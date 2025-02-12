@@ -14,7 +14,7 @@ on:
       - 'v*'
 
 jobs:
-  build-windows: # 构建Windows版本
+  build-windows:  # 构建Windows版本
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
@@ -111,8 +111,8 @@ jobs:
           path: dist/${{ env.EXE_NAME }}
           retention-days: 5
 
-  create-release: # 创建发布版本
-    needs: [ build-windows ]
+  create-release:  # 创建发布版本
+    needs: [build-windows]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
 
@@ -137,11 +137,11 @@ jobs:
         run: |
           cd artifacts/${{ env.ARTIFACT_NAME }}
           cat > .env << 'EOL'
-DOMAIN=
-EMAIL=
-PASSWORD=
-COOKIES_STR=
-EOL
+          DOMAIN=
+          EMAIL=
+          PASSWORD=
+          COOKIES_STR=
+          EOL
 
       - name: 创建发布压缩包
         run: |
@@ -168,7 +168,7 @@ EOL
           prerelease: false
 
   cleanup:
-    needs: [ create-release ]
+    needs: [create-release]
     runs-on: ubuntu-latest
     if: always()
     permissions:
