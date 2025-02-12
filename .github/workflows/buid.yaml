@@ -169,6 +169,8 @@ jobs:
     needs: [ create-release ]
     runs-on: ubuntu-latest
     if: always()
+    permissions:
+      actions: write
     steps:
       - name: 删除构建产物
         uses: geekyeggo/delete-artifact@v2
@@ -193,4 +195,4 @@ jobs:
           done
           echo "缓存清理完成"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
