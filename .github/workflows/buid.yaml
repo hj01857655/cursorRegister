@@ -120,12 +120,32 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
+          
+      - name: 删除旧的 releases
+        env:
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        run: |
+          # 获取所有release的ID（跳过最新的一个）
+          releases=$(gh api repos/${{ github.repository }}/releases --jq '.[1:][].id')
+          
+          # 如果有releases需要删除
+          if [ ! -z "$releases" ]; then
+            echo "发现需要删除的旧releases..."
+            # 遍历并删除每个release
+            for release_id in $releases; do
+              echo "正在删除release ID: $release_id"
+              gh api -X DELETE repos/${{ github.repository }}/releases/$release_id
+            done
+            echo "旧releases清理完成"
+          else
+            echo "没有需要删除的旧releases"
+          fi
+          
       - name: 下载所有构建产物
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-
+          
       - name: 生成更新日志
         id: changelog
         run: |
