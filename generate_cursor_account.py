@@ -1,11 +1,20 @@
 import os
 import random
 import string
+import sys
 from typing import Tuple, Optional
 from pathlib import Path
 from dotenv import load_dotenv
 from loguru import logger
 
+
+def get_application_path() -> Path:
+    if getattr(sys, 'frozen', False):
+        # 如果是打包后的exe
+        return Path(sys.executable).parent
+    else:
+        # 如果是python脚本
+        return Path(__file__).parent
 
 class CursorAccountGenerator:
     def __init__(self):
@@ -46,7 +55,7 @@ class CursorAccountGenerator:
     @staticmethod
     def update_env_file(email: str, password: str, env_path: Optional[Path] = None) -> None:
         if env_path is None:
-            env_path = Path(__file__).parent / '.env'
+            env_path = get_application_path() / '.env'
             
         logger.info(f"正在更新.env文件: {env_path.absolute()}")
             
@@ -90,7 +99,7 @@ def generate_cursor_account() -> bool:
         logger.info(f"邮箱: {email}")
         logger.info(f"密码: {password}")
         
-        env_path = Path(__file__).parent / '.env'
+        env_path = get_application_path() / '.env'
         logger.info(f".env文件位置: {env_path.absolute()}")
         
         generator.update_env_file(email, password)
