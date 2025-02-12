@@ -47,7 +47,9 @@ class CursorAccountGenerator:
     def update_env_file(email: str, password: str, env_path: Optional[Path] = None) -> None:
         if env_path is None:
             env_path = Path(__file__).parent / '.env'
-
+            
+        logger.info(f"正在更新.env文件: {env_path.absolute()}")
+            
         try:
             if env_path.exists():
                 content = env_path.read_text(encoding='utf-8').splitlines()
@@ -87,6 +89,10 @@ def generate_cursor_account() -> bool:
         logger.info("生成的Cursor账号信息：")
         logger.info(f"邮箱: {email}")
         logger.info(f"密码: {password}")
+        
+        env_path = Path(__file__).parent / '.env'
+        logger.info(f".env文件位置: {env_path.absolute()}")
+        
         generator.update_env_file(email, password)
         os.environ['EMAIL'] = email
         os.environ['PASSWORD'] = password
