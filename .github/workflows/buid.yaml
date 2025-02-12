@@ -136,10 +136,12 @@ jobs:
       - name: 创建空白.env文件
         run: |
           cd artifacts/${{ env.ARTIFACT_NAME }}
-          echo 'DOMAIN=
-                EMAIL=
-                PASSWORD=
-                COOKIES_STR=' > .env
+          cat > .env << 'EOL'
+DOMAIN=
+EMAIL=
+PASSWORD=
+COOKIES_STR=
+EOL
 
       - name: 创建发布压缩包
         run: |
@@ -169,6 +171,8 @@ jobs:
     needs: [ create-release ]
     runs-on: ubuntu-latest
     if: always()
+    permissions:
+      actions: write
     steps:
       - name: 删除构建产物
         uses: geekyeggo/delete-artifact@v2
@@ -193,4 +197,4 @@ jobs:
           done
           echo "缓存清理完成"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
