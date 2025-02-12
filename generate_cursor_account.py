@@ -98,10 +98,6 @@ def generate_cursor_account() -> bool:
         logger.info("生成的Cursor账号信息：")
         logger.info(f"邮箱: {email}")
         logger.info(f"密码: {password}")
-        
-        env_path = get_application_path() / '.env'
-        logger.info(f".env文件位置: {env_path.absolute()}")
-        
         generator.update_env_file(email, password)
         os.environ['EMAIL'] = email
         os.environ['PASSWORD'] = password
