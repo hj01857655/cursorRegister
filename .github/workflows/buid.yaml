@@ -1,0 +1,196 @@
+name: 构建可执行文件
+
+env:
+  APP_NAME: cursorRegister
+  EXE_NAME: cursorRegister.exe
+  ARTIFACT_NAME: cursorRegister-Windows
+  ZIP_NAME: cursorRegister-Windows.zip
+  PYTHON_VERSION: '3.11'
+  CACHE_VERSION: v1
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-windows: # 构建Windows版本
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: 配置Git
+        run: |
+          git config --global user.name "GitHub Actions"
+          git config --global user.email "actions@github.com"
+          if ($env:GITHUB_REF.StartsWith("refs/tags/")) {
+            git checkout $env:GITHUB_REF_NAME
+          } else {
+            git checkout $env:GITHUB_SHA
+          }
+
+      - name: 设置Python环境
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: 从标签获取版本号
+        id: get_version
+        run: |
+          if ($env:GITHUB_REF.StartsWith("refs/tags/v")) {
+            $version = $env:GITHUB_REF.Replace('refs/tags/v', '')
+          } else {
+            $version = "dev-$($env:GITHUB_SHA.Substring(0,7))"
+          }
+          echo "VERSION=$version" >> $env:GITHUB_ENV
+          echo "BUILD_TIME=$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" >> $env:GITHUB_ENV
+
+      - name: 安装依赖
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller wheel setuptools
+          pip install -r requirements.txt
+
+      - name: 缓存PyInstaller构建
+        uses: actions/cache@v4
+        with:
+          path: |
+            build
+            dist
+            *.spec
+          key: ${{ runner.os }}-pyinstaller-${{ env.CACHE_VERSION }}-${{ hashFiles('**/*.py', '**/*.spec', 'requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pyinstaller-${{ env.CACHE_VERSION }}-
+
+      - name: 构建可执行文件
+        run: |
+          $env:PYTHONOPTIMIZE = 2
+          $env:PYTHONHASHSEED = 42  # 确保构建的确定性
+          pyinstaller ${{ env.APP_NAME }}.spec --clean
+        env:
+          PYTHONOPTIMIZE: 2
+
+      - name: 验证构建
+        run: |
+          Write-Host "当前工作目录: $PWD"
+          Write-Host "目录内容:"
+          Get-ChildItem -Force
+          
+          Write-Host "`ndist 目录内容:"
+          if (Test-Path dist) {
+            Get-ChildItem dist -Force
+          } else {
+            throw "dist 目录不存在!"
+          }
+          
+          $exePath = "dist\${{ env.EXE_NAME }}"
+          if (Test-Path $exePath) {
+            $fileSize = (Get-Item $exePath).Length
+            Write-Host "`n构建文件信息:"
+            Write-Host "路径: $exePath"
+            Write-Host "大小: $([math]::Round($fileSize/1MB, 2)) MB"
+          
+            # 检查文件大小是否在合理范围内
+            if ($fileSize -lt 1MB) {
+              throw "构建文件过小，可能存在问题"
+            }
+          } else {
+            Write-Host "`n构建目录结构:"
+            Get-ChildItem -Recurse | Select-Object FullName
+            throw "未在预期路径找到可执行文件: $exePath"
+          }
+
+      - name: 上传Windows构建产物
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          path: dist/${{ env.EXE_NAME }}
+          retention-days: 5
+
+  create-release: # 创建发布版本
+    needs: [ build-windows ]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 下载所有构建产物
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: 生成更新日志
+        id: changelog
+        run: |
+          echo "### 更新内容" > changelog.md
+          echo "" >> changelog.md
+          git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" >> changelog.md
+
+      - name: 创建空白.env文件
+        run: |
+          cd artifacts/${{ env.ARTIFACT_NAME }}
+          echo 'DOMAIN=
+                EMAIL=
+                PASSWORD=
+                COOKIES_STR=' > .env
+
+      - name: 创建发布压缩包
+        run: |
+          cd artifacts
+          zip -r ${{ env.ZIP_NAME }} ${{ env.ARTIFACT_NAME }}/
+
+      - name: 调试信息
+        run: |
+          echo "当前标签: ${{ github.ref }}"
+          echo "当前工作目录: $(pwd)"
+          echo "构建产物目录内容:"
+          ls -la artifacts/
+
+      - name: 创建发布版本
+        uses: softprops/action-gh-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+        with:
+          name: ${{ env.APP_NAME }} ${{ env.VERSION }}
+          body_path: changelog.md
+          files: |
+            artifacts/${{ env.ZIP_NAME }}
+          draft: false
+          prerelease: false
+
+  cleanup:
+    needs: [ create-release ]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: 删除构建产物
+        uses: geekyeggo/delete-artifact@v2
+        with:
+          name: ${{ env.ARTIFACT_NAME }}
+          failOnError: false
+          
+      - name: 清除缓存
+        run: |
+          gh extension install actions/gh-actions-cache
+          
+          REPO=${{ github.repository }}
+          BRANCH=${{ github.ref }}
+          
+          echo "获取缓存列表..."
+          cacheKeys=$(gh actions-cache list --repo $REPO --branch $BRANCH --limit 100 | cut -f 1)
+          
+          echo "开始清除缓存..."
+          for cacheKey in $cacheKeys; do
+            gh actions-cache delete $cacheKey --repo $REPO --branch $BRANCH --confirm
+            echo "已删除缓存: $cacheKey"
+          done
+          echo "缓存清理完成"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
