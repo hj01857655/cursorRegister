@@ -14,7 +14,6 @@ class CursorAccountGenerator:
             raise ValueError("环境变量 'DOMAIN' 未设置")
         
     def generate_random_email(self, min_length: int = 5, max_length: int = 20) -> str:
-        """生成随机邮箱地址"""
         email_length = random.randint(min_length, max_length)
         random_chars = ''.join(
             random.choices(string.ascii_lowercase + string.digits, k=email_length)
@@ -22,16 +21,13 @@ class CursorAccountGenerator:
         return f"{random_chars}@{self.domain}"
 
     def generate_secure_password(self, length: int = 16) -> str:
-        """生成安全的随机密码"""
         common_special_chars = "!@#$%^&*()"
-        # 确保密码包含必要字符
         password_chars = [
-            random.choice(string.ascii_uppercase),  # 大写字母
-            random.choice(string.ascii_lowercase),  # 小写字母
-            random.choice(common_special_chars),    # 特殊字符
-            random.choice(string.digits)            # 数字
+            random.choice(string.ascii_uppercase),
+            random.choice(string.ascii_lowercase),
+            random.choice(common_special_chars),
+            random.choice(string.digits)
         ]
-        # 填充剩余长度
         remaining_length = length - len(password_chars)
         password_chars.extend(
             random.choices(
@@ -39,36 +35,30 @@ class CursorAccountGenerator:
                 k=remaining_length
             )
         )
-        # 打乱字符顺序
         random.shuffle(password_chars)
         return ''.join(password_chars)
 
     def generate_account(self) -> Tuple[str, str]:
-        """生成Cursor账号信息"""
         email = self.generate_random_email()
         password = self.generate_secure_password()
         return email, password
 
     @staticmethod
     def update_env_file(email: str, password: str, env_path: Optional[Path] = None) -> None:
-        """更新.env文件"""
         if env_path is None:
             env_path = Path(__file__).parent / '.env'
 
         try:
-            # 读取现有内容
             if env_path.exists():
                 content = env_path.read_text(encoding='utf-8').splitlines()
             else:
                 content = []
 
-            # 准备新的环境变量
             new_vars = {
                 'EMAIL': email,
                 'PASSWORD': password
             }
 
-            # 更新或添加环境变量
             updated_content = []
             updated_keys = set()
 
@@ -80,12 +70,10 @@ class CursorAccountGenerator:
                 else:
                     updated_content.append(line)
 
-            # 添加未更新的变量
             for key, value in new_vars.items():
                 if key not in updated_keys:
                     updated_content.append(f'{key}=\'{value}\'')
 
-            # 写入文件
             env_path.write_text('\n'.join(updated_content) + '\n', encoding='utf-8')
 
         except Exception as e:
@@ -93,16 +81,13 @@ class CursorAccountGenerator:
 
 
 def generate_cursor_account() -> bool:
-    """主函数：生成Cursor账号并更新配置"""
     try:
         generator = CursorAccountGenerator()
         email, password = generator.generate_account()
         logger.info("生成的Cursor账号信息：")
         logger.info(f"邮箱: {email}")
         logger.info(f"密码: {password}")
-        # 更新.env文件
         generator.update_env_file(email, password)
-        # 更新环境变量
         os.environ['EMAIL'] = email
         os.environ['PASSWORD'] = password
         logger.success("账号信息已成功更新到.env文件并更新环境变量")

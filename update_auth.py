@@ -6,8 +6,6 @@ from dotenv import load_dotenv
 from loguru import logger
 
 class CursorAuthUpdater:
-    """Cursor认证信息管理器"""
-    
     DB_PATHS = {
         "win32": "{APPDATA}/Cursor/User/globalStorage/state.vscdb",
         "darwin": "~/Library/Application Support/Cursor/User/globalStorage/state.vscdb",
@@ -26,7 +24,6 @@ class CursorAuthUpdater:
         load_dotenv()
 
     def _get_db_path(self) -> Path:
-        """获取数据库路径"""
         if sys.platform not in self.DB_PATHS:
             raise NotImplementedError(f"不支持的操作系统: {sys.platform}")
             
@@ -41,7 +38,6 @@ class CursorAuthUpdater:
         return Path(path).expanduser().resolve()
 
     def _update_env_file(self, cookies: str) -> None:
-        """更新环境变量文件"""
         env_path = Path(__file__).parent / '.env'
         env_content = env_path.read_text(encoding='utf-8')
         updated_content = []
@@ -56,7 +52,6 @@ class CursorAuthUpdater:
         os.environ['COOKIES_STR'] = cookies
 
     def _extract_token(self, cookies: str) -> str | None:
-        """从cookies中提取token"""
         token_key = "WorkosCursorSessionToken="
         if token_key not in cookies:
             logger.error("未找到 WorkosCursorSessionToken")
@@ -73,7 +68,6 @@ class CursorAuthUpdater:
         return token_parts[1]
 
     def update_db(self, updates: dict) -> bool:
-        """更新数据库中的认证信息"""
         try:
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
@@ -96,7 +90,6 @@ class CursorAuthUpdater:
             return False
 
     def update_with_cookie(self, cookies: str) -> None:
-        """使用提供的cookie字符串更新认证信息"""
         self._update_env_file(cookies)
         
         if not (token := self._extract_token(cookies)):
@@ -114,7 +107,6 @@ class CursorAuthUpdater:
             raise RuntimeError("更新认证信息失败")
 
     def run(self) -> None:
-        """运行更新流程"""
         cookies = input("请输入Cookie字符串: ").strip()
         self._update_env_file(cookies)
         
@@ -136,7 +128,6 @@ class CursorAuthUpdater:
 
 def main():
     try:
-
         updater = CursorAuthUpdater()
         updater.run()
     except Exception as e:
