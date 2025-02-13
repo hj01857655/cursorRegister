@@ -130,13 +130,13 @@ jobs:
           echo "当前tag: $CURRENT_TAG"
           
           # 获取所有release的ID和tag名称（跳过最新的一个）
-          releases=$(gh api repos/${{ github.repository }}/releases --jq '.[1:][].{id: .id, tag_name: .tag_name}')
+          releases=$(gh api repos/${{ github.repository }}/releases | jq '.[1:] | .[] | {id: .id, tag_name: .tag_name}')
           
           # 如果有releases需要删除
           if [ ! -z "$releases" ]; then
             echo "发现需要删除的旧releases..."
             # 遍历并删除每个release和对应的tag
-            echo "$releases" | jq -r '.[] | "\(.id) \(.tag_name)"' | while read -r release_id tag_name; do
+            echo "$releases" | jq -r '"\(.id) \(.tag_name)"' | while read -r release_id tag_name; do
               echo "正在删除release ID: $release_id, tag: $tag_name"
               # 删除release
               gh api -X DELETE repos/${{ github.repository }}/releases/$release_id
