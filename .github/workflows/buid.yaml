@@ -121,22 +121,29 @@ jobs:
         with:
           fetch-depth: 0
           
-      - name: 删除旧的 releases
+      - name: 删除旧的 releases 和 tags
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN }}
         run: |
-          # 获取所有release的ID（跳过最新的一个）
-          releases=$(gh api repos/${{ github.repository }}/releases --jq '.[1:][].id')
+          # 获取当前tag
+          CURRENT_TAG=${{ github.ref_name }}
+          echo "当前tag: $CURRENT_TAG"
+          
+          # 获取所有release的ID和tag名称（跳过最新的一个）
+          releases=$(gh api repos/${{ github.repository }}/releases --jq '.[1:][].{id: .id, tag_name: .tag_name}')
           
           # 如果有releases需要删除
           if [ ! -z "$releases" ]; then
             echo "发现需要删除的旧releases..."
-            # 遍历并删除每个release
-            for release_id in $releases; do
-              echo "正在删除release ID: $release_id"
+            # 遍历并删除每个release和对应的tag
+            echo "$releases" | jq -r '.[] | "\(.id) \(.tag_name)"' | while read -r release_id tag_name; do
+              echo "正在删除release ID: $release_id, tag: $tag_name"
+              # 删除release
               gh api -X DELETE repos/${{ github.repository }}/releases/$release_id
+              # 删除远程tag
+              git push origin :refs/tags/$tag_name || echo "删除tag $tag_name 失败，可能已经不存在"
             done
-            echo "旧releases清理完成"
+            echo "旧releases和tags清理完成"
           else
             echo "没有需要删除的旧releases"
           fi
