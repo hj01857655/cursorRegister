@@ -1,3 +1,4 @@
+import sys
 import tkinter as tk
 from tkinter import ttk
 from typing import Dict, Optional, Callable, List, Tuple
@@ -7,13 +8,13 @@ from cursor_id_resetter import CursorResetter
 from cursor_auth_updater import CursorAuthUpdater
 from loguru import logger
 from dotenv import load_dotenv
-from configlog import LogSetup
 import os
 from pathlib import Path
 from cursor_utils import (
     PathManager, FileManager, Result, UIManager, 
     StyleManager, MessageManager, error_handler, EnvManager
 )
+import functools
 
 @dataclass
 class WindowConfig:
@@ -67,8 +68,8 @@ class CursorApp:
         account_frame = UIManager.create_labeled_frame(self.main_frame, "账号信息")
         for row, (var_name, label_text) in enumerate(self.window_config.env_vars):
             entry = UIManager.create_labeled_entry(account_frame, label_text, row)
-            entry.bind('<FocusIn>', lambda e, entry=entry: entry.configure(style='TEntry'))
-            entry.bind('<FocusOut>', lambda e, entry=entry: entry.configure(style='TEntry') if not entry.get().strip() else None)
+            entry.bind('<FocusIn>', functools.partial(self._handle_focus_in, entry))
+            entry.bind('<FocusOut>', functools.partial(self._handle_focus_out, entry))
             if os.getenv(var_name):
                 entry.insert(0, os.getenv(var_name))
             self.entries[var_name] = entry
@@ -194,8 +195,34 @@ class CursorApp:
         self.entries['PASSWORD'].delete(0, tk.END)
         self.entries['PASSWORD'].insert(0, password)
 
+    def _handle_focus_in(self, entry: ttk.Entry, event) -> None:
+        entry.configure(style='TEntry')
+
+    def _handle_focus_out(self, entry: ttk.Entry, event) -> None:
+        if not entry.get().strip():
+            entry.configure(style='TEntry')
+
 def setup_logging() -> None:
-    LogSetup()
+    logger.remove()
+    logger.add(
+        sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD_HH}.log",
+        format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
+        rotation="10 MB",
+        retention="14 days",
+        compression="gz",
+        enqueue=True,
+        backtrace=True,
+        diagnose=True,
+        level="DEBUG"
+    )
+    logger.add(
+        sink=sys.stderr,
+        colorize=True,
+        enqueue=True,
+        backtrace=True,
+        diagnose=True,
+        level="DEBUG"
+    )
 
 def main() -> None:
     try:
