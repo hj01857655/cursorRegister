@@ -360,45 +360,28 @@ class CursorApp:
                 registrar.browser.quit()
 
 def setup_logging() -> None:
-    try:
-        logger.remove()  # 移除所有已存在的处理器
-        
-        # 确保日志目录存在
-        log_dir = Path("./cursorRegister_log")
-        log_dir.mkdir(exist_ok=True, parents=True)
-        
-        # 添加文件日志处理器
-        logger.add(
-            sink=str(log_dir / "{time:YYYY-MM-DD_HH}.log"),
-            format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
-            rotation="10 MB",
-            retention="14 days",
-            compression="gz",
-            enqueue=True,
-            backtrace=True,
-            diagnose=True,
-            level="DEBUG",
-            catch=True  # 捕获处理器内的错误
-        )
-        
-        # 添加控制台日志处理器
-        logger.add(
-            sink=sys.stderr,
-            format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
-            colorize=True,
-            enqueue=True,
-            backtrace=True,
-            diagnose=True,
-            level="DEBUG",
-            catch=True  # 捕获处理器内的错误
-        )
-    except Exception as e:
-        print(f"日志系统初始化失败: {e}")
-        # 确保至少有一个基本的控制台处理器
-        logger.add(sys.stderr)
+    logger.remove()
+    logger.add(
+        sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD_HH}.log",
+        format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
+        rotation="10 MB",
+        retention="14 days",
+        compression="gz",
+        enqueue=True,
+        backtrace=True,
+        diagnose=True,
+        level="DEBUG"
+    )
+    logger.add(
+        sink=sys.stderr,
+        colorize=True,
+        enqueue=True,
+        backtrace=True,
+        diagnose=True,
+        level="DEBUG"
+    )
 
 def main() -> None:
-    root = None  # 初始化 root 变量
     try:
         load_dotenv(dotenv_path=Utils.get_path('env'))
         setup_logging()
@@ -407,10 +390,7 @@ def main() -> None:
         root.mainloop()
     except Exception as e:
         logger.error(f"程序启动失败: {e}")
-        if root is not None:  
-            UI.show_error(root, "程序启动失败", e)
-        else:
-            print(f"程序启动失败: {e}")  
+        UI.show_error(root, "程序启动失败", e)
 
 if __name__ == "__main__":
     main()
