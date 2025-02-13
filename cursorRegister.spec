@@ -17,7 +17,8 @@ a = Analysis(
         'cursor_id_resetter',
         'cursor_auth_updater',
         'cursor_utils',
-        'cursor_registerAc'
+        'cursor_registerAc',
+        'email'
     ],
     hookspath=[],
     hooksconfig={},
@@ -26,7 +27,7 @@ a = Analysis(
         'matplotlib', 'numpy', 'pandas', 'scipy', 'PyQt5', 'PyQt6', 
         'PySide2', 'PySide6', 'wx', 'notebook', 'sphinx', 'jupyter',
         'IPython', 'ipykernel', 'nbconvert', 'nbformat', 'test', 'tests',
-        'unittest', 'distutils', 'pkg_resources', 'email',
+        'unittest', 'distutils', 'pkg_resources',
         '_pytest', 'pytest', 'doctest', 'pycparser', 'pdb'
     ],
     noarchive=False,
