@@ -15,21 +15,21 @@ from cursor_utils import Utils, Result, error_handler
 class UI:
     FONT = ('Microsoft YaHei UI', 10)
     COLORS = {
-        'primary': '#2563EB',      # 更现代的蓝色
-        'secondary': '#64748B',    # 更柔和的次要色调
-        'success': '#059669',      # 清新的绿色
-        'error': '#DC2626',        # 鲜明的红色
-        'warning': '#D97706',      # 温暖的橙色
-        'bg': '#F8FAFC',          # 更亮的背景色
-        'card_bg': '#FFFFFF',     # 保持白色卡片背景
-        'disabled': '#94A3B8',    # 柔和的禁用色
-        'hover': '#1D4ED8',       # 深蓝色悬停效果
-        'pressed': '#1E40AF',     # 更深的按下效果
-        'border': '#E2E8F0',      # 柔和的边框色
-        'input_bg': '#FFFFFF',    # 输入框背景色
-        'label_fg': '#334155',    # 更深的标签文字颜色
-        'title_fg': '#1E40AF',    # 标题使用深蓝色
-        'subtitle_fg': '#475569'   # 柔和的副标题色
+        'primary': '#2563EB',      
+        'secondary': '#64748B',   
+        'success': '#059669',     
+        'error': '#DC2626',       
+        'warning': '#D97706',     
+        'bg': '#F8FAFC',         
+        'card_bg': '#FFFFFF',    
+        'disabled': '#94A3B8',   
+        'hover': '#1D4ED8',       
+        'pressed': '#1E40AF',     
+        'border': '#E2E8F0',      
+        'input_bg': '#FFFFFF',    
+        'label_fg': '#334155',    
+        'title_fg': '#1E40AF',    
+        'subtitle_fg': '#475569'   
     }
 
     @staticmethod
@@ -40,35 +40,31 @@ class UI:
             'background': UI.COLORS['bg']
         }
         
-        # 主框架样式
         style.configure('TFrame', background=UI.COLORS['bg'])
         
-        # 标签框样式
         style.configure('TLabelframe', 
             background=UI.COLORS['card_bg'],
-            padding=10,  # 进一步减小内边距
+            padding=10,
             relief='flat',
             borderwidth=1
         )
         
-        # 标签框标题样式
         style.configure('TLabelframe.Label', 
             font=(UI.FONT[0], 11, 'bold'),
             foreground=UI.COLORS['title_fg'],
-            padding=(0, 4)  # 减小标题边距
+            background=UI.COLORS['bg'],
+            padding=(0, 4)
         )
         
-        # 按钮样式
         style.configure('Custom.TButton',
             font=(UI.FONT[0], 10, 'bold'),
-            padding=(12, 6),  # 减小按钮内边距
+            padding=(12, 6),
             background=UI.COLORS['primary'],
             foreground='black',
             borderwidth=0,
             relief='flat'
         )
         
-        # 按钮悬停和点击效果
         style.map('Custom.TButton',
             background=[
                 ('pressed', UI.COLORS['pressed']),
@@ -76,15 +72,14 @@ class UI:
                 ('disabled', UI.COLORS['disabled'])
             ],
             foreground=[
-                ('pressed', 'black'),  # 改为黑色字体
-                ('active', 'black'),   # 改为黑色字体
+                ('pressed', 'black'),
+                ('active', 'black'),
                 ('disabled', '#94A3B8')
             ]
         )
         
-        # 输入框样式
         style.configure('TEntry',
-            padding=8,  # 减小输入框内边距
+            padding=8,
             relief='flat',
             borderwidth=1,
             selectbackground=UI.COLORS['primary'],
@@ -92,53 +87,32 @@ class UI:
             fieldbackground=UI.COLORS['input_bg']
         )
         
-        # 标签样式
         style.configure('TLabel',
             font=(UI.FONT[0], 10),
-            background=UI.COLORS['card_bg'],
+            background=UI.COLORS['bg'],
             foreground=UI.COLORS['label_fg'],
-            padding=(4, 2)  # 减小标签边距
+            padding=(4, 2)
         )
         
-        # 特殊标签样式
-        label_styles = {
-            'Info.TLabel': {
-                'foreground': UI.COLORS['subtitle_fg'],
-                'font': (UI.FONT[0], 10),
-                'background': UI.COLORS['card_bg']
-            },
-            'Error.TLabel': {
-                'foreground': UI.COLORS['error'],
-                'font': (UI.FONT[0], 10),
-                'background': UI.COLORS['card_bg']
-            },
-            'Success.TLabel': {
-                'foreground': UI.COLORS['success'],
-                'font': (UI.FONT[0], 10),
-                'background': UI.COLORS['card_bg']
-            },
-            'Footer.TLabel': {
-                'font': (UI.FONT[0], 9),
-                'foreground': UI.COLORS['subtitle_fg'],
-                'background': UI.COLORS['bg']
-            },
-            'Title.TLabel': {
-                'font': (UI.FONT[0], 14, 'bold'),  # 增大标题字体
-                'foreground': UI.COLORS['title_fg'],
-                'background': UI.COLORS['bg']
-            }
-        }
+        style.configure('Footer.TLabel',
+            font=(UI.FONT[0], 9),
+            foreground=UI.COLORS['subtitle_fg'],
+            background=UI.COLORS['bg']
+        )
         
-        for name, config in label_styles.items():
-            style.configure(name, **{**base_style, **config})
+        style.configure('Title.TLabel',
+            font=(UI.FONT[0], 14, 'bold'),
+            foreground=UI.COLORS['title_fg'],
+            background=UI.COLORS['bg']
+        )
 
     @staticmethod
     def create_labeled_entry(parent, label_text: str, row: int, **kwargs) -> ttk.Entry:
         frame = ttk.Frame(parent, style='TFrame')
-        frame.grid(row=row, column=0, columnspan=2, sticky='ew', padx=6, pady=3)  # 减小边距
+        frame.grid(row=row, column=0, columnspan=2, sticky='ew', padx=6, pady=3)
         
-        label = ttk.Label(frame, text=f"{label_text}:", style='Info.TLabel')
-        label.pack(side=tk.LEFT, padx=(3, 8))  # 减小标签边距
+        label = ttk.Label(frame, text=f"{label_text}:", style='TLabel')
+        label.pack(side=tk.LEFT, padx=(3, 8))
         
         entry = ttk.Entry(frame, style='TEntry', **kwargs)
         entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
@@ -154,7 +128,7 @@ class UI:
             style='TLabelframe',
             **kwargs
         )
-        frame.pack(fill=tk.X, padx=10, pady=4)  # 减小外边距
+        frame.pack(fill=tk.X, padx=10, pady=4)
         frame.columnconfigure(1, weight=1)
         return frame
 
