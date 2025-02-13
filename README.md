@@ -12,7 +12,8 @@
 - 📦 [从 Release 页面下载](https://github.com/ktovoz/cursorRegister/releases)
   > 在 Release 页面下载最新版本的注册助手程序
 
-## �� 使用方法
+## 🔐 使用方法
+
 
 ### 前置准备
 1. 准备一个可用的域名（推荐使用便宜的域名服务商）
