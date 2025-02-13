@@ -13,23 +13,23 @@ from pathlib import Path
 from cursor_utils import Utils, Result, error_handler
 
 class UI:
-    FONT = ('Microsoft YaHei UI', 9)
+    FONT = ('Microsoft YaHei UI', 10)
     COLORS = {
-        'primary': '#1976D2',      # 主色调
-        'secondary': '#455A64',    # 次要色调
-        'success': '#2E7D32',      # 成功色
-        'error': '#D32F2F',        # 错误色
-        'warning': '#ED6C02',      # 警告色
-        'bg': '#F5F5F5',          # 背景色
-        'card_bg': '#FFFFFF',     # 卡片背景色
-        'disabled': '#90A4AE',     # 禁用色
-        'hover': '#1E88E5',       # 悬停色
-        'pressed': '#1565C0',     # 按下色
-        'border': '#E0E0E0',      # 边框色
+        'primary': '#2563EB',      # 更现代的蓝色
+        'secondary': '#64748B',    # 更柔和的次要色调
+        'success': '#059669',      # 清新的绿色
+        'error': '#DC2626',        # 鲜明的红色
+        'warning': '#D97706',      # 温暖的橙色
+        'bg': '#F8FAFC',          # 更亮的背景色
+        'card_bg': '#FFFFFF',     # 保持白色卡片背景
+        'disabled': '#94A3B8',    # 柔和的禁用色
+        'hover': '#1D4ED8',       # 深蓝色悬停效果
+        'pressed': '#1E40AF',     # 更深的按下效果
+        'border': '#E2E8F0',      # 柔和的边框色
         'input_bg': '#FFFFFF',    # 输入框背景色
-        'label_fg': '#37474F',    # 标签文字颜色
-        'title_fg': '#1976D2',    # 标题文字颜色
-        'subtitle_fg': '#546E7A'   # 副标题文字颜色
+        'label_fg': '#334155',    # 更深的标签文字颜色
+        'title_fg': '#1E40AF',    # 标题使用深蓝色
+        'subtitle_fg': '#475569'   # 柔和的副标题色
     }
 
     @staticmethod
@@ -46,25 +46,24 @@ class UI:
         # 标签框样式
         style.configure('TLabelframe', 
             background=UI.COLORS['card_bg'],
-            padding=20,
+            padding=25,  # 增加内边距
             relief='flat',
-            borderwidth=0
+            borderwidth=1
         )
         
         # 标签框标题样式
         style.configure('TLabelframe.Label', 
-            font=(UI.FONT[0], 11, 'bold'),
+            font=(UI.FONT[0], 12, 'bold'),  # 增大字体
             foreground=UI.COLORS['title_fg'],
-            background=UI.COLORS['card_bg'],
-            padding=(15, 5)
+            padding=(0, 8)  # 调整标题边距
         )
         
         # 按钮样式
         style.configure('Custom.TButton',
-            font=(UI.FONT[0], 9, 'bold'),
-            padding=(30, 12),
+            font=(UI.FONT[0], 10, 'bold'),  # 增大字体
+            padding=(25, 10),  # 增加按钮内边距
             background=UI.COLORS['primary'],
-            foreground='white',
+            foreground='black',  # 改为黑色字体
             borderwidth=0,
             relief='flat'
         )
@@ -77,16 +76,16 @@ class UI:
                 ('disabled', UI.COLORS['disabled'])
             ],
             foreground=[
-                ('pressed', 'white'),
-                ('active', 'white'),
-                ('disabled', '#E0E0E0')
+                ('pressed', 'black'),  # 改为黑色字体
+                ('active', 'black'),   # 改为黑色字体
+                ('disabled', '#94A3B8')
             ]
         )
         
         # 输入框样式
         style.configure('TEntry',
-            padding=10,
-            relief='solid',
+            padding=12,  # 增加内边距
+            relief='flat',
             borderwidth=1,
             selectbackground=UI.COLORS['primary'],
             selectforeground='white',
@@ -95,36 +94,36 @@ class UI:
         
         # 标签样式
         style.configure('TLabel',
-            font=(UI.FONT[0], 9),
+            font=(UI.FONT[0], 10),  # 增大字体
             background=UI.COLORS['card_bg'],
             foreground=UI.COLORS['label_fg'],
-            padding=(5, 2)
+            padding=(8, 4)  # 增加边距
         )
         
         # 特殊标签样式
         label_styles = {
             'Info.TLabel': {
                 'foreground': UI.COLORS['subtitle_fg'],
-                'font': (UI.FONT[0], 9),
+                'font': (UI.FONT[0], 10),
                 'background': UI.COLORS['card_bg']
             },
             'Error.TLabel': {
                 'foreground': UI.COLORS['error'],
-                'font': (UI.FONT[0], 9),
+                'font': (UI.FONT[0], 10),
                 'background': UI.COLORS['card_bg']
             },
             'Success.TLabel': {
                 'foreground': UI.COLORS['success'],
-                'font': (UI.FONT[0], 9),
+                'font': (UI.FONT[0], 10),
                 'background': UI.COLORS['card_bg']
             },
             'Footer.TLabel': {
-                'font': (UI.FONT[0], 8),
+                'font': (UI.FONT[0], 9),
                 'foreground': UI.COLORS['subtitle_fg'],
                 'background': UI.COLORS['bg']
             },
             'Title.TLabel': {
-                'font': (UI.FONT[0], 12, 'bold'),
+                'font': (UI.FONT[0], 14, 'bold'),  # 增大标题字体
                 'foreground': UI.COLORS['title_fg'],
                 'background': UI.COLORS['bg']
             }
@@ -187,7 +186,7 @@ class UI:
 @dataclass
 class WindowConfig:
     width: int = 600
-    height: int = 680
+    height: int = 700
     title: str = "Cursor账号管理工具"
     backup_dir: str = "env_backups"
     max_backups: int = 10
@@ -267,7 +266,7 @@ class CursorApp:
             text="powered by kto 仅供学习使用",
             style='Footer.TLabel'
         )
-        footer.pack(side=tk.BOTTOM, pady=(20, 0))
+        footer.pack(side=tk.BOTTOM, pady=(0, 0))
 
     def _save_env_vars(self, updates: Dict[str, str] = None) -> None:
         if not updates:
