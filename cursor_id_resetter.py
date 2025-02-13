@@ -3,80 +3,63 @@ import uuid
 import hashlib
 from pathlib import Path
 from loguru import logger
-from cursor_utils import (
-    PathManager, FileManager, ProcessManager, 
-    error_handler, Result
-)
+from cursor_utils import Utils, error_handler, Result
 
-class CursorResetter:
-    def __init__(self):
-        cursor_path = PathManager.get_cursor_path()
-        self.storage_file = cursor_path / 'storage.json'
-        self.backup_dir = cursor_path / 'backups'
-        self.updater_path = Path(os.getenv('LOCALAPPDATA')) / 'cursor-updater'
+def generate_ids() -> dict:
+    return {
+        f'telemetry.{key}': value for key, value in {
+            'machineId': f"auth0|user_{hashlib.sha256(os.urandom(32)).hexdigest()}",
+            'macMachineId': hashlib.sha256(os.urandom(32)).hexdigest(),
+            'devDeviceId': str(uuid.uuid4()),
+            'sqmId': "{" + str(uuid.uuid4()).upper() + "}"
+        }.items()
+    }
 
-    def generate_ids(self) -> dict:
-        return {
-            f'telemetry.{key}': value for key, value in {
-                'machineId': f"auth0|user_{hashlib.sha256(os.urandom(32)).hexdigest()}",
-                'macMachineId': hashlib.sha256(os.urandom(32)).hexdigest(),
-                'devDeviceId': str(uuid.uuid4()),
-                'sqmId': "{" + str(uuid.uuid4()).upper() + "}"
-            }.items()
-        }
+@error_handler
+def reset() -> Result:
+    if not Utils.run_as_admin():
+        return Result.fail("需要管理员权限")
 
-    def disable_auto_update(self) -> Result:
-        try:
-            if self.updater_path.exists():
-                if self.updater_path.is_dir():
-                    self.updater_path.unlink(missing_ok=True)
-                    self.updater_path.touch()
-                elif self.updater_path.stat().st_mode & 0o222:
-                    self.updater_path.touch()
-                else:
-                    return Result.ok()
-            else:
-                self.updater_path.touch()
+    if not (result := Utils.kill_process(['Cursor', 'cursor'])):
+        return result
 
-            FileManager.set_read_only(self.updater_path)
-            return Result.ok()
-        except Exception as e:
-            return Result.fail(f"禁用自动更新失败: {e}")
+    cursor_path = Utils.get_path('cursor')
+    storage_file = cursor_path / 'storage.json'
+    backup_dir = cursor_path / 'backups'
 
-    @error_handler
-    def reset(self) -> Result:
-        if not ProcessManager.run_as_admin():
-            return Result.fail("需要管理员权限")
+    if not (result := Utils.backup_file(storage_file, backup_dir, 'storage.json.backup')):
+        return result
 
-        kill_result = ProcessManager.kill_process(['Cursor', 'cursor'])
-        if not kill_result:
-            return kill_result
+    if not (result := Utils.update_json_file(storage_file, generate_ids(), make_read_only=True)):
+        return Result.fail("更新配置文件失败")
 
-        backup_result = FileManager.backup_file(
-            self.storage_file, self.backup_dir, 'storage.json.backup'
-        )
-        if not backup_result:
-            return backup_result
+    try:
+        updater_path = Path(os.getenv('LOCALAPPDATA')) / 'cursor-updater'
         
-        update_result = FileManager.update_json_file(
-            self.storage_file, self.generate_ids(), make_read_only=True
-        )
-        if not update_result:
-            return Result.fail("更新配置文件失败")
-            
-        disable_result = self.disable_auto_update()
-        if not disable_result:
-            return Result.fail("禁用自动更新失败")
+  
+        if updater_path.is_dir():
+            try:
+                import shutil
+                shutil.rmtree(updater_path)
+            except Exception as e:
+                logger.warning(f"删除cursor-updater文件夹失败: {e}")
+        
+        if not updater_path.exists():
+            updater_path.touch(exist_ok=True)
+            Utils.manage_file_permissions(updater_path)
+        else:
+            try:
+                Utils.manage_file_permissions(updater_path)
+            except PermissionError:
+               
+                pass
             
         return Result.ok(message="重置机器码成功，已禁用自动更新")
-
-def main():
-    resetter = CursorResetter()
-    result = resetter.reset()
-    if result:
-        logger.success(result.message)
-    else:
-        logger.error(result.message)
+    except Exception as e:
+        return Result.fail(f"禁用自动更新失败: {e}")
 
 if __name__ == "__main__":
-    main() 
+    if result := reset():
+        logger.success(result.message)
+    else:
+        logger.error(result.message) 
