@@ -2,10 +2,12 @@ from typing import Tuple
 from dotenv import load_dotenv
 from loguru import logger
 from cursor_utils import error_handler, Utils
+import random
 
 @error_handler
 def generate_cursor_account() -> Tuple[str, str]:
-    email = f"{Utils.generate_random_string(5)}@{Utils.get_env_var('DOMAIN')}"
+    random_length = random.randint(5, 20)
+    email = f"{Utils.generate_random_string(random_length)}@{Utils.get_env_var('DOMAIN')}"
     password = Utils.generate_secure_password()
     
     logger.info(f"生成的Cursor账号信息：邮箱: {email} 密码: {password}")
