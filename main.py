@@ -1,19 +1,18 @@
 import tkinter as tk
-from tkinter import messagebox, ttk
-from typing import Dict, Optional, Tuple, Callable
+from tkinter import ttk
+from typing import Dict, Optional, Callable, List, Tuple
 from dataclasses import dataclass
-from generate_cursor_account import generate_cursor_account
-from reset_ID import CursorResetter
-from update_auth import CursorAuthUpdater
+from cursor_account_generator import generate_cursor_account
+from cursor_id_resetter import CursorResetter
+from cursor_auth_updater import CursorAuthUpdater
 from loguru import logger
 from dotenv import load_dotenv
 from configlog import LogSetup
 import os
-import sys
-from functools import wraps
-import shutil
-from datetime import datetime
-import glob
+from cursor_utils import (
+    PathManager, FileManager, Result, UIManager, 
+    StyleManager, MessageManager, error_handler
+)
 
 @dataclass
 class WindowConfig:
@@ -22,15 +21,20 @@ class WindowConfig:
     title: str = "Cursor账号管理工具"
     backup_dir: str = "env_backups"
     max_backups: int = 10
+    env_vars: List[Tuple[str, str]] = None
+    buttons: List[Tuple[str, str]] = None
 
-def error_handler(func: Callable) -> Callable:
-    @wraps(func)
-    def wrapper(self, *args, **kwargs):
-        try:
-            return func(self, *args, **kwargs)
-        except Exception as e:
-            self._handle_error(f"{func.__name__}执行错误", e)
-    return wrapper
+    def __post_init__(self):
+        self.env_vars = [
+            ('domain', '域名'), 
+            ('email', '邮箱'), 
+            ('password', '密码')
+        ]
+        self.buttons = [
+            ("生成账号", "generate_account"),
+            ("重置ID", "reset_ID"),
+            ("更新账号信息", "update_auth")
+        ]
 
 class CursorApp:
     def __init__(self, root: tk.Tk) -> None:
@@ -39,86 +43,20 @@ class CursorApp:
         self.root.title(self.window_config.title)
         self._configure_window()
         self._init_variables()
-        self._set_window_icon()
         self.setup_ui()
 
     def _configure_window(self) -> None:
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        x = (screen_width - self.window_config.width) // 2
-        y = (screen_height - self.window_config.height) // 2
-        self.root.geometry(
-            f"{self.window_config.width}x{self.window_config.height}+{x}+{y}"
-        )
+        UIManager.center_window(self.root, self.window_config.width, self.window_config.height)
         self.root.resizable(False, False)
         self.root.configure(bg='#FFFFFF')
         if os.name == 'nt':
             self.root.attributes('-alpha', 0.98)
-            
-    def _set_window_icon(self) -> None:
-        pass
         
     def _init_variables(self) -> None:
-        self.email_entry: Optional[ttk.Entry] = None
-        self.password_entry: Optional[ttk.Entry] = None
-        self.cookie_entry: Optional[ttk.Entry] = None
+        self.entries: Dict[str, ttk.Entry] = {}
         self.env_labels: Dict[str, ttk.Label] = {}
         self.main_frame: Optional[ttk.Frame] = None
-        self._create_styles()
-
-    def _create_styles(self) -> None:
-        style = ttk.Style()
-        style.configure('.', font=('Microsoft YaHei UI', 9))
-        style.configure('TLabelframe', 
-            padding=12,
-            background='#FFFFFF',
-            relief='groove'
-        )
-        style.configure('TLabelframe.Label', 
-            font=('Microsoft YaHei UI', 10, 'bold'),
-            foreground='#1976D2',
-            background='#FFFFFF'
-        )
-        style.configure('TFrame', background='#FFFFFF')
-        style.configure('Custom.TButton',
-            padding=(20, 8),
-            font=('Microsoft YaHei UI', 9, 'bold'),
-            background='#E3F2FD',
-            foreground='#000000',
-            relief='raised'
-        )
-        style.map('Custom.TButton',
-            background=[('pressed', '#BBDEFB'), ('active', '#E3F2FD'), ('disabled', '#F5F5F5')],
-            relief=[('pressed', 'sunken'), ('!pressed', 'raised')],
-            foreground=[('disabled', '#9E9E9E'), ('!disabled', '#000000')]
-        )
-        style.configure('Info.TLabel', 
-            font=('Microsoft YaHei UI', 9),
-            foreground='#424242',
-            background='#FFFFFF'
-        )
-        style.configure('Error.TLabel', 
-            font=('Microsoft YaHei UI', 9),
-            foreground='#D32F2F',
-            background='#FFFFFF'
-        )
-        style.configure('Success.TLabel', 
-            font=('Microsoft YaHei UI', 9),
-            foreground='#388E3C',
-            background='#FFFFFF'
-        )
-        style.configure('Footer.TLabel',
-            font=('Microsoft YaHei UI', 8),
-            foreground='#757575',
-            background='#FFFFFF'
-        )
-        style.configure('TEntry', 
-            padding=6,
-            relief='solid',
-            selectbackground='#2196F3',
-            selectforeground='white',
-            fieldbackground='#F5F5F5'
-        )
+        StyleManager.setup_styles()
 
     def setup_ui(self) -> None:
         self.main_frame = ttk.Frame(self.root, padding="10")
@@ -126,29 +64,22 @@ class CursorApp:
         self._create_frames()
 
     def _create_frames(self) -> None:
-        frames = [
-            self.create_env_info_frame,
-            self.create_account_info_frame,
-            self.create_cookie_frame,
-            self.create_button_frame
-        ]
-        for create_frame in frames:
-            create_frame()
-
-    def create_env_info_frame(self) -> None:
-        env_frame = ttk.LabelFrame(self.main_frame, text="环境变量信息", padding="12")
-        env_frame.pack(fill=tk.X, padx=12, pady=(8,6))
-
-        env_vars: list[tuple[str, str]] = [
-            ('domain', '域名'),
-            ('email', '邮箱'),
-            ('password', '密码')
-        ]
-
-        for row, (var_name, label_text) in enumerate(env_vars):
+        env_frame = UIManager.create_labeled_frame(self.main_frame, "环境变量信息")
+        for row, (var_name, label_text) in enumerate(self.window_config.env_vars):
             self._create_env_label(env_frame, row, var_name, label_text)
 
-        env_frame.columnconfigure(1, weight=1)
+        info_frame = UIManager.create_labeled_frame(self.main_frame, "账号信息")
+        for row, (var_name, label_text) in enumerate(self.window_config.env_vars[1:]):
+            entry = UIManager.create_labeled_entry(info_frame, label_text, row)
+            entry.bind('<FocusIn>', lambda e, entry=entry: entry.configure(style='TEntry'))
+            entry.bind('<FocusOut>', lambda e, entry=entry: entry.configure(style='TEntry') if not entry.get().strip() else None)
+            self.entries[var_name] = entry
+
+        cookie_frame = UIManager.create_labeled_frame(self.main_frame, "Cookie设置")
+        self.entries['cookie'] = UIManager.create_labeled_entry(cookie_frame, "Cookie", 0)
+        self.entries['cookie'].insert(0, "WorkosCursorSessionToken")
+
+        self._create_button_frame()
 
     def _create_env_label(self, frame: ttk.Frame, row: int, var_name: str, label_text: str) -> None:
         ttk.Label(frame, text=f"{label_text}:", style='Info.TLabel').grid(
@@ -163,36 +94,46 @@ class CursorApp:
             row=row, column=1, sticky=tk.W, padx=8, pady=4
         )
 
-    def create_account_info_frame(self) -> None:
-        info_frame = ttk.LabelFrame(self.main_frame, text="账号信息", padding="12")
-        info_frame.pack(fill=tk.X, padx=12, pady=6)
+    def _create_button_frame(self) -> None:
+        button_frame = ttk.Frame(self.main_frame, style='TFrame')
+        button_frame.pack(fill=tk.X, pady=(15,0))
 
-        fields: list[tuple[str, str]] = [
-            ('email_entry', '邮箱'),
-            ('password_entry', '密码')
-        ]
+        container = ttk.Frame(button_frame, style='TFrame')
+        container.pack()
 
-        for row, (field_name, label_text) in enumerate(fields):
-            self._create_input_field(info_frame, row, field_name, label_text)
+        for col, (text, command) in enumerate(self.window_config.buttons):
+            btn = ttk.Button(
+                container,
+                text=text,
+                command=getattr(self, command),
+                style='Custom.TButton'
+            )
+            btn.grid(row=0, column=col, padx=10)
 
-        info_frame.columnconfigure(1, weight=1)
-
-    def _create_input_field(self, frame: ttk.Frame, row: int, field_name: str, label_text: str) -> None:
-        ttk.Label(frame, text=f"{label_text}:", style='Info.TLabel').grid(
-            row=row, column=0, sticky=tk.W, padx=8, pady=4
-        )
-        entry = ttk.Entry(frame, width=40, style='TEntry')
-        entry.grid(row=row, column=1, sticky=tk.EW, padx=8, pady=4)
-        entry.bind('<FocusIn>', lambda e: self._on_entry_focus_in(entry))
-        entry.bind('<FocusOut>', lambda e: self._on_entry_focus_out(entry))
-        setattr(self, field_name, entry)
+        footer_frame = ttk.Frame(button_frame, style='TFrame')
+        footer_frame.pack(fill=tk.X, pady=(10,5))
+        ttk.Label(
+            footer_frame,
+            text="powered by kto 仅供学习使用",
+            style='Footer.TLabel'
+        ).pack()
 
     @error_handler
     def generate_account(self) -> None:
-        email, password = generate_cursor_account()
-        self._update_entry_values(email, password)
-        logger.success("账号生成成功")
-        self.refresh_env_vars()
+        result = generate_cursor_account()
+        if isinstance(result, Result):
+            if result:
+                email, password = result.data
+                self._update_entry_values(email, password)
+                MessageManager.show_success(self.root, "账号生成成功")
+                self.refresh_env_vars()
+            else:
+                raise RuntimeError(result.message)
+        else:
+            email, password = result
+            self._update_entry_values(email, password)
+            MessageManager.show_success(self.root, "账号生成成功")
+            self.refresh_env_vars()
 
     def refresh_env_vars(self) -> None:
         load_dotenv(override=True)
@@ -202,159 +143,55 @@ class CursorApp:
     @error_handler
     def reset_ID(self) -> None:
         resetter = CursorResetter()
-        success, message = resetter.reset()
-        if success:
-            self._show_success(message)
+        result = resetter.reset()
+        if result:
+            MessageManager.show_success(self.root, result.message)
             self.refresh_env_vars()
         else:
-            raise Exception(message)
+            raise Exception(result.message)
 
-    def get_env_file_path(self) -> str:
-        if getattr(sys, 'frozen', False):
-            base_path = os.path.dirname(sys.executable)
-        else:
-            base_path = os.path.dirname(os.path.abspath(__file__))
-        
-        env_path = os.path.join(base_path, '.env')
-        return env_path
-
-    def get_backup_dir_path(self) -> str:
-        if getattr(sys, 'frozen', False):
-            base_path = os.path.dirname(sys.executable)
-        else:
-            base_path = os.path.dirname(os.path.abspath(__file__))
-        
-        return os.path.join(base_path, self.window_config.backup_dir)
-
-    @error_handler
     def backup_env_file(self) -> None:
-        env_path = self.get_env_file_path()
-        if not os.path.exists(env_path):
+        env_path = PathManager.get_env_path()
+        if not env_path.exists():
             raise Exception(f"未找到.env文件: {env_path}")
 
-        backup_dir = self.get_backup_dir_path()
-        if not os.path.exists(backup_dir):
-            os.makedirs(backup_dir)
-
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_file = os.path.join(backup_dir, f'.env.{timestamp}')
-
-        shutil.copy2(env_path, backup_file)
-        logger.info(f"已创建.env备份: {backup_file}")
-
-        self._cleanup_old_backups()
-
-    def _cleanup_old_backups(self) -> None:
-        backup_dir = self.get_backup_dir_path()
-        backup_files = glob.glob(os.path.join(backup_dir, '.env.*'))
-        backup_files.sort(key=os.path.getctime, reverse=True)
-
-        while len(backup_files) > self.window_config.max_backups:
-            oldest_file = backup_files.pop()
-            try:
-                os.remove(oldest_file)
-                logger.info(f"已删除旧备份文件: {oldest_file}")
-            except Exception as e:
-                logger.error(f"删除旧备份文件失败: {e}")
+        backup_dir = Path(self.window_config.backup_dir)
+        result = FileManager.backup_file(env_path, backup_dir, '.env', self.window_config.max_backups)
+        if not result:
+            raise Exception(result.message)
 
     @error_handler
     def update_auth(self) -> None:
-        cookie_str = self.cookie_entry.get().strip()
+        cookie_str = self.entries['cookie'].get().strip()
         if not self._validate_cookie(cookie_str):
             return
 
         self.backup_env_file()
-
         updater = CursorAuthUpdater()
-        success, message = updater.process_cookies(cookie_str)
-        if success:
-            self._show_success(message)
-            self.cookie_entry.delete(0, tk.END)
+        result = updater.process_cookies(cookie_str)
+        if result:
+            MessageManager.show_success(self.root, result.message)
+            self.entries['cookie'].delete(0, tk.END)
             self.refresh_env_vars()
         else:
-            raise Exception(message)
+            raise Exception(result.message)
 
     def _validate_cookie(self, cookie_str: str) -> bool:
         if not cookie_str:
-            self._show_error("请输入Cookie字符串")
+            MessageManager.show_warning(self.root, "请输入Cookie字符串")
             return False
 
         if "WorkosCursorSessionToken=" not in cookie_str:
-            self._show_error("Cookie字符串格式不正确，必须包含 WorkosCursorSessionToken")
+            MessageManager.show_warning(self.root, "Cookie字符串格式不正确，必须包含 WorkosCursorSessionToken")
             return False
 
         return True
 
-    def _handle_error(self, title: str, error: Exception) -> None:
-        error_msg = f"{title}: {str(error)}"
-        logger.error(error_msg)
-        self._show_error(error_msg)
-
-    def _show_error(self, message: str) -> None:
-        self.root.bell()
-        messagebox.showerror("错误", message)
-
-    def _show_success(self, message: str) -> None:
-        logger.info(message)
-        self.root.bell()
-        messagebox.showinfo("成功", message)
-
-    def create_cookie_frame(self) -> None:
-        cookie_frame = ttk.LabelFrame(self.main_frame, text="Cookie设置", padding="12")
-        cookie_frame.pack(fill=tk.X, padx=12, pady=6)
-
-        ttk.Label(cookie_frame, text="Cookie:", style='Info.TLabel').grid(
-            row=0, column=0, sticky=tk.W, padx=6, pady=4
-        )
-        self.cookie_entry = ttk.Entry(cookie_frame, width=40, style='TEntry')
-        self.cookie_entry.grid(row=0, column=1, sticky=tk.EW, padx=6, pady=4)
-        self.cookie_entry.insert(0, "WorkosCursorSessionToken")
-
-        cookie_frame.columnconfigure(1, weight=1)
-
-    def create_button_frame(self) -> None:
-        button_frame = ttk.Frame(self.main_frame, style='TFrame')
-        button_frame.pack(fill=tk.X, pady=(15,0))
-
-        buttons = [
-            ("生成账号", self.generate_account),
-            ("重置ID", self.reset_ID),
-            ("更新账号信息", self.update_auth)
-        ]
-
-        container = ttk.Frame(button_frame, style='TFrame')
-        container.pack()
-
-        for col, (text, command) in enumerate(buttons):
-            btn = ttk.Button(
-                container,
-                text=text,
-                command=command,
-                style='Custom.TButton'
-            )
-            btn.grid(row=0, column=col, padx=10)
-
-        footer_frame = ttk.Frame(button_frame, style='TFrame')
-        footer_frame.pack(fill=tk.X, pady=(10,5))
-        
-        ttk.Label(
-            footer_frame,
-            text="powered by kto 仅供学习使用",
-            style='Footer.TLabel'
-        ).pack()
-
     def _update_entry_values(self, email: str, password: str) -> None:
-        self.email_entry.delete(0, tk.END)
-        self.email_entry.insert(0, email)
-        self.password_entry.delete(0, tk.END)
-        self.password_entry.insert(0, password)
-
-    def _on_entry_focus_in(self, entry: ttk.Entry) -> None:
-        entry.configure(style='TEntry')
-        
-    def _on_entry_focus_out(self, entry: ttk.Entry) -> None:
-        if not entry.get().strip():
-            entry.configure(style='TEntry')
+        self.entries['email'].delete(0, tk.END)
+        self.entries['email'].insert(0, email)
+        self.entries['password'].delete(0, tk.END)
+        self.entries['password'].insert(0, password)
 
 def setup_logging() -> None:
     config_dict = {
@@ -371,11 +208,7 @@ def setup_logging() -> None:
 
 def main() -> None:
     try:
-        if getattr(sys, 'frozen', False):
-            env_path = os.path.join(os.path.dirname(sys.executable), '.env')
-        else:
-            env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
-        
+        env_path = PathManager.get_env_path()
         load_dotenv(dotenv_path=env_path)
         setup_logging()
         root = tk.Tk()
@@ -383,7 +216,7 @@ def main() -> None:
         root.mainloop()
     except Exception as e:
         logger.error(f"程序启动失败: {e}")
-        messagebox.showerror("错误", f"程序启动失败: {e}")
+        MessageManager.show_error(root, "程序启动失败", e)
 
 if __name__ == "__main__":
     main()
