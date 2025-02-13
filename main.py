@@ -2,9 +2,9 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 from typing import Dict, Optional, Tuple, Callable
 from dataclasses import dataclass
-from generate_cursor_account import generate_cursor_account
-from reset_ID import CursorResetter
-from update_auth import CursorAuthUpdater
+from cursor_account_generator import generate_cursor_account
+from cursor_id_resetter import CursorResetter
+from cursor_auth_updater import CursorAuthUpdater
 from loguru import logger
 from dotenv import load_dotenv
 from configlog import LogSetup
@@ -14,6 +14,7 @@ from functools import wraps
 import shutil
 from datetime import datetime
 import glob
+from cursor_utils import PathManager, FileManager, Result
 
 @dataclass
 class WindowConfig:
@@ -189,10 +190,20 @@ class CursorApp:
 
     @error_handler
     def generate_account(self) -> None:
-        email, password = generate_cursor_account()
-        self._update_entry_values(email, password)
-        logger.success("账号生成成功")
-        self.refresh_env_vars()
+        result = generate_cursor_account()
+        if isinstance(result, Result):
+            if result:
+                email, password = result.data
+                self._update_entry_values(email, password)
+                logger.success("账号生成成功")
+                self.refresh_env_vars()
+            else:
+                raise RuntimeError(result.message)
+        else:
+            email, password = result
+            self._update_entry_values(email, password)
+            logger.success("账号生成成功")
+            self.refresh_env_vars()
 
     def refresh_env_vars(self) -> None:
         load_dotenv(override=True)
@@ -202,60 +213,22 @@ class CursorApp:
     @error_handler
     def reset_ID(self) -> None:
         resetter = CursorResetter()
-        success, message = resetter.reset()
-        if success:
-            self._show_success(message)
+        result = resetter.reset()
+        if result:
+            self._show_success(result.message)
             self.refresh_env_vars()
         else:
-            raise Exception(message)
+            raise Exception(result.message)
 
-    def get_env_file_path(self) -> str:
-        if getattr(sys, 'frozen', False):
-            base_path = os.path.dirname(sys.executable)
-        else:
-            base_path = os.path.dirname(os.path.abspath(__file__))
-        
-        env_path = os.path.join(base_path, '.env')
-        return env_path
-
-    def get_backup_dir_path(self) -> str:
-        if getattr(sys, 'frozen', False):
-            base_path = os.path.dirname(sys.executable)
-        else:
-            base_path = os.path.dirname(os.path.abspath(__file__))
-        
-        return os.path.join(base_path, self.window_config.backup_dir)
-
-    @error_handler
     def backup_env_file(self) -> None:
-        env_path = self.get_env_file_path()
-        if not os.path.exists(env_path):
+        env_path = PathManager.get_env_path()
+        if not env_path.exists():
             raise Exception(f"未找到.env文件: {env_path}")
 
-        backup_dir = self.get_backup_dir_path()
-        if not os.path.exists(backup_dir):
-            os.makedirs(backup_dir)
-
-        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-        backup_file = os.path.join(backup_dir, f'.env.{timestamp}')
-
-        shutil.copy2(env_path, backup_file)
-        logger.info(f"已创建.env备份: {backup_file}")
-
-        self._cleanup_old_backups()
-
-    def _cleanup_old_backups(self) -> None:
-        backup_dir = self.get_backup_dir_path()
-        backup_files = glob.glob(os.path.join(backup_dir, '.env.*'))
-        backup_files.sort(key=os.path.getctime, reverse=True)
-
-        while len(backup_files) > self.window_config.max_backups:
-            oldest_file = backup_files.pop()
-            try:
-                os.remove(oldest_file)
-                logger.info(f"已删除旧备份文件: {oldest_file}")
-            except Exception as e:
-                logger.error(f"删除旧备份文件失败: {e}")
+        backup_dir = Path(self.window_config.backup_dir)
+        result = FileManager.backup_file(env_path, backup_dir, '.env', self.window_config.max_backups)
+        if not result:
+            raise Exception(result.message)
 
     @error_handler
     def update_auth(self) -> None:
@@ -266,13 +239,13 @@ class CursorApp:
         self.backup_env_file()
 
         updater = CursorAuthUpdater()
-        success, message = updater.process_cookies(cookie_str)
-        if success:
-            self._show_success(message)
+        result = updater.process_cookies(cookie_str)
+        if result:
+            self._show_success(result.message)
             self.cookie_entry.delete(0, tk.END)
             self.refresh_env_vars()
         else:
-            raise Exception(message)
+            raise Exception(result.message)
 
     def _validate_cookie(self, cookie_str: str) -> bool:
         if not cookie_str:
@@ -371,11 +344,7 @@ def setup_logging() -> None:
 
 def main() -> None:
     try:
-        if getattr(sys, 'frozen', False):
-            env_path = os.path.join(os.path.dirname(sys.executable), '.env')
-        else:
-            env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
-        
+        env_path = PathManager.get_env_path()
         load_dotenv(dotenv_path=env_path)
         setup_logging()
         root = tk.Tk()
