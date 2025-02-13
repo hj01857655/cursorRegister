@@ -195,9 +195,8 @@ class CursorApp:
         main_frame.pack(fill=tk.BOTH, expand=True)
         
         content_frame = ttk.Frame(main_frame, style='TFrame')
-        content_frame.pack(fill=tk.BOTH, expand=False)  # 改为False，不再扩展
+        content_frame.pack(fill=tk.BOTH, expand=False)
         
-        # 标题
         title_label = ttk.Label(
             content_frame,
             text=self.config.title,
@@ -205,7 +204,6 @@ class CursorApp:
         )
         title_label.pack(pady=(0, 6))
         
-        # 账号信息框
         account_frame = UI.create_labeled_frame(content_frame, "账号信息")
         for row, (var_name, label_text) in enumerate(self.config.env_vars):
             entry = UI.create_labeled_entry(account_frame, label_text, row)
@@ -213,16 +211,13 @@ class CursorApp:
                 entry.insert(0, os.getenv(var_name))
             self.entries[var_name] = entry
 
-        # Cookie设置框
         cookie_frame = UI.create_labeled_frame(content_frame, "Cookie设置")
         self.entries['cookie'] = UI.create_labeled_entry(cookie_frame, "Cookie", 0)
         self.entries['cookie'].insert(0, "WorkosCursorSessionToken")
 
-        # 按钮区域
         button_frame = ttk.Frame(content_frame, style='TFrame')
-        button_frame.pack(fill=tk.X, pady=(8, 0))  # 移除底部边距
+        button_frame.pack(fill=tk.X, pady=(8, 0))
         
-        # 创建两行按钮
         for i, (text, command) in enumerate(self.config.buttons):
             row = i // 2
             col = i % 2
@@ -237,13 +232,12 @@ class CursorApp:
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
 
-        # 页脚
         footer = ttk.Label(
             main_frame,
             text="powered by kto 仅供学习使用",
             style='Footer.TLabel'
         )
-        footer.pack(side=tk.BOTTOM, pady=2)  # 进一步减小页脚边距
+        footer.pack(side=tk.BOTTOM, pady=2)
 
     def _save_env_vars(self, updates: Dict[str, str] = None) -> None:
         if not updates:
