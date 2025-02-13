@@ -96,7 +96,7 @@ class Utils:
 
                 for f in backup_files:
                     try:
-                        # 首先尝试直接删除
+                
                         try:
                             f.unlink()
                             logger.info(f"成功删除旧备份文件: {f}")
@@ -105,7 +105,7 @@ class Utils:
                             logger.debug(f"尝试直接删除文件失败，准备修改权限: {f}")
                             pass
 
-                        # 如果直接删除失败，尝试获取文件所有权并修改权限
+                 
                         if Utils.manage_file_permissions(f, False):
                             try:
                                 f.unlink()

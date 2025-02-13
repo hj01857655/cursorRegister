@@ -48,7 +48,6 @@ class CursorApp:
         main_frame = ttk.Frame(self.root, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
         
-        # 账号信息框
         account_frame = UI.create_labeled_frame(main_frame, "账号信息")
         for row, (var_name, label_text) in enumerate(self.config.env_vars):
             entry = UI.create_labeled_entry(account_frame, label_text, row)
@@ -58,16 +57,13 @@ class CursorApp:
                 entry.insert(0, os.getenv(var_name))
             self.entries[var_name] = entry
 
-        # Cookie设置框
         cookie_frame = UI.create_labeled_frame(main_frame, "Cookie设置")
         self.entries['cookie'] = UI.create_labeled_entry(cookie_frame, "Cookie", 0)
         self.entries['cookie'].insert(0, "WorkosCursorSessionToken")
 
-        # 按钮框
         button_frame = ttk.Frame(main_frame, style='TFrame')
         button_frame.pack(fill=tk.X, pady=(15,0))
         
-        # 按钮容器
         container = ttk.Frame(button_frame, style='TFrame')
         container.pack(pady=(0,5))
         
@@ -79,7 +75,6 @@ class CursorApp:
                 style='Custom.TButton'
             ).grid(row=0, column=col, padx=10)
 
-        # 版权信息
         ttk.Label(
             button_frame,
             text="powered by kto 仅供学习使用",
