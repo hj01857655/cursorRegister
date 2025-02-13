@@ -44,7 +44,8 @@
 为确保 Cursor 不会自动更新到不支持的新版本，程序会自动禁用自动更新功能。
 
 ## 📖 详细教程
-完整的使用教程将发布在 [ktovoz.com](https://ktovoz.com)
+完整的使用教程已发布在[Cursor 注册助手食用指南](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97)
+
 
 ## 🙏 致谢
 特别感谢以下开源项目的贡献：
