@@ -195,17 +195,7 @@ class CursorApp:
         self.entries['PASSWORD'].insert(0, password)
 
 def setup_logging() -> None:
-    config_dict = {
-        '日志路径': './cursorRegister_log',
-        '日志级别': 'DEBUG',
-        '颜色化': '开启',
-        '日志轮转': '10 MB',
-        '日志保留时间': '14 days',
-        '压缩方式': 'gz',
-        '控制台模式': '关闭',
-        '记录日志': '开启'
-    }
-    LogSetup(config=config_dict)
+    LogSetup()
 
 def main() -> None:
     try:
