@@ -1,4 +1,3 @@
-# -*- mode: python ; coding: utf-8 -*-
 import sys
 from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 
@@ -20,10 +19,9 @@ a = Analysis(
         '_pytest', 'pytest', 'doctest', 'pycparser', 'pdb'
     ],
     noarchive=False,
-    optimize=2,  # 优化级别设为2
+    optimize=2,
 )
 
-# 删除一些不必要的模块以减小文件大小
 excluded_binaries = [
     'VCRUNTIME140.dll',
     'MSVCP140.dll',
@@ -39,7 +37,6 @@ excluded_binaries = [
 
 a.binaries = TOC([x for x in a.binaries if not any(pattern.lower() in x[0].lower() for pattern in excluded_binaries)])
 
-# 移除不需要的数据文件，保留tk相关文件，并排除 .env 和 README.md 文件
 a.datas = TOC([x for x in a.datas if not x[0].startswith(('numpy', 'matplotlib')) and x[0] not in ['.env', 'README.md']])
 
 pyz = PYZ(a.pure, cipher=block_cipher)
@@ -53,14 +50,14 @@ exe = EXE(
     name='cursorRegister',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,  # 保持启用以减小体积
+    strip=True,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
-    console=False, 
-    disable_windowed_traceback=False,  # 启用 traceback 以便于调试
-    argv_emulation=True,  # 采用参考设置
-    target_arch=None,  # 保持默认值，需要时可通过环境变量指定
+    console=False,
+    disable_windowed_traceback=False,
+    argv_emulation=True,
+    target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
     icon=None,
