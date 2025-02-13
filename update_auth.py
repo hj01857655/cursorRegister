@@ -58,28 +58,34 @@ class CursorAuthUpdater:
             logger.error(f"数据库更新失败: {e}")
             return False
 
-    def process_cookies(self, cookies: str) -> bool:
-        self._update_env_file(cookies)
-        
-        if not (token := self._extract_token(cookies)):
-            return False
+    def process_cookies(self, cookies: str) -> tuple[bool, str]:
+        try:
+            self._update_env_file(cookies)
             
-        updates = {
-            self.AUTH_KEYS["sign_up"]: "Auth_0",
-            self.AUTH_KEYS["email"]: os.getenv("EMAIL", ""),
-            self.AUTH_KEYS["access"]: token,
-            self.AUTH_KEYS["refresh"]: token
-        }
-        
-        logger.info("正在更新认证信息...")
-        return self.update_db(updates)
+            if not (token := self._extract_token(cookies)):
+                return False, "无效的 WorkosCursorSessionToken"
+                
+            updates = {
+                self.AUTH_KEYS["sign_up"]: "Auth_0",
+                self.AUTH_KEYS["email"]: os.getenv("EMAIL", ""),
+                self.AUTH_KEYS["access"]: token,
+                self.AUTH_KEYS["refresh"]: token
+            }
+            
+            logger.info("正在更新认证信息...")
+            if not self.update_db(updates):
+                return False, "数据库更新失败"
+            return True, "认证信息更新成功"
+        except Exception as e:
+            return False, f"更新认证信息失败: {str(e)}"
 
     def run(self) -> None:
         cookies = input("请输入Cookie字符串: ").strip()
-        if self.process_cookies(cookies):
-            logger.info("认证信息更新完成")
+        success, message = self.process_cookies(cookies)
+        if success:
+            logger.success(message)
         else:
-            logger.error("认证信息更新失败")
+            logger.error(message)
 
 def main():
     try:

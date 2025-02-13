@@ -196,11 +196,12 @@ class CursorApp:
     @error_handler
     def reset_ID(self) -> None:
         resetter = CursorResetter()
-        if resetter.reset():
-            self._show_success("重置机器码完成")
+        success, message = resetter.reset()
+        if success:
+            self._show_success(message)
             self.refresh_env_vars()
         else:
-            raise Exception("重置失败")
+            raise Exception(message)
 
     @error_handler
     def update_auth(self) -> None:
@@ -209,10 +210,13 @@ class CursorApp:
             return
 
         updater = CursorAuthUpdater()
-        updater.update_with_cookie(cookie_str)
-        self._show_success("更新登录信息完成")
-        self.cookie_entry.delete(0, tk.END)
-        self.refresh_env_vars()
+        success, message = updater.process_cookies(cookie_str)
+        if success:
+            self._show_success(message)
+            self.cookie_entry.delete(0, tk.END)
+            self.refresh_env_vars()
+        else:
+            raise Exception(message)
 
     def _validate_cookie(self, cookie_str: str) -> bool:
         if not cookie_str:

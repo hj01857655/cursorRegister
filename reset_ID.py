@@ -8,6 +8,7 @@ import subprocess
 import hashlib
 from datetime import datetime
 from loguru import logger
+import time
 
 class CursorResetter:
     def __init__(self):
@@ -101,12 +102,19 @@ class CursorResetter:
 
     def disable_auto_update(self):
         try:
-            if not os.path.exists(self.updater_path):
-                with open(self.updater_path, 'w') as f:
-                    pass
-            
-            if os.path.isdir(self.updater_path):
-                shutil.rmtree(self.updater_path)
+            # 如果路径存在，先检查是否为目录
+            if os.path.exists(self.updater_path):
+                if os.path.isdir(self.updater_path):
+                    shutil.rmtree(self.updater_path)
+                    with open(self.updater_path, 'w') as f:
+                        pass
+                else:
+                    # 获取文件权限
+                    mode = os.stat(self.updater_path).st_mode
+                    # 检查是否为只读权限 (对所有用户)
+                    if not (mode & 0o222):  # 检查是否没有写权限
+                        return True  # 已经是只读状态，说明之前已禁用过
+            else:
                 with open(self.updater_path, 'w') as f:
                     pass
 
@@ -120,23 +128,26 @@ class CursorResetter:
 
     def reset(self):
         try:
-            if sys.platform.startswith('win'):
-                os.system('chcp 65001 && cls')
             if not self.run_as_admin():
-                return False
+                return False, "需要管理员权限"
 
             self.kill_cursor()
             self.backup_config()
             if not self.update_config(self.generate_ids()):
-                return False
-            self.disable_auto_update()
-            return True
-        except:
-            return False
+                return False, "更新配置文件失败"
+            if not self.disable_auto_update():
+                return False, "禁用自动更新失败"
+            return True, "重置机器码成功，已禁用自动更新"
+        except Exception as e:
+            return False, f"重置失败: {str(e)}"
 
 def main():
     resetter = CursorResetter()
-    resetter.reset()
+    success, message = resetter.reset()
+    if success:
+        logger.success(message)
+    else:
+        logger.error(message)
 
 if __name__ == "__main__":
     main()
