@@ -267,7 +267,6 @@ class CursorApp:
 
     @error_handler
     def generate_account(self) -> None:
-        self.backup_env_file()
         
         if domain := self.entries['DOMAIN'].get().strip():
             if not Utils.update_env_vars({'DOMAIN': domain}):
@@ -281,8 +280,7 @@ class CursorApp:
         for key, value in {'EMAIL': email, 'PASSWORD': password}.items():
             self.entries[key].delete(0, tk.END)
             self.entries[key].insert(0, value)
-            
-        UI.show_success(self.root, "账号生成成功")
+
         self._save_env_vars()
 
     @error_handler
@@ -315,7 +313,6 @@ class CursorApp:
     def auto_register(self) -> None:
         self._save_env_vars()
         load_dotenv(override=True)
-        
         from cursor_registerAc import CursorRegistration
         registrar = CursorRegistration()
         
@@ -361,6 +358,7 @@ class CursorApp:
                 self.entries['cookie'].delete(0, tk.END)
                 self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
                 UI.show_success(self.root, "自动注册成功，Token已填入")
+                self.backup_env_file()
             else:
                 UI.show_warning(self.root, "获取Token失败")
         finally:
