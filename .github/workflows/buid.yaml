@@ -1,4 +1,4 @@
-name: 构建可执行文件
+name: 构建并发布可执行文件
 
 env:
   APP_NAME: cursorRegister
