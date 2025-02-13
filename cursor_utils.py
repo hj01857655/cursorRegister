@@ -221,9 +221,15 @@ class Utils:
             token_start = cookies.index(token_key) + len(token_key)
             token_end = cookies.find(';', token_start)
             token = cookies[token_start:] if token_end == -1 else cookies[token_start:token_end]
-            return token.split("::")[1]
-        except (ValueError, IndexError):
-            logger.error(f"无效的 {token_key}")
+            if '::' in token:
+                return token.split('::')[1]
+            elif '%3A%3A' in token:
+                return token.split('%3A%3A')[1]
+            
+            logger.error(f"在token中未找到有效的分隔符: {token}")
+            return None
+        except (ValueError, IndexError) as e:
+            logger.error(f"无效的 {token_key}: {str(e)}")
             return None
 
 def error_handler(func: Callable) -> Callable:

@@ -14,7 +14,7 @@ from cursor_utils import Utils, UI, Result, error_handler
 
 @dataclass
 class WindowConfig:
-    width: int = 480
+    width: int = 600
     height: int = 385
     title: str = "Cursor账号管理工具"
     backup_dir: str = "env_backups"
@@ -24,6 +24,7 @@ class WindowConfig:
     ])
     buttons: List[Tuple[str, str]] = field(default_factory=lambda: [
         ("生成账号", "generate_account"),
+        ("自动注册", "auto_register"),
         ("重置ID", "reset_ID"),
         ("更新账号信息", "update_auth")
     ])
@@ -146,6 +147,62 @@ class CursorApp:
         UI.show_success(self.root, result.message)
         self.entries['cookie'].delete(0, tk.END)
         self._save_env_vars()
+
+    @error_handler
+    def auto_register(self) -> None:
+        self._save_env_vars()
+        load_dotenv(override=True)
+        
+        from cursor_registerAc import CursorRegistration
+        registrar = CursorRegistration()
+        
+        def wait_for_user(message: str):
+            dialog = tk.Toplevel(self.root)
+            dialog.title("等待确认")
+            dialog.geometry("300x150")
+            UI.center_window(dialog, 300, 150)
+            dialog.transient(self.root)
+            dialog.grab_set()
+            
+            ttk.Label(
+                dialog,
+                text=message,
+                wraplength=250,
+                justify="center",
+                style="TLabel"
+            ).pack(pady=20)
+            
+            def on_continue():
+                dialog.grab_release()
+                dialog.destroy()
+                
+            ttk.Button(
+                dialog,
+                text="继续",
+                command=on_continue,
+                style="Custom.TButton"
+            ).pack(pady=10)
+            
+            dialog.wait_window()
+        
+        try:
+            registrar.init_browser()
+            registrar.fill_registration_form()
+            wait_for_user("请在浏览器中点击按钮，完成后点击继续...")
+            registrar.fill_password()
+            wait_for_user("请在浏览器中完成注册和验证码验证，完成后点击继续...")
+            registrar.get_user_info()
+            token = registrar.get_cursor_token()
+            
+            if token:
+                self.entries['cookie'].delete(0, tk.END)
+                self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
+                UI.show_success(self.root, "自动注册成功，Token已填入")
+            else:
+                UI.show_warning(self.root, "获取Token失败")
+        finally:
+            if registrar.browser:
+                registrar.browser.quit()
 
 def setup_logging() -> None:
     logger.remove()
