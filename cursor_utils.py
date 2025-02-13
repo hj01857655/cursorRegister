@@ -12,8 +12,6 @@ from typing import Any, Dict, Union, TypeVar, Generic, Callable
 from datetime import datetime
 from loguru import logger
 from functools import wraps
-import tkinter as tk
-from tkinter import ttk, messagebox
 
 T = TypeVar('T')
 
@@ -96,7 +94,6 @@ class Utils:
 
                 for f in backup_files:
                     try:
-                
                         try:
                             f.unlink()
                             logger.info(f"成功删除旧备份文件: {f}")
@@ -105,7 +102,6 @@ class Utils:
                             logger.debug(f"尝试直接删除文件失败，准备修改权限: {f}")
                             pass
 
-                 
                         if Utils.manage_file_permissions(f, False):
                             try:
                                 f.unlink()
@@ -242,106 +238,3 @@ def error_handler(func: Callable) -> Callable:
             logger.error(f"{func.__name__} 执行失败: {e}")
             return Result.fail(str(e))
     return wrapper
-
-class UI:
-    FONT = ('Microsoft YaHei UI', 9)
-    COLORS = {
-        'primary': '#1976D2',
-        'secondary': '#424242',
-        'success': '#388E3C',
-        'error': '#D32F2F',
-        'warning': '#F57C00',
-        'bg': '#FFFFFF',
-        'disabled': '#9E9E9E'
-    }
-
-    @staticmethod
-    def setup_styles() -> None:
-        style = ttk.Style()
-        base_style = {'font': UI.FONT, 'background': UI.COLORS['bg']}
-        
-        styles = {
-            '.': base_style,
-            'TFrame': {'background': UI.COLORS['bg']},
-            'TLabelframe': {**base_style, 'padding': 12, 'relief': 'groove'},
-            'TLabelframe.Label': {
-                **base_style,
-                'font': (UI.FONT[0], 10, 'bold'),
-                'foreground': UI.COLORS['primary']
-            },
-            'Custom.TButton': {
-                **base_style,
-                'padding': (20, 8),
-                'font': (UI.FONT[0], 9, 'bold'),
-                'background': '#E3F2FD',
-                'foreground': UI.COLORS['secondary'],
-                'relief': 'raised'
-            },
-            'TEntry': {
-                'padding': 6,
-                'relief': 'solid',
-                'selectbackground': UI.COLORS['primary'],
-                'selectforeground': UI.COLORS['bg'],
-                'fieldbackground': '#F5F5F5'
-            }
-        }
-
-        label_styles = {
-            'Info.TLabel': {'foreground': UI.COLORS['secondary']},
-            'Error.TLabel': {'foreground': UI.COLORS['error']},
-            'Success.TLabel': {'foreground': UI.COLORS['success']},
-            'Footer.TLabel': {
-                'font': (UI.FONT[0], 8),
-                'foreground': UI.COLORS['disabled']
-            }
-        }
-
-        for name, config in {**styles, **{k: {**base_style, **v} for k, v in label_styles.items()}}.items():
-            style.configure(name, **config)
-            
-        style.map('Custom.TButton',
-            background=[('pressed', '#BBDEFB'), ('active', '#E3F2FD'), ('disabled', '#F5F5F5')],
-            relief=[('pressed', 'sunken'), ('!pressed', 'raised')],
-            foreground=[('disabled', UI.COLORS['disabled']), ('!disabled', UI.COLORS['secondary'])]
-        )
-
-    @staticmethod
-    def create_labeled_entry(parent, label_text: str, row: int, **kwargs) -> ttk.Entry:
-        ttk.Label(parent, text=f"{label_text}:", style='Info.TLabel').grid(
-            row=row, column=0, sticky=tk.W, padx=8, pady=4
-        )
-        entry = ttk.Entry(parent, width=40, style='TEntry', **kwargs)
-        entry.grid(row=row, column=1, sticky=tk.EW, padx=8, pady=4)
-        return entry
-
-    @staticmethod
-    def create_labeled_frame(parent, title: str, padding: str = "12", **kwargs) -> ttk.LabelFrame:
-        frame = ttk.LabelFrame(parent, text=title, padding=padding, **kwargs)
-        frame.pack(fill=tk.X, padx=12, pady=6)
-        frame.columnconfigure(1, weight=1)
-        return frame
-
-    @staticmethod
-    def center_window(window, width: int, height: int) -> None:
-        x = (window.winfo_screenwidth() - width) // 2
-        y = (window.winfo_screenheight() - height) // 2
-        window.geometry(f"{width}x{height}+{x}+{y}")
-
-    @staticmethod
-    def show_message(window: tk.Tk, title: str, message: str, msg_type: str) -> None:
-        window.bell()
-        getattr(messagebox, msg_type)(title, message)
-        log_level = 'error' if msg_type == 'showerror' else 'warning' if msg_type == 'showwarning' else 'info'
-        getattr(logger, log_level)(message)
-
-    @staticmethod
-    def show_error(window: tk.Tk, title: str, error: Exception) -> None:
-        UI.show_message(window, "错误", f"{title}: {str(error)}", 'showerror')
-
-    @staticmethod
-    def show_success(window: tk.Tk, message: str) -> None:
-        UI.show_message(window, "成功", message, 'showinfo')
-
-    @staticmethod
-    def show_warning(window: tk.Tk, message: str) -> None:
-        UI.show_message(window, "警告", message, 'showwarning')

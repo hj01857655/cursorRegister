@@ -1,6 +1,6 @@
 import sys
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass, field
 from cursor_account_generator import generate_cursor_account
@@ -10,12 +10,184 @@ from loguru import logger
 from dotenv import load_dotenv
 import os
 from pathlib import Path
-from cursor_utils import Utils, UI, Result, error_handler
+from cursor_utils import Utils, Result, error_handler
+
+class UI:
+    FONT = ('Microsoft YaHei UI', 9)
+    COLORS = {
+        'primary': '#1976D2',      # 主色调
+        'secondary': '#455A64',    # 次要色调
+        'success': '#2E7D32',      # 成功色
+        'error': '#D32F2F',        # 错误色
+        'warning': '#ED6C02',      # 警告色
+        'bg': '#F5F5F5',          # 背景色
+        'card_bg': '#FFFFFF',     # 卡片背景色
+        'disabled': '#90A4AE',     # 禁用色
+        'hover': '#1E88E5',       # 悬停色
+        'pressed': '#1565C0',     # 按下色
+        'border': '#E0E0E0',      # 边框色
+        'input_bg': '#FFFFFF',    # 输入框背景色
+        'label_fg': '#37474F',    # 标签文字颜色
+        'title_fg': '#1976D2',    # 标题文字颜色
+        'subtitle_fg': '#546E7A'   # 副标题文字颜色
+    }
+
+    @staticmethod
+    def setup_styles() -> None:
+        style = ttk.Style()
+        base_style = {
+            'font': UI.FONT,
+            'background': UI.COLORS['bg']
+        }
+        
+        # 主框架样式
+        style.configure('TFrame', background=UI.COLORS['bg'])
+        
+        # 标签框样式
+        style.configure('TLabelframe', 
+            background=UI.COLORS['card_bg'],
+            padding=20,
+            relief='flat',
+            borderwidth=0
+        )
+        
+        # 标签框标题样式
+        style.configure('TLabelframe.Label', 
+            font=(UI.FONT[0], 11, 'bold'),
+            foreground=UI.COLORS['title_fg'],
+            background=UI.COLORS['card_bg'],
+            padding=(15, 5)
+        )
+        
+        # 按钮样式
+        style.configure('Custom.TButton',
+            font=(UI.FONT[0], 9, 'bold'),
+            padding=(30, 12),
+            background=UI.COLORS['primary'],
+            foreground='white',
+            borderwidth=0,
+            relief='flat'
+        )
+        
+        # 按钮悬停和点击效果
+        style.map('Custom.TButton',
+            background=[
+                ('pressed', UI.COLORS['pressed']),
+                ('active', UI.COLORS['hover']),
+                ('disabled', UI.COLORS['disabled'])
+            ],
+            foreground=[
+                ('pressed', 'white'),
+                ('active', 'white'),
+                ('disabled', '#E0E0E0')
+            ]
+        )
+        
+        # 输入框样式
+        style.configure('TEntry',
+            padding=10,
+            relief='solid',
+            borderwidth=1,
+            selectbackground=UI.COLORS['primary'],
+            selectforeground='white',
+            fieldbackground=UI.COLORS['input_bg']
+        )
+        
+        # 标签样式
+        style.configure('TLabel',
+            font=(UI.FONT[0], 9),
+            background=UI.COLORS['card_bg'],
+            foreground=UI.COLORS['label_fg'],
+            padding=(5, 2)
+        )
+        
+        # 特殊标签样式
+        label_styles = {
+            'Info.TLabel': {
+                'foreground': UI.COLORS['subtitle_fg'],
+                'font': (UI.FONT[0], 9),
+                'background': UI.COLORS['card_bg']
+            },
+            'Error.TLabel': {
+                'foreground': UI.COLORS['error'],
+                'font': (UI.FONT[0], 9),
+                'background': UI.COLORS['card_bg']
+            },
+            'Success.TLabel': {
+                'foreground': UI.COLORS['success'],
+                'font': (UI.FONT[0], 9),
+                'background': UI.COLORS['card_bg']
+            },
+            'Footer.TLabel': {
+                'font': (UI.FONT[0], 8),
+                'foreground': UI.COLORS['subtitle_fg'],
+                'background': UI.COLORS['bg']
+            },
+            'Title.TLabel': {
+                'font': (UI.FONT[0], 12, 'bold'),
+                'foreground': UI.COLORS['title_fg'],
+                'background': UI.COLORS['bg']
+            }
+        }
+        
+        for name, config in label_styles.items():
+            style.configure(name, **{**base_style, **config})
+
+    @staticmethod
+    def create_labeled_entry(parent, label_text: str, row: int, **kwargs) -> ttk.Entry:
+        frame = ttk.Frame(parent, style='TFrame')
+        frame.grid(row=row, column=0, columnspan=2, sticky='ew', padx=15, pady=8)
+        
+        label = ttk.Label(frame, text=f"{label_text}:", style='Info.TLabel')
+        label.pack(side=tk.LEFT, padx=(5, 15))
+        
+        entry = ttk.Entry(frame, style='TEntry', **kwargs)
+        entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        
+        return entry
+
+    @staticmethod
+    def create_labeled_frame(parent, title: str, padding: str = "20", **kwargs) -> ttk.LabelFrame:
+        frame = ttk.LabelFrame(
+            parent,
+            text=title,
+            padding=padding,
+            style='TLabelframe',
+            **kwargs
+        )
+        frame.pack(fill=tk.X, padx=20, pady=10)
+        frame.columnconfigure(1, weight=1)
+        return frame
+
+    @staticmethod
+    def center_window(window, width: int, height: int) -> None:
+        x = (window.winfo_screenwidth() - width) // 2
+        y = (window.winfo_screenheight() - height) // 2
+        window.geometry(f"{width}x{height}+{x}+{y}")
+
+    @staticmethod
+    def show_message(window: tk.Tk, title: str, message: str, msg_type: str) -> None:
+        window.bell()
+        getattr(messagebox, msg_type)(title, message)
+        log_level = 'error' if msg_type == 'showerror' else 'warning' if msg_type == 'showwarning' else 'info'
+        getattr(logger, log_level)(message)
+
+    @staticmethod
+    def show_error(window: tk.Tk, title: str, error: Exception) -> None:
+        UI.show_message(window, "错误", f"{title}: {str(error)}", 'showerror')
+
+    @staticmethod
+    def show_success(window: tk.Tk, message: str) -> None:
+        UI.show_message(window, "成功", message, 'showinfo')
+
+    @staticmethod
+    def show_warning(window: tk.Tk, message: str) -> None:
+        UI.show_message(window, "警告", message, 'showwarning')
 
 @dataclass
 class WindowConfig:
     width: int = 600
-    height: int = 385
+    height: int = 680
     title: str = "Cursor账号管理工具"
     backup_dir: str = "env_backups"
     max_backups: int = 10
@@ -46,41 +218,56 @@ class CursorApp:
         self.setup_ui()
 
     def setup_ui(self) -> None:
-        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame = ttk.Frame(self.root, padding="20", style='TFrame')
         main_frame.pack(fill=tk.BOTH, expand=True)
         
+        # 标题
+        title_label = ttk.Label(
+            main_frame,
+            text=self.config.title,
+            style='Title.TLabel'
+        )
+        title_label.pack(pady=(0, 15))
+        
+        # 账号信息框
         account_frame = UI.create_labeled_frame(main_frame, "账号信息")
         for row, (var_name, label_text) in enumerate(self.config.env_vars):
             entry = UI.create_labeled_entry(account_frame, label_text, row)
-            entry.bind('<FocusIn>', lambda e, entry=entry: entry.configure(style='TEntry'))
-            entry.bind('<FocusOut>', lambda e, entry=entry: entry.configure(style='TEntry') if not entry.get().strip() else None)
             if os.getenv(var_name):
                 entry.insert(0, os.getenv(var_name))
             self.entries[var_name] = entry
 
+        # Cookie设置框
         cookie_frame = UI.create_labeled_frame(main_frame, "Cookie设置")
         self.entries['cookie'] = UI.create_labeled_entry(cookie_frame, "Cookie", 0)
         self.entries['cookie'].insert(0, "WorkosCursorSessionToken")
 
+        # 按钮区域
         button_frame = ttk.Frame(main_frame, style='TFrame')
-        button_frame.pack(fill=tk.X, pady=(15,0))
+        button_frame.pack(fill=tk.X, pady=20)
         
-        container = ttk.Frame(button_frame, style='TFrame')
-        container.pack(pady=(0,5))
-        
-        for col, (text, command) in enumerate(self.config.buttons):
-            ttk.Button(
-                container,
+        # 创建两行按钮
+        for i, (text, command) in enumerate(self.config.buttons):
+            row = i // 2
+            col = i % 2
+            btn = ttk.Button(
+                button_frame,
                 text=text,
                 command=getattr(self, command),
                 style='Custom.TButton'
-            ).grid(row=0, column=col, padx=10)
+            )
+            btn.grid(row=row, column=col, padx=8, pady=6, sticky='ew')
+        
+        button_frame.grid_columnconfigure(0, weight=1)
+        button_frame.grid_columnconfigure(1, weight=1)
 
-        ttk.Label(
-            button_frame,
+        # 页脚
+        footer = ttk.Label(
+            main_frame,
             text="powered by kto 仅供学习使用",
             style='Footer.TLabel'
-        ).pack(pady=(0,5))
+        )
+        footer.pack(side=tk.BOTTOM, pady=(20, 0))
 
     def _save_env_vars(self, updates: Dict[str, str] = None) -> None:
         if not updates:
