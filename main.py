@@ -372,25 +372,21 @@ def setup_logging() -> None:
         diagnose=True,
         level="DEBUG"
     )
-    logger.add(
-        sink=sys.stderr,
-        colorize=True,
-        enqueue=True,
-        backtrace=True,
-        diagnose=True,
-        level="DEBUG"
-    )
 
 def main() -> None:
     try:
-        load_dotenv(dotenv_path=Utils.get_path('env'))
+        base_path = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(__file__)
+        env_path = os.path.join(base_path, '.env')
+        if os.path.exists(env_path):
+            load_dotenv(dotenv_path=env_path)
         setup_logging()
         root = tk.Tk()
         app = CursorApp(root)
         root.mainloop()
     except Exception as e:
         logger.error(f"程序启动失败: {e}")
-        UI.show_error(root, "程序启动失败", e)
+        if 'root' in locals():
+            UI.show_error(root, "程序启动失败", e)
 
 if __name__ == "__main__":
     main()

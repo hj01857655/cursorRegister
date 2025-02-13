@@ -7,7 +7,18 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    hiddenimports=['tkinter', 'PIL._tkinter_finder'],
+    hiddenimports=[
+        'tkinter', 
+        'PIL._tkinter_finder',
+        'loguru',
+        'python-dotenv',
+        'drissionpage',
+        'cursor_account_generator',
+        'cursor_id_resetter',
+        'cursor_auth_updater',
+        'cursor_utils',
+        'cursor_registerAc'
+    ],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],
@@ -15,7 +26,7 @@ a = Analysis(
         'matplotlib', 'numpy', 'pandas', 'scipy', 'PyQt5', 'PyQt6', 
         'PySide2', 'PySide6', 'wx', 'notebook', 'sphinx', 'jupyter',
         'IPython', 'ipykernel', 'nbconvert', 'nbformat', 'test', 'tests',
-        'unittest', 'distutils', 'pkg_resources', 'setuptools', 'email',
+        'unittest', 'distutils', 'pkg_resources', 'email',
         '_pytest', 'pytest', 'doctest', 'pycparser', 'pdb'
     ],
     noarchive=False,
