@@ -14,7 +14,7 @@ from functools import wraps
 @dataclass
 class WindowConfig:
     width: int = 480
-    height: int = 510
+    height: int = 500
     title: str = "Cursor账号管理工具"
 
 def error_handler(func: Callable) -> Callable:
@@ -45,16 +45,11 @@ class CursorApp:
             f"{self.window_config.width}x{self.window_config.height}+{x}+{y}"
         )
         self.root.resizable(False, False)
-        
-        # 设置窗口背景色
         self.root.configure(bg='#FFFFFF')
-        
-        # 设置窗口样式
-        if os.name == 'nt':  # Windows系统
-            self.root.attributes('-alpha', 0.98)  # 轻微透明效果
+        if os.name == 'nt':
+            self.root.attributes('-alpha', 0.98)
             
     def _set_window_icon(self) -> None:
-        # 如果需要设置图标，可以在这里添加
         pass
         
     def _init_variables(self) -> None:
@@ -67,11 +62,7 @@ class CursorApp:
 
     def _create_styles(self) -> None:
         style = ttk.Style()
-        
-        # 设置全局主题颜色
         style.configure('.', font=('Microsoft YaHei UI', 9))
-        
-        # 配置标签框样式
         style.configure('TLabelframe', 
             padding=12,
             background='#FFFFFF',
@@ -82,25 +73,19 @@ class CursorApp:
             foreground='#1976D2',
             background='#FFFFFF'
         )
-        
-        # 配置Frame样式
         style.configure('TFrame', background='#FFFFFF')
-        
-        # 配置按钮样式
         style.configure('Custom.TButton',
             padding=(20, 8),
             font=('Microsoft YaHei UI', 9, 'bold'),
-            background='#E3F2FD',  # 浅蓝色背景
-            foreground='#000000',  # 黑色文字
+            background='#E3F2FD',
+            foreground='#000000',
             relief='raised'
         )
         style.map('Custom.TButton',
             background=[('pressed', '#BBDEFB'), ('active', '#E3F2FD'), ('disabled', '#F5F5F5')],
             relief=[('pressed', 'sunken'), ('!pressed', 'raised')],
-            foreground=[('disabled', '#9E9E9E'), ('!disabled', '#000000')]  # 禁用时灰色，正常时黑色
+            foreground=[('disabled', '#9E9E9E'), ('!disabled', '#000000')]
         )
-        
-        # 配置标签样式
         style.configure('Info.TLabel', 
             font=('Microsoft YaHei UI', 9),
             foreground='#424242',
@@ -121,8 +106,6 @@ class CursorApp:
             foreground='#757575',
             background='#FFFFFF'
         )
-        
-        # 配置输入框样式
         style.configure('TEntry', 
             padding=6,
             relief='solid',
@@ -194,11 +177,8 @@ class CursorApp:
         )
         entry = ttk.Entry(frame, width=40, style='TEntry')
         entry.grid(row=row, column=1, sticky=tk.EW, padx=8, pady=4)
-        
-        # 添加输入框焦点效果
         entry.bind('<FocusIn>', lambda e: self._on_entry_focus_in(entry))
         entry.bind('<FocusOut>', lambda e: self._on_entry_focus_out(entry))
-        
         setattr(self, field_name, entry)
 
     @error_handler
@@ -251,12 +231,12 @@ class CursorApp:
         self._show_error(error_msg)
 
     def _show_error(self, message: str) -> None:
-        self.root.bell()  # 添加提示音
+        self.root.bell()
         messagebox.showerror("错误", message)
 
     def _show_success(self, message: str) -> None:
         logger.info(message)
-        self.root.bell()  # 添加提示音
+        self.root.bell()
         messagebox.showinfo("成功", message)
 
     def create_cookie_frame(self) -> None:
@@ -295,7 +275,7 @@ class CursorApp:
             btn.grid(row=0, column=col, padx=10)
 
         footer_frame = ttk.Frame(button_frame, style='TFrame')
-        footer_frame.pack(fill=tk.X, pady=(15,10))
+        footer_frame.pack(fill=tk.X, pady=(10,5))
         
         ttk.Label(
             footer_frame,
