@@ -9,6 +9,7 @@ from loguru import logger
 from dotenv import load_dotenv
 from configlog import LogSetup
 import os
+from pathlib import Path
 from cursor_utils import (
     PathManager, FileManager, Result, UIManager, 
     StyleManager, MessageManager, error_handler, EnvManager
