@@ -9,13 +9,19 @@ from loguru import logger
 from dotenv import load_dotenv
 from configlog import LogSetup
 import os
+import sys
 from functools import wraps
+import shutil
+from datetime import datetime
+import glob
 
 @dataclass
 class WindowConfig:
     width: int = 480
     height: int = 500
     title: str = "Cursor账号管理工具"
+    backup_dir: str = "env_backups"
+    max_backups: int = 10
 
 def error_handler(func: Callable) -> Callable:
     @wraps(func)
@@ -203,11 +209,61 @@ class CursorApp:
         else:
             raise Exception(message)
 
+    def get_env_file_path(self) -> str:
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+        
+        env_path = os.path.join(base_path, '.env')
+        return env_path
+
+    def get_backup_dir_path(self) -> str:
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+        
+        return os.path.join(base_path, self.window_config.backup_dir)
+
+    @error_handler
+    def backup_env_file(self) -> None:
+        env_path = self.get_env_file_path()
+        if not os.path.exists(env_path):
+            raise Exception(f"未找到.env文件: {env_path}")
+
+        backup_dir = self.get_backup_dir_path()
+        if not os.path.exists(backup_dir):
+            os.makedirs(backup_dir)
+
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        backup_file = os.path.join(backup_dir, f'.env.{timestamp}')
+
+        shutil.copy2(env_path, backup_file)
+        logger.info(f"已创建.env备份: {backup_file}")
+
+        self._cleanup_old_backups()
+
+    def _cleanup_old_backups(self) -> None:
+        backup_dir = self.get_backup_dir_path()
+        backup_files = glob.glob(os.path.join(backup_dir, '.env.*'))
+        backup_files.sort(key=os.path.getctime, reverse=True)
+
+        while len(backup_files) > self.window_config.max_backups:
+            oldest_file = backup_files.pop()
+            try:
+                os.remove(oldest_file)
+                logger.info(f"已删除旧备份文件: {oldest_file}")
+            except Exception as e:
+                logger.error(f"删除旧备份文件失败: {e}")
+
     @error_handler
     def update_auth(self) -> None:
         cookie_str = self.cookie_entry.get().strip()
         if not self._validate_cookie(cookie_str):
             return
+
+        self.backup_env_file()
 
         updater = CursorAuthUpdater()
         success, message = updater.process_cookies(cookie_str)
@@ -315,7 +371,12 @@ def setup_logging() -> None:
 
 def main() -> None:
     try:
-        load_dotenv()
+        if getattr(sys, 'frozen', False):
+            env_path = os.path.join(os.path.dirname(sys.executable), '.env')
+        else:
+            env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '.env')
+        
+        load_dotenv(dotenv_path=env_path)
         setup_logging()
         root = tk.Tk()
         app = CursorApp(root)
