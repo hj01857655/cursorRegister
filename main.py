@@ -361,8 +361,11 @@ class CursorApp:
 
 def setup_logging() -> None:
     logger.remove()
+    log_dir = Path("./cursorRegister_log")
+    log_dir.mkdir(exist_ok=True)  # 确保日志目录存在
+    
     logger.add(
-        sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD_HH}.log",
+        sink=str(log_dir / "{time:YYYY-MM-DD_HH}.log"),  # 转换为字符串
         format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
         rotation="10 MB",
         retention="14 days",
@@ -382,6 +385,7 @@ def setup_logging() -> None:
     )
 
 def main() -> None:
+    root = None  # 初始化 root 变量
     try:
         load_dotenv(dotenv_path=Utils.get_path('env'))
         setup_logging()
@@ -390,7 +394,10 @@ def main() -> None:
         root.mainloop()
     except Exception as e:
         logger.error(f"程序启动失败: {e}")
-        UI.show_error(root, "程序启动失败", e)
+        if root is not None:  # 确保 root 存在时才显示错误
+            UI.show_error(root, "程序启动失败", e)
+        else:
+            print(f"程序启动失败: {e}")  # 如果 root 不存在，直接打印错误
 
 if __name__ == "__main__":
     main()
