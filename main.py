@@ -46,24 +46,24 @@ class UI:
         # 标签框样式
         style.configure('TLabelframe', 
             background=UI.COLORS['card_bg'],
-            padding=25,  # 增加内边距
+            padding=10,  # 进一步减小内边距
             relief='flat',
             borderwidth=1
         )
         
         # 标签框标题样式
         style.configure('TLabelframe.Label', 
-            font=(UI.FONT[0], 12, 'bold'),  # 增大字体
+            font=(UI.FONT[0], 11, 'bold'),
             foreground=UI.COLORS['title_fg'],
-            padding=(0, 8)  # 调整标题边距
+            padding=(0, 4)  # 减小标题边距
         )
         
         # 按钮样式
         style.configure('Custom.TButton',
-            font=(UI.FONT[0], 10, 'bold'),  # 增大字体
-            padding=(25, 10),  # 增加按钮内边距
+            font=(UI.FONT[0], 10, 'bold'),
+            padding=(12, 6),  # 减小按钮内边距
             background=UI.COLORS['primary'],
-            foreground='black',  # 改为黑色字体
+            foreground='black',
             borderwidth=0,
             relief='flat'
         )
@@ -84,7 +84,7 @@ class UI:
         
         # 输入框样式
         style.configure('TEntry',
-            padding=12,  # 增加内边距
+            padding=8,  # 减小输入框内边距
             relief='flat',
             borderwidth=1,
             selectbackground=UI.COLORS['primary'],
@@ -94,10 +94,10 @@ class UI:
         
         # 标签样式
         style.configure('TLabel',
-            font=(UI.FONT[0], 10),  # 增大字体
+            font=(UI.FONT[0], 10),
             background=UI.COLORS['card_bg'],
             foreground=UI.COLORS['label_fg'],
-            padding=(8, 4)  # 增加边距
+            padding=(4, 2)  # 减小标签边距
         )
         
         # 特殊标签样式
@@ -135,18 +135,18 @@ class UI:
     @staticmethod
     def create_labeled_entry(parent, label_text: str, row: int, **kwargs) -> ttk.Entry:
         frame = ttk.Frame(parent, style='TFrame')
-        frame.grid(row=row, column=0, columnspan=2, sticky='ew', padx=15, pady=8)
+        frame.grid(row=row, column=0, columnspan=2, sticky='ew', padx=6, pady=3)  # 减小边距
         
         label = ttk.Label(frame, text=f"{label_text}:", style='Info.TLabel')
-        label.pack(side=tk.LEFT, padx=(5, 15))
+        label.pack(side=tk.LEFT, padx=(3, 8))  # 减小标签边距
         
         entry = ttk.Entry(frame, style='TEntry', **kwargs)
-        entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
         
         return entry
 
     @staticmethod
-    def create_labeled_frame(parent, title: str, padding: str = "20", **kwargs) -> ttk.LabelFrame:
+    def create_labeled_frame(parent, title: str, padding: str = "10", **kwargs) -> ttk.LabelFrame:
         frame = ttk.LabelFrame(
             parent,
             text=title,
@@ -154,7 +154,7 @@ class UI:
             style='TLabelframe',
             **kwargs
         )
-        frame.pack(fill=tk.X, padx=20, pady=10)
+        frame.pack(fill=tk.X, padx=10, pady=4)  # 减小外边距
         frame.columnconfigure(1, weight=1)
         return frame
 
@@ -185,8 +185,8 @@ class UI:
 
 @dataclass
 class WindowConfig:
-    width: int = 600
-    height: int = 700
+    width: int = 450  
+    height: int = 460
     title: str = "Cursor账号管理工具"
     backup_dir: str = "env_backups"
     max_backups: int = 10
@@ -217,19 +217,22 @@ class CursorApp:
         self.setup_ui()
 
     def setup_ui(self) -> None:
-        main_frame = ttk.Frame(self.root, padding="20", style='TFrame')
+        main_frame = ttk.Frame(self.root, padding="10", style='TFrame')
         main_frame.pack(fill=tk.BOTH, expand=True)
+        
+        content_frame = ttk.Frame(main_frame, style='TFrame')
+        content_frame.pack(fill=tk.BOTH, expand=False)  # 改为False，不再扩展
         
         # 标题
         title_label = ttk.Label(
-            main_frame,
+            content_frame,
             text=self.config.title,
             style='Title.TLabel'
         )
-        title_label.pack(pady=(0, 15))
+        title_label.pack(pady=(0, 6))
         
         # 账号信息框
-        account_frame = UI.create_labeled_frame(main_frame, "账号信息")
+        account_frame = UI.create_labeled_frame(content_frame, "账号信息")
         for row, (var_name, label_text) in enumerate(self.config.env_vars):
             entry = UI.create_labeled_entry(account_frame, label_text, row)
             if os.getenv(var_name):
@@ -237,13 +240,13 @@ class CursorApp:
             self.entries[var_name] = entry
 
         # Cookie设置框
-        cookie_frame = UI.create_labeled_frame(main_frame, "Cookie设置")
+        cookie_frame = UI.create_labeled_frame(content_frame, "Cookie设置")
         self.entries['cookie'] = UI.create_labeled_entry(cookie_frame, "Cookie", 0)
         self.entries['cookie'].insert(0, "WorkosCursorSessionToken")
 
         # 按钮区域
-        button_frame = ttk.Frame(main_frame, style='TFrame')
-        button_frame.pack(fill=tk.X, pady=20)
+        button_frame = ttk.Frame(content_frame, style='TFrame')
+        button_frame.pack(fill=tk.X, pady=(8, 0))  # 移除底部边距
         
         # 创建两行按钮
         for i, (text, command) in enumerate(self.config.buttons):
@@ -255,7 +258,7 @@ class CursorApp:
                 command=getattr(self, command),
                 style='Custom.TButton'
             )
-            btn.grid(row=row, column=col, padx=8, pady=6, sticky='ew')
+            btn.grid(row=row, column=col, padx=4, pady=3, sticky='ew')
         
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
@@ -266,7 +269,7 @@ class CursorApp:
             text="powered by kto 仅供学习使用",
             style='Footer.TLabel'
         )
-        footer.pack(side=tk.BOTTOM, pady=(0, 0))
+        footer.pack(side=tk.BOTTOM, pady=2)  # 进一步减小页脚边距
 
     def _save_env_vars(self, updates: Dict[str, str] = None) -> None:
         if not updates:
