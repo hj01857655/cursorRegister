@@ -11,13 +11,13 @@ from configlog import LogSetup
 import os
 from cursor_utils import (
     PathManager, FileManager, Result, UIManager, 
-    StyleManager, MessageManager, error_handler
+    StyleManager, MessageManager, error_handler, EnvManager
 )
 
 @dataclass
 class WindowConfig:
     width: int = 480
-    height: int = 500
+    height: int = 390
     title: str = "Cursor账号管理工具"
     backup_dir: str = "env_backups"
     max_backups: int = 10
@@ -26,9 +26,9 @@ class WindowConfig:
 
     def __post_init__(self):
         self.env_vars = [
-            ('domain', '域名'), 
-            ('email', '邮箱'), 
-            ('password', '密码')
+            ('DOMAIN', '域名'), 
+            ('EMAIL', '邮箱'), 
+            ('PASSWORD', '密码')
         ]
         self.buttons = [
             ("生成账号", "generate_account"),
@@ -54,7 +54,6 @@ class CursorApp:
         
     def _init_variables(self) -> None:
         self.entries: Dict[str, ttk.Entry] = {}
-        self.env_labels: Dict[str, ttk.Label] = {}
         self.main_frame: Optional[ttk.Frame] = None
         StyleManager.setup_styles()
 
@@ -64,15 +63,13 @@ class CursorApp:
         self._create_frames()
 
     def _create_frames(self) -> None:
-        env_frame = UIManager.create_labeled_frame(self.main_frame, "环境变量信息")
+        account_frame = UIManager.create_labeled_frame(self.main_frame, "账号信息")
         for row, (var_name, label_text) in enumerate(self.window_config.env_vars):
-            self._create_env_label(env_frame, row, var_name, label_text)
-
-        info_frame = UIManager.create_labeled_frame(self.main_frame, "账号信息")
-        for row, (var_name, label_text) in enumerate(self.window_config.env_vars[1:]):
-            entry = UIManager.create_labeled_entry(info_frame, label_text, row)
+            entry = UIManager.create_labeled_entry(account_frame, label_text, row)
             entry.bind('<FocusIn>', lambda e, entry=entry: entry.configure(style='TEntry'))
             entry.bind('<FocusOut>', lambda e, entry=entry: entry.configure(style='TEntry') if not entry.get().strip() else None)
+            if os.getenv(var_name):
+                entry.insert(0, os.getenv(var_name))
             self.entries[var_name] = entry
 
         cookie_frame = UIManager.create_labeled_frame(self.main_frame, "Cookie设置")
@@ -80,19 +77,6 @@ class CursorApp:
         self.entries['cookie'].insert(0, "WorkosCursorSessionToken")
 
         self._create_button_frame()
-
-    def _create_env_label(self, frame: ttk.Frame, row: int, var_name: str, label_text: str) -> None:
-        ttk.Label(frame, text=f"{label_text}:", style='Info.TLabel').grid(
-            row=row, column=0, sticky=tk.W, padx=8, pady=4
-        )
-        self.env_labels[var_name] = ttk.Label(
-            frame, 
-            text=os.getenv(var_name.upper(), '未设置'),
-            style='Info.TLabel'
-        )
-        self.env_labels[var_name].grid(
-            row=row, column=1, sticky=tk.W, padx=8, pady=4
-        )
 
     def _create_button_frame(self) -> None:
         button_frame = ttk.Frame(self.main_frame, style='TFrame')
@@ -120,25 +104,41 @@ class CursorApp:
 
     @error_handler
     def generate_account(self) -> None:
+        self.backup_env_file()
+        
+        updates = {}
+        if domain := self.entries['DOMAIN'].get().strip():
+            updates['DOMAIN'] = domain
+            result = EnvManager.update_env_vars(updates)
+            if not result:
+                raise RuntimeError(f"保存域名失败: {result.message}")
+            load_dotenv(override=True)
+
         result = generate_cursor_account()
         if isinstance(result, Result):
             if result:
                 email, password = result.data
                 self._update_entry_values(email, password)
                 MessageManager.show_success(self.root, "账号生成成功")
-                self.refresh_env_vars()
+                self._save_env_vars()
             else:
                 raise RuntimeError(result.message)
         else:
             email, password = result
             self._update_entry_values(email, password)
             MessageManager.show_success(self.root, "账号生成成功")
-            self.refresh_env_vars()
+            self._save_env_vars()
 
-    def refresh_env_vars(self) -> None:
-        load_dotenv(override=True)
-        for var_name, label in self.env_labels.items():
-            label.config(text=os.getenv(var_name.upper(), '未设置'))
+    def _save_env_vars(self) -> None:
+        updates = {}
+        for var_name, _ in self.window_config.env_vars:
+            if value := self.entries[var_name].get().strip():
+                updates[var_name] = value
+        
+        if updates:
+            result = EnvManager.update_env_vars(updates)
+            if not result:
+                MessageManager.show_warning(self.root, f"保存环境变量失败: {result.message}")
 
     @error_handler
     def reset_ID(self) -> None:
@@ -146,7 +146,7 @@ class CursorApp:
         result = resetter.reset()
         if result:
             MessageManager.show_success(self.root, result.message)
-            self.refresh_env_vars()
+            self._save_env_vars()
         else:
             raise Exception(result.message)
 
@@ -172,7 +172,7 @@ class CursorApp:
         if result:
             MessageManager.show_success(self.root, result.message)
             self.entries['cookie'].delete(0, tk.END)
-            self.refresh_env_vars()
+            self._save_env_vars()
         else:
             raise Exception(result.message)
 
@@ -188,10 +188,10 @@ class CursorApp:
         return True
 
     def _update_entry_values(self, email: str, password: str) -> None:
-        self.entries['email'].delete(0, tk.END)
-        self.entries['email'].insert(0, email)
-        self.entries['password'].delete(0, tk.END)
-        self.entries['password'].insert(0, password)
+        self.entries['EMAIL'].delete(0, tk.END)
+        self.entries['EMAIL'].insert(0, email)
+        self.entries['PASSWORD'].delete(0, tk.END)
+        self.entries['PASSWORD'].insert(0, password)
 
 def setup_logging() -> None:
     config_dict = {
