@@ -13,8 +13,8 @@ from functools import wraps
 
 @dataclass
 class WindowConfig:
-    width: int = 450
-    height: int = 360
+    width: int = 480
+    height: int = 510
     title: str = "Cursor账号管理工具"
 
 def error_handler(func: Callable) -> Callable:
@@ -33,6 +33,7 @@ class CursorApp:
         self.root.title(self.window_config.title)
         self._configure_window()
         self._init_variables()
+        self._set_window_icon()
         self.setup_ui()
 
     def _configure_window(self) -> None:
@@ -44,7 +45,18 @@ class CursorApp:
             f"{self.window_config.width}x{self.window_config.height}+{x}+{y}"
         )
         self.root.resizable(False, False)
-
+        
+        # 设置窗口背景色
+        self.root.configure(bg='#FFFFFF')
+        
+        # 设置窗口样式
+        if os.name == 'nt':  # Windows系统
+            self.root.attributes('-alpha', 0.98)  # 轻微透明效果
+            
+    def _set_window_icon(self) -> None:
+        # 如果需要设置图标，可以在这里添加
+        pass
+        
     def _init_variables(self) -> None:
         self.email_entry: Optional[ttk.Entry] = None
         self.password_entry: Optional[ttk.Entry] = None
@@ -55,13 +67,72 @@ class CursorApp:
 
     def _create_styles(self) -> None:
         style = ttk.Style()
-        style.configure('Custom.TButton', padding=(12, 5))
-        style.configure('Info.TLabel', font=('Arial', 11))
-        style.configure('Error.TLabel', foreground='red')
-        style.configure('Success.TLabel', foreground='green')
+        
+        # 设置全局主题颜色
+        style.configure('.', font=('Microsoft YaHei UI', 9))
+        
+        # 配置标签框样式
+        style.configure('TLabelframe', 
+            padding=12,
+            background='#FFFFFF',
+            relief='groove'
+        )
+        style.configure('TLabelframe.Label', 
+            font=('Microsoft YaHei UI', 10, 'bold'),
+            foreground='#1976D2',
+            background='#FFFFFF'
+        )
+        
+        # 配置Frame样式
+        style.configure('TFrame', background='#FFFFFF')
+        
+        # 配置按钮样式
+        style.configure('Custom.TButton',
+            padding=(20, 8),
+            font=('Microsoft YaHei UI', 9, 'bold'),
+            background='#E3F2FD',  # 浅蓝色背景
+            foreground='#000000',  # 黑色文字
+            relief='raised'
+        )
+        style.map('Custom.TButton',
+            background=[('pressed', '#BBDEFB'), ('active', '#E3F2FD'), ('disabled', '#F5F5F5')],
+            relief=[('pressed', 'sunken'), ('!pressed', 'raised')],
+            foreground=[('disabled', '#9E9E9E'), ('!disabled', '#000000')]  # 禁用时灰色，正常时黑色
+        )
+        
+        # 配置标签样式
+        style.configure('Info.TLabel', 
+            font=('Microsoft YaHei UI', 9),
+            foreground='#424242',
+            background='#FFFFFF'
+        )
+        style.configure('Error.TLabel', 
+            font=('Microsoft YaHei UI', 9),
+            foreground='#D32F2F',
+            background='#FFFFFF'
+        )
+        style.configure('Success.TLabel', 
+            font=('Microsoft YaHei UI', 9),
+            foreground='#388E3C',
+            background='#FFFFFF'
+        )
+        style.configure('Footer.TLabel',
+            font=('Microsoft YaHei UI', 8),
+            foreground='#757575',
+            background='#FFFFFF'
+        )
+        
+        # 配置输入框样式
+        style.configure('TEntry', 
+            padding=6,
+            relief='solid',
+            selectbackground='#2196F3',
+            selectforeground='white',
+            fieldbackground='#F5F5F5'
+        )
 
     def setup_ui(self) -> None:
-        self.main_frame = ttk.Frame(self.root, padding="3")
+        self.main_frame = ttk.Frame(self.root, padding="10")
         self.main_frame.pack(fill=tk.BOTH, expand=True)
         self._create_frames()
 
@@ -76,8 +147,8 @@ class CursorApp:
             create_frame()
 
     def create_env_info_frame(self) -> None:
-        env_frame = ttk.LabelFrame(self.main_frame, text="环境变量信息", padding="5")
-        env_frame.pack(fill=tk.X, padx=5, pady=(5,2))
+        env_frame = ttk.LabelFrame(self.main_frame, text="环境变量信息", padding="12")
+        env_frame.pack(fill=tk.X, padx=12, pady=(8,6))
 
         env_vars: list[tuple[str, str]] = [
             ('domain', '域名'),
@@ -91,8 +162,8 @@ class CursorApp:
         env_frame.columnconfigure(1, weight=1)
 
     def _create_env_label(self, frame: ttk.Frame, row: int, var_name: str, label_text: str) -> None:
-        ttk.Label(frame, text=f"{label_text}:").grid(
-            row=row, column=0, sticky=tk.W, padx=5, pady=2
+        ttk.Label(frame, text=f"{label_text}:", style='Info.TLabel').grid(
+            row=row, column=0, sticky=tk.W, padx=8, pady=4
         )
         self.env_labels[var_name] = ttk.Label(
             frame, 
@@ -100,12 +171,12 @@ class CursorApp:
             style='Info.TLabel'
         )
         self.env_labels[var_name].grid(
-            row=row, column=1, sticky=tk.W, padx=5, pady=2
+            row=row, column=1, sticky=tk.W, padx=8, pady=4
         )
 
     def create_account_info_frame(self) -> None:
-        info_frame = ttk.LabelFrame(self.main_frame, text="账号信息", padding="5")
-        info_frame.pack(fill=tk.X, padx=5, pady=2)
+        info_frame = ttk.LabelFrame(self.main_frame, text="账号信息", padding="12")
+        info_frame.pack(fill=tk.X, padx=12, pady=6)
 
         fields: list[tuple[str, str]] = [
             ('email_entry', '邮箱'),
@@ -118,11 +189,16 @@ class CursorApp:
         info_frame.columnconfigure(1, weight=1)
 
     def _create_input_field(self, frame: ttk.Frame, row: int, field_name: str, label_text: str) -> None:
-        ttk.Label(frame, text=f"{label_text}:").grid(
-            row=row, column=0, sticky=tk.W, padx=5, pady=2
+        ttk.Label(frame, text=f"{label_text}:", style='Info.TLabel').grid(
+            row=row, column=0, sticky=tk.W, padx=8, pady=4
         )
-        entry = ttk.Entry(frame, width=40)
-        entry.grid(row=row, column=1, sticky=tk.EW, padx=5, pady=2)
+        entry = ttk.Entry(frame, width=40, style='TEntry')
+        entry.grid(row=row, column=1, sticky=tk.EW, padx=8, pady=4)
+        
+        # 添加输入框焦点效果
+        entry.bind('<FocusIn>', lambda e: self._on_entry_focus_in(entry))
+        entry.bind('<FocusOut>', lambda e: self._on_entry_focus_out(entry))
+        
         setattr(self, field_name, entry)
 
     @error_handler
@@ -175,28 +251,30 @@ class CursorApp:
         self._show_error(error_msg)
 
     def _show_error(self, message: str) -> None:
+        self.root.bell()  # 添加提示音
         messagebox.showerror("错误", message)
 
     def _show_success(self, message: str) -> None:
         logger.info(message)
+        self.root.bell()  # 添加提示音
         messagebox.showinfo("成功", message)
 
     def create_cookie_frame(self) -> None:
-        cookie_frame = ttk.LabelFrame(self.main_frame, text="Cookie设置", padding="5")
-        cookie_frame.pack(fill=tk.X, padx=5, pady=2)
+        cookie_frame = ttk.LabelFrame(self.main_frame, text="Cookie设置", padding="12")
+        cookie_frame.pack(fill=tk.X, padx=12, pady=6)
 
-        ttk.Label(cookie_frame, text="Cookie:").grid(
-            row=0, column=0, sticky=tk.W, padx=5, pady=2
+        ttk.Label(cookie_frame, text="Cookie:", style='Info.TLabel').grid(
+            row=0, column=0, sticky=tk.W, padx=6, pady=4
         )
-        self.cookie_entry = ttk.Entry(cookie_frame, width=40)
-        self.cookie_entry.grid(row=0, column=1, sticky=tk.EW, padx=5, pady=2)
+        self.cookie_entry = ttk.Entry(cookie_frame, width=40, style='TEntry')
+        self.cookie_entry.grid(row=0, column=1, sticky=tk.EW, padx=6, pady=4)
         self.cookie_entry.insert(0, "WorkosCursorSessionToken")
 
         cookie_frame.columnconfigure(1, weight=1)
 
     def create_button_frame(self) -> None:
-        button_frame = ttk.Frame(self.main_frame)
-        button_frame.pack(fill=tk.X, pady=5)
+        button_frame = ttk.Frame(self.main_frame, style='TFrame')
+        button_frame.pack(fill=tk.X, pady=(15,0))
 
         buttons = [
             ("生成账号", self.generate_account),
@@ -204,28 +282,39 @@ class CursorApp:
             ("更新账号信息", self.update_auth)
         ]
 
-        container = ttk.Frame(button_frame)
-        container.pack(pady=5)
+        container = ttk.Frame(button_frame, style='TFrame')
+        container.pack()
 
         for col, (text, command) in enumerate(buttons):
-            ttk.Button(
+            btn = ttk.Button(
                 container,
                 text=text,
                 command=command,
                 style='Custom.TButton'
-            ).grid(row=0, column=col, padx=5)
+            )
+            btn.grid(row=0, column=col, padx=10)
 
+        footer_frame = ttk.Frame(button_frame, style='TFrame')
+        footer_frame.pack(fill=tk.X, pady=(15,10))
+        
         ttk.Label(
-            button_frame,
+            footer_frame,
             text="powered by kto 仅供学习使用",
-            style='Info.TLabel'
-        ).pack(pady=5)
+            style='Footer.TLabel'
+        ).pack()
 
     def _update_entry_values(self, email: str, password: str) -> None:
         self.email_entry.delete(0, tk.END)
         self.email_entry.insert(0, email)
         self.password_entry.delete(0, tk.END)
         self.password_entry.insert(0, password)
+
+    def _on_entry_focus_in(self, entry: ttk.Entry) -> None:
+        entry.configure(style='TEntry')
+        
+    def _on_entry_focus_out(self, entry: ttk.Entry) -> None:
+        if not entry.get().strip():
+            entry.configure(style='TEntry')
 
 def setup_logging() -> None:
     config_dict = {
