@@ -275,8 +275,6 @@ class CursorApp:
             self.entries[key].delete(0, tk.END)
             self.entries[key].insert(0, value)
 
-        self._save_env_vars()
-
     @error_handler
     def reset_ID(self) -> None:
         if not (result := reset()):
@@ -305,16 +303,16 @@ class CursorApp:
 
     @error_handler
     def auto_register(self) -> None:
+        import threading
         self._save_env_vars()
         load_dotenv(override=True)
-        from cursor_registerAc import CursorRegistration
-        registrar = CursorRegistration()
+        from cursor_registerAc import CursorRegistration, RegistrationInterrupted
         
-        def wait_for_user(message: str):
+        def create_dialog(message: str) -> bool:
             dialog = tk.Toplevel(self.root)
             dialog.title("等待确认")
-            dialog.geometry("300x150")
-            UI.center_window(dialog, 300, 150)
+            dialog.geometry("250x180")
+            UI.center_window(dialog, 300, 180)
             dialog.transient(self.root)
             dialog.grab_set()
             
@@ -326,38 +324,81 @@ class CursorApp:
                 style="TLabel"
             ).pack(pady=20)
             
+            button_frame = ttk.Frame(dialog, style='TFrame')
+            button_frame.pack(pady=10)
+            
+            result = {'continue': True}
+            
             def on_continue():
-                dialog.grab_release()
                 dialog.destroy()
                 
+            def on_terminate():
+                result['continue'] = False
+                dialog.destroy()
+            
             ttk.Button(
-                dialog,
+                button_frame,
                 text="继续",
                 command=on_continue,
                 style="Custom.TButton"
-            ).pack(pady=10)
+            ).pack(side=tk.LEFT, padx=5)
+            
+            ttk.Button(
+                button_frame,
+                text="终止",
+                command=on_terminate,
+                style="Custom.TButton"
+            ).pack(side=tk.LEFT, padx=5)
             
             dialog.wait_window()
-        
-        try:
-            registrar.init_browser()
-            registrar.fill_registration_form()
-            wait_for_user("请在浏览器中点击按钮，完成后点击继续...")
-            registrar.fill_password()
-            wait_for_user("请在浏览器中完成注册和验证码验证，完成后点击继续...")
-            registrar.get_user_info()
-            token = registrar.get_cursor_token()
+            if not result['continue']:
+                raise RegistrationInterrupted()
+
+        def update_ui_success(token):
+            self.entries['cookie'].delete(0, tk.END)
+            self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
+            UI.show_success(self.root, "自动注册成功，Token已填入")
+            self.backup_env_file()
             
-            if token:
-                self.entries['cookie'].delete(0, tk.END)
-                self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
-                UI.show_success(self.root, "自动注册成功，Token已填入")
-                self.backup_env_file()
-            else:
-                UI.show_warning(self.root, "获取Token失败")
-        finally:
-            if registrar.browser:
-                registrar.browser.quit()
+        def update_ui_warning(message):
+            UI.show_warning(self.root, message)
+
+        def register_thread():
+            registrar = None
+            try:
+                registrar = CursorRegistration()
+                if token := registrar.register(create_dialog):
+                    self.root.after(0, lambda: update_ui_success(token))
+                else:
+                    self.root.after(0, lambda: update_ui_warning("注册流程未完成"))
+            except RegistrationInterrupted:
+                self.root.after(0, lambda: update_ui_warning("注册流程已被终止"))
+            except Exception as e:
+                logger.error(f"注册过程发生错误: {str(e)}")
+                self.root.after(0, lambda: update_ui_warning(f"注册失败: {str(e)}"))
+            finally:
+                if registrar and registrar.browser:
+                    registrar.browser.quit()
+
+        for widget in self.root.winfo_children():
+            if isinstance(widget, ttk.Frame):
+                for child in widget.winfo_children():
+                    if isinstance(child, ttk.Button) and child['text'] == "自动注册":
+                        child.configure(state='disabled')
+
+        thread = threading.Thread(target=register_thread, daemon=True)
+        thread.start()
+
+
+        def restore_button():
+            thread.join()  
+            for widget in self.root.winfo_children():
+                if isinstance(widget, ttk.Frame):
+                    for child in widget.winfo_children():
+                        if isinstance(child, ttk.Button) and child['text'] == "自动注册":
+                            self.root.after(0, lambda: child.configure(state='normal'))
+
+        threading.Thread(target=restore_button, daemon=True).start()
 
 def setup_logging() -> None:
     logger.remove()
