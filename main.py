@@ -305,14 +305,13 @@ class CursorApp:
     def auto_register(self) -> None:
         self._save_env_vars()
         load_dotenv(override=True)
-        from cursor_registerAc import CursorRegistration
-        registrar = CursorRegistration()
+        from cursor_registerAc import CursorRegistration, RegistrationInterrupted
         
-        def wait_for_user(message: str):
+        def create_dialog(message: str) -> bool:
             dialog = tk.Toplevel(self.root)
             dialog.title("等待确认")
-            dialog.geometry("300x150")
-            UI.center_window(dialog, 300, 150)
+            dialog.geometry("250x180")
+            UI.center_window(dialog, 300, 180)
             dialog.transient(self.root)
             dialog.grab_set()
             
@@ -324,35 +323,47 @@ class CursorApp:
                 style="TLabel"
             ).pack(pady=20)
             
+            button_frame = ttk.Frame(dialog, style='TFrame')
+            button_frame.pack(pady=10)
+            
+            result = {'continue': True}
+            
             def on_continue():
-                dialog.grab_release()
                 dialog.destroy()
                 
+            def on_terminate():
+                result['continue'] = False
+                dialog.destroy()
+            
             ttk.Button(
-                dialog,
+                button_frame,
                 text="继续",
                 command=on_continue,
                 style="Custom.TButton"
-            ).pack(pady=10)
+            ).pack(side=tk.LEFT, padx=5)
+            
+            ttk.Button(
+                button_frame,
+                text="终止",
+                command=on_terminate,
+                style="Custom.TButton"
+            ).pack(side=tk.LEFT, padx=5)
             
             dialog.wait_window()
+            if not result['continue']:
+                raise RegistrationInterrupted()
         
+        registrar = CursorRegistration()
         try:
-            registrar.init_browser()
-            registrar.fill_registration_form()
-            wait_for_user("请在浏览器中点击按钮，完成后点击继续...")
-            registrar.fill_password()
-            wait_for_user("请在浏览器中完成注册和验证码验证，完成后点击继续...")
-            registrar.get_user_info()
-            token = registrar.get_cursor_token()
-            
-            if token:
+            if token := registrar.register(create_dialog):
                 self.entries['cookie'].delete(0, tk.END)
                 self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
                 UI.show_success(self.root, "自动注册成功，Token已填入")
                 self.backup_env_file()
             else:
-                UI.show_warning(self.root, "获取Token失败")
+                UI.show_warning(self.root, "注册流程未完成")
+        except RegistrationInterrupted:
+            UI.show_warning(self.root, "注册流程已被终止")
         finally:
             if registrar.browser:
                 registrar.browser.quit()
