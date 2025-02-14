@@ -275,8 +275,6 @@ class CursorApp:
             self.entries[key].delete(0, tk.END)
             self.entries[key].insert(0, value)
 
-        self._save_env_vars()
-
     @error_handler
     def reset_ID(self) -> None:
         if not (result := reset()):
