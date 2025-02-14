@@ -17,6 +17,9 @@ from cursor_registerAc import CursorRegistration, RegistrationInterrupted
 
 class UI:
     FONT = ('Microsoft YaHei UI', 10)
+    BUTTON_PADDING = (8, 4)  
+    BUTTON_GRID_PADDING = 4  
+    BUTTON_GRID_MARGIN = 3  
     COLORS = {
         'primary': '#2563EB',
         'secondary': '#64748B',
@@ -61,7 +64,7 @@ class UI:
 
         style.configure('Custom.TButton',
             font=(UI.FONT[0], 10, 'bold'),
-            padding=(12, 6),
+            padding=UI.BUTTON_PADDING,
             background=UI.COLORS['primary'],
             foreground='black',
             borderwidth=0,
@@ -160,10 +163,34 @@ class UI:
     def show_warning(window: tk.Tk, message: str) -> None:
         UI.show_message(window, "警告", message, 'showwarning')
 
+    @staticmethod
+    def create_loading_dialog(window: tk.Tk, message: str) -> tk.Toplevel:
+        dialog = tk.Toplevel(window)
+        dialog.title("处理中")
+        dialog.geometry("250x100")
+        UI.center_window(dialog, 250, 100)
+        dialog.transient(window)
+        dialog.grab_set()
+        dialog.resizable(False, False)
+        dialog.configure(bg=UI.COLORS['bg'])
+        
+        frame = ttk.Frame(dialog, style='TFrame')
+        frame.pack(expand=True)
+        
+        ttk.Label(
+            frame,
+            text=message,
+            wraplength=200,
+            justify="center",
+            style="TLabel"
+        ).pack(pady=10)
+        
+        return dialog
+
 @dataclass
 class WindowConfig:
     width: int = 450
-    height: int = 500
+    height: int = 485
     title: str = "Cursor注册小助手"
     backup_dir: str = "env_backups"
     max_backups: int = 10
@@ -175,7 +202,8 @@ class WindowConfig:
         ("自动注册", "auto_register"),
         ("重置ID", "reset_ID"),
         ("更新账号信息", "update_auth"),
-        ("账号试用信息", "show_trial_info")
+        ("账号试用信息", "show_trial_info"),
+        ("备份账号", "backup_account")
     ])
 
 class CursorApp:
@@ -234,7 +262,7 @@ class CursorApp:
                 command=getattr(self, command),
                 style='Custom.TButton'
             )
-            btn.grid(row=row, column=col, padx=4, pady=3, sticky='ew')
+            btn.grid(row=row, column=col, padx=UI.BUTTON_GRID_PADDING, pady=UI.BUTTON_GRID_MARGIN, sticky='ew')
 
         button_frame.grid_columnconfigure(0, weight=1)
         button_frame.grid_columnconfigure(1, weight=1)
@@ -300,7 +328,6 @@ class CursorApp:
             UI.show_warning(self.root, "Cookie字符串格式不正确，必须包含 WorkosCursorSessionToken")
             return
 
-        self.backup_env_file()
         if not (result := process_cookies(cookie_str)):
             raise Exception(result.message)
 
@@ -312,8 +339,14 @@ class CursorApp:
     def auto_register(self) -> None:
         self._save_env_vars()
         load_dotenv(override=True)
+        loading_dialog = None
 
         def create_dialog(message: str) -> bool:
+            nonlocal loading_dialog
+            if loading_dialog:
+                loading_dialog.destroy()
+                loading_dialog = None
+                
             dialog = tk.Toplevel(self.root)
             dialog.title("等待确认")
             dialog.geometry("250x180")
@@ -336,6 +369,8 @@ class CursorApp:
 
             def on_continue():
                 dialog.destroy()
+                nonlocal loading_dialog
+                loading_dialog = UI.create_loading_dialog(self.root, "正在处理，请稍候...")
 
             def on_terminate():
                 result['continue'] = False
@@ -360,17 +395,24 @@ class CursorApp:
                 raise RegistrationInterrupted()
 
         def update_ui_success(token):
+            nonlocal loading_dialog
+            if loading_dialog:
+                loading_dialog.destroy()
             self.entries['cookie'].delete(0, tk.END)
             self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
             UI.show_success(self.root, "自动注册成功，Token已填入")
-            self.backup_env_file()
 
         def update_ui_warning(message):
+            nonlocal loading_dialog
+            if loading_dialog:
+                loading_dialog.destroy()
             UI.show_warning(self.root, message)
 
         def register_thread():
+            nonlocal loading_dialog
             registrar = None
             try:
+                loading_dialog = UI.create_loading_dialog(self.root, "正在启动注册流程，请稍候...")
                 registrar = CursorRegistration()
                 if token := registrar.register(create_dialog):
                     self.root.after(0, lambda: update_ui_success(token))
@@ -394,7 +436,6 @@ class CursorApp:
         thread = threading.Thread(target=register_thread, daemon=True)
         thread.start()
 
-
         def restore_button():
             thread.join()
             for widget in self.root.winfo_children():
@@ -406,15 +447,46 @@ class CursorApp:
         threading.Thread(target=restore_button, daemon=True).start()
 
     @error_handler
+    def backup_account(self) -> None:
+        try:
+            self.backup_env_file()
+            UI.show_success(self.root, "账号备份成功")
+        except Exception as e:
+            UI.show_error(self.root, "账号备份失败", e)
+
+    @error_handler
     def show_trial_info(self) -> None:
         try:
+            loading_dialog = None
+            
             def get_trial_info():
-                pass
+                nonlocal loading_dialog
+                try:
+                    from cursor_get_trial import get_trial_info as get_info
+                    cookie_str = os.getenv('COOKIES_STR', '').strip()
+                    if not cookie_str:
+                        raise Exception("未找到Cookie信息，请先更新账号信息")
+                    
+                    if "WorkosCursorSessionToken=" not in cookie_str:
+                        cookie_str = f"WorkosCursorSessionToken={cookie_str}"
+                    
+                    usage, days = get_info(cookie_str)
+                    self.root.after(0, lambda: UI.show_success(
+                        self.root, 
+                        f"账户可用额度: {usage}\n试用天数: {days}"
+                    ))
+                finally:
+                    if loading_dialog:
+                        self.root.after(0, loading_dialog.destroy)
+
             self._save_env_vars()
             load_dotenv(override=True)
+            loading_dialog = UI.create_loading_dialog(self.root, "正在获取账号信息，请稍候...")
             thread = threading.Thread(target=get_trial_info, daemon=True)
             thread.start()
         except Exception as e:
+            if loading_dialog:
+                loading_dialog.destroy()
             UI.show_error(self.root, "获取账号信息失败", e)
 
 def setup_logging() -> None:
