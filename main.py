@@ -303,6 +303,7 @@ class CursorApp:
 
     @error_handler
     def auto_register(self) -> None:
+        import threading
         self._save_env_vars()
         load_dotenv(override=True)
         from cursor_registerAc import CursorRegistration, RegistrationInterrupted
@@ -352,21 +353,54 @@ class CursorApp:
             dialog.wait_window()
             if not result['continue']:
                 raise RegistrationInterrupted()
-        
-        registrar = CursorRegistration()
-        try:
-            if token := registrar.register(create_dialog):
-                self.entries['cookie'].delete(0, tk.END)
-                self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
-                UI.show_success(self.root, "自动注册成功，Token已填入")
-                self.backup_env_file()
-            else:
-                UI.show_warning(self.root, "注册流程未完成")
-        except RegistrationInterrupted:
-            UI.show_warning(self.root, "注册流程已被终止")
-        finally:
-            if registrar.browser:
-                registrar.browser.quit()
+
+        def update_ui_success(token):
+            self.entries['cookie'].delete(0, tk.END)
+            self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
+            UI.show_success(self.root, "自动注册成功，Token已填入")
+            self.backup_env_file()
+            
+        def update_ui_warning(message):
+            UI.show_warning(self.root, message)
+
+        def register_thread():
+            registrar = None
+            try:
+                registrar = CursorRegistration()
+                if token := registrar.register(create_dialog):
+                    self.root.after(0, lambda: update_ui_success(token))
+                else:
+                    self.root.after(0, lambda: update_ui_warning("注册流程未完成"))
+            except RegistrationInterrupted:
+                self.root.after(0, lambda: update_ui_warning("注册流程已被终止"))
+            except Exception as e:
+                logger.error(f"注册过程发生错误: {str(e)}")
+                self.root.after(0, lambda: update_ui_warning(f"注册失败: {str(e)}"))
+            finally:
+                if registrar and registrar.browser:
+                    registrar.browser.quit()
+
+        # 禁用注册按钮
+        for widget in self.root.winfo_children():
+            if isinstance(widget, ttk.Frame):
+                for child in widget.winfo_children():
+                    if isinstance(child, ttk.Button) and child['text'] == "自动注册":
+                        child.configure(state='disabled')
+
+        # 启动注册线程
+        thread = threading.Thread(target=register_thread, daemon=True)
+        thread.start()
+
+        # 启动按钮状态恢复线程
+        def restore_button():
+            thread.join()  # 等待注册线程完成
+            for widget in self.root.winfo_children():
+                if isinstance(widget, ttk.Frame):
+                    for child in widget.winfo_children():
+                        if isinstance(child, ttk.Button) and child['text'] == "自动注册":
+                            self.root.after(0, lambda: child.configure(state='normal'))
+
+        threading.Thread(target=restore_button, daemon=True).start()
 
 def setup_logging() -> None:
     logger.remove()
