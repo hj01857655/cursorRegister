@@ -7,7 +7,6 @@ from cursor_utils import Utils
 from loguru import logger
 
 class RegistrationInterrupted(Exception):
-    """用户中断注册流程的异常"""
     pass
 
 class CursorRegistration:

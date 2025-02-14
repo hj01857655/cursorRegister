@@ -380,20 +380,18 @@ class CursorApp:
                 if registrar and registrar.browser:
                     registrar.browser.quit()
 
-        # 禁用注册按钮
         for widget in self.root.winfo_children():
             if isinstance(widget, ttk.Frame):
                 for child in widget.winfo_children():
                     if isinstance(child, ttk.Button) and child['text'] == "自动注册":
                         child.configure(state='disabled')
 
-        # 启动注册线程
         thread = threading.Thread(target=register_thread, daemon=True)
         thread.start()
 
-        # 启动按钮状态恢复线程
+
         def restore_button():
-            thread.join()  # 等待注册线程完成
+            thread.join()  
             for widget in self.root.winfo_children():
                 if isinstance(widget, ttk.Frame):
                     for child in widget.winfo_children():
