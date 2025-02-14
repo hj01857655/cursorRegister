@@ -164,7 +164,7 @@ class UI:
 class WindowConfig:
     width: int = 450
     height: int = 500
-    title: str = "Cursor账号管理工具"
+    title: str = "Cursor注册小助手"
     backup_dir: str = "env_backups"
     max_backups: int = 10
     env_vars: List[Tuple[str, str]] = field(default_factory=lambda: [
