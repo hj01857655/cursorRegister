@@ -115,8 +115,10 @@
 
 特别感谢以下开源项目的贡献：
 
+
 - [cursor-auto-free](https://github.com/chengazhen/cursor-auto-free)
 - [go-cursor-help](https://github.com/yuaotian/go-cursor-help)
+- [CursorRegister](https://github.com/JiuZ-Chn/CursorRegister)
 
 ## 📜 许可证与声明
 
