@@ -339,7 +339,6 @@ class CursorApp:
             raise Exception(result.message)
 
         UI.show_success(self.root, result.message)
-        self.entries['cookie'].delete(0, tk.END)
         self._save_env_vars()
 
     @error_handler
