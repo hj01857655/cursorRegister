@@ -89,7 +89,7 @@ class CursorRegistration:
                 
             self._safe_action(self.get_user_info)
             if token := self._safe_action(self.get_cursor_token):
-                if not Utils.update_env_vars({"COOKIES_STR": token}).success:
+                if not Utils.update_env_vars({"COOKIES_STR": f"WorkosCursorSessionToken={token}"}).success:
                     logger.error("更新环境变量COOKIES_STR失败")
             return token
             
@@ -105,7 +105,7 @@ def main():
     try:
         registrar = CursorRegistration()
         if token := registrar.register(lambda msg: input(f"{msg}，完成后按回车键继续...")):
-            logger.info(f"获取到的Cookie: {token}")
+            logger.info(f"获取到的Cookie: WorkosCursorSessionToken={token}")
             logger.info("Cookie已成功更新到环境变量COOKIES_STR")
         else:
             logger.error("获取Cookie失败")
