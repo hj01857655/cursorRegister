@@ -186,7 +186,6 @@ class Utils:
                 Utils.ensure_path(backup_dir)
                 backup_path = backup_dir / f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
                 
-                # 清理旧备份
                 try:
                     backup_files = sorted(backup_dir.glob(f"{prefix}_*"), key=lambda x: x.stat().st_ctime)[:-max_backups + 1]
                     for f in backup_files:
