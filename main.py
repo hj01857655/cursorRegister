@@ -335,9 +335,10 @@ class CursorApp:
         if "WorkosCursorSessionToken=" not in cookie_str:
             UI.show_warning(self.root, "Cookie字符串格式不正确，必须包含 WorkosCursorSessionToken")
             return
-
-        if not (result := CursorManager.process_cookies(cookie_str)):
-            raise Exception(result.message)
+        result = CursorManager().process_cookies(cookie_str)
+        if not result.success:
+            UI.show_warning(self.root, result.message)
+            return
 
         UI.show_success(self.root, result.message)
         self._save_env_vars()

@@ -9,10 +9,20 @@ import string
 import subprocess
 import sys
 import uuid
+from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import Any, Dict, Union, TypeVar, Generic, Callable, Tuple
+from typing import (
+    Any,
+    Callable,
+    ContextManager,
+    Dict,
+    Generic,
+    Tuple,
+    TypeVar,
+    Union
+)
 
 from loguru import logger
 
@@ -33,6 +43,97 @@ class Result(Generic[T]):
 
     def __bool__(self) -> bool:
         return self.success
+
+
+@contextmanager
+def file_operation_context(file_path: Path, require_write: bool = True) -> ContextManager[Path]:
+    if not file_path.exists():
+        raise FileNotFoundError(f"文件不存在: {file_path}")
+    
+    if require_write and not os.access(str(file_path), os.W_OK):
+        Utils.manage_file_permissions(file_path, False)
+    
+    try:
+        yield file_path
+    finally:
+        if require_write:
+            Utils.manage_file_permissions(file_path, True)
+
+
+class DatabaseManager:
+    def __init__(self, db_path: Path, table: str = "itemTable"):
+        self.db_path = db_path
+        self.table = table
+
+    @contextmanager
+    def get_connection(self):
+        conn = sqlite3.connect(self.db_path)
+        try:
+            yield conn
+        finally:
+            conn.close()
+
+    def update(self, updates: Dict[str, str]) -> Result[None]:
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                for key, value in updates.items():
+                    cursor.execute(
+                        f"INSERT INTO {self.table} (key, value) VALUES (?, ?) "
+                        "ON CONFLICT(key) DO UPDATE SET value = ?",
+                        (key, value, value)
+                    )
+                    logger.info(f"已更新 {key.split('/')[-1]}")
+                conn.commit()
+                return Result.ok()
+        except Exception as e:
+            return Result.fail(f"数据库更新失败: {e}")
+
+    def query(self, keys: Union[str, list[str]] = None) -> Result[Dict[str, str]]:
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                if isinstance(keys, str):
+                    keys = [keys]
+
+                if keys:
+                    placeholders = ','.join(['?' for _ in keys])
+                    cursor.execute(f"SELECT key, value FROM {self.table} WHERE key IN ({placeholders})", keys)
+                else:
+                    cursor.execute(f"SELECT key, value FROM {self.table}")
+
+                results = dict(cursor.fetchall())
+                logger.info(f"已查询 {len(results)} 条记录")
+                return Result.ok(results)
+        except Exception as e:
+            return Result.fail(f"数据库查询失败: {e}")
+
+
+class EnvManager:
+    @staticmethod
+    def update(updates: Dict[str, str]) -> Result[None]:
+        try:
+            env_path = Utils.get_path('env')
+            content = env_path.read_text(encoding='utf-8').splitlines() if env_path.exists() else []
+            updated = {line.split('=')[0]: line for line in content if '=' in line}
+
+            for key, value in updates.items():
+                updated[key] = f'{key}=\'{value}\''
+                os.environ[key] = value
+
+            env_path.write_text('\n'.join(updated.values()) + '\n', encoding='utf-8')
+            logger.info(f"已更新环境变量: {', '.join(updates.keys())}")
+            return Result.ok()
+        except Exception as e:
+            return Result.fail(f"更新环境变量失败: {e}")
+
+    @staticmethod
+    def get(key: str, raise_error: bool = True) -> str:
+        if value := os.getenv(key):
+            return value
+        if raise_error:
+            raise ValueError(f"环境变量 '{key}' 未设置")
+        return ""
 
 
 class Utils:
@@ -81,55 +182,25 @@ class Utils:
     @staticmethod
     def backup_file(source: Path, backup_dir: Path, prefix: str, max_backups: int = 10) -> Result[None]:
         try:
-            if not source.exists():
-                return Result.fail(f"源文件不存在: {source}")
-
-            if not os.access(str(source), os.R_OK):
-                return Result.fail(f"没有源文件的读取权限: {source}")
-
-            Utils.ensure_path(backup_dir)
-
-            if not os.access(str(backup_dir), os.W_OK):
-                return Result.fail(f"没有备份目录的写入权限: {backup_dir}")
-
-            backup_path = backup_dir / f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-
-            try:
-                backup_files = sorted(backup_dir.glob(f"{prefix}_*"), key=lambda x: x.stat().st_ctime)[
-                               :-max_backups + 1]
-
-                for f in backup_files:
-                    try:
+            with file_operation_context(source, require_write=False) as src:
+                Utils.ensure_path(backup_dir)
+                backup_path = backup_dir / f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+                
+                # 清理旧备份
+                try:
+                    backup_files = sorted(backup_dir.glob(f"{prefix}_*"), key=lambda x: x.stat().st_ctime)[:-max_backups + 1]
+                    for f in backup_files:
                         try:
                             f.unlink()
                             logger.info(f"成功删除旧备份文件: {f}")
-                            continue
-                        except PermissionError:
-                            logger.debug(f"尝试直接删除文件失败，准备修改权限: {f}")
-                            pass
+                        except Exception as del_err:
+                            logger.warning(f"删除旧备份文件失败: {f}, 错误: {del_err}")
+                except Exception as e:
+                    logger.warning(f"处理旧备份文件时出错: {e}")
 
-                        if Utils.manage_file_permissions(f, False):
-                            try:
-                                f.unlink()
-                                logger.info(f"修改权限后成功删除旧备份文件: {f}")
-                            except Exception as e:
-                                logger.warning(f"获取权限后仍无法删除文件: {f}, 错误: {e}")
-                        else:
-                            logger.warning(f"无法修改文件权限: {f}")
-
-                    except Exception as del_err:
-                        logger.warning(f"删除旧备份文件失败: {f}, 错误: {del_err}")
-
-            except Exception as e:
-                logger.warning(f"处理旧备份文件时出错: {e}")
-
-            shutil.copy2(source, backup_path)
-
-            logger.info(f"已创建备份: {backup_path}")
-            return Result.ok()
-
-        except PermissionError as pe:
-            return Result.fail(f"权限错误: {pe}")
+                shutil.copy2(src, backup_path)
+                logger.info(f"已创建备份: {backup_path}")
+                return Result.ok()
         except Exception as e:
             return Result.fail(f"备份文件失败: {e}")
 
@@ -152,16 +223,11 @@ class Utils:
     @staticmethod
     def update_json_file(file_path: Path, updates: Dict[str, Any], make_read_only: bool = False) -> Result[None]:
         try:
-            if not file_path.exists() or (make_read_only and not Utils.manage_file_permissions(file_path, False)):
-                return Result.fail(f"文件不存在或无法获取所有权: {file_path}")
-
-            content = json.loads(file_path.read_text(encoding='utf-8'))
-            content.update(updates)
-            file_path.write_text(json.dumps(content, indent=2), encoding='utf-8')
-
-            if make_read_only:
-                Utils.manage_file_permissions(file_path)
-            return Result.ok()
+            with file_operation_context(file_path, require_write=True) as fp:
+                content = json.loads(fp.read_text(encoding='utf-8'))
+                content.update(updates)
+                fp.write_text(json.dumps(content, indent=2), encoding='utf-8')
+                return Result.ok()
         except Exception as e:
             return Result.fail(f"更新JSON文件失败: {e}")
 
@@ -272,19 +338,23 @@ def error_handler(func: Callable) -> Callable:
 
 
 class CursorManager:
+    def __init__(self):
+        self.db_manager = DatabaseManager(Utils.get_path('cursor') / 'state.vscdb')
+        self.env_manager = EnvManager()
+
     @staticmethod
     @error_handler
     def generate_cursor_account() -> Tuple[str, str]:
         try:
             random_length = random.randint(5, 20)
-            email = f"{Utils.generate_random_string(random_length)}@{Utils.get_env_var('DOMAIN')}"
+            email = f"{Utils.generate_random_string(random_length)}@{EnvManager.get('DOMAIN')}"
             password = Utils.generate_secure_password()
 
             logger.info("生成的Cursor账号信息：")
             logger.info(f"邮箱: {email}")
             logger.info(f"密码: {password}")
 
-            if not (result := Utils.update_env_vars({'EMAIL': email, 'PASSWORD': password})):
+            if not (result := EnvManager.update({'EMAIL': email, 'PASSWORD': password})):
                 raise RuntimeError(result.message)
             return email, password
         except Exception as e:
@@ -345,9 +415,8 @@ class CursorManager:
             logger.error(f"reset 执行失败: {e}")
             return Result.fail(str(e))
 
-    @staticmethod
     @error_handler
-    def process_cookies(cookies: str) -> Result:
+    def process_cookies(self, cookies: str) -> Result:
         try:
             auth_keys = {k: f"cursorAuth/{v}" for k, v in {
                 "sign_up": "cachedSignUpType",
@@ -370,7 +439,7 @@ class CursorManager:
             }
 
             logger.info("正在更新认证信息...")
-            if not (result := Utils.update_sqlite_db(Utils.get_path('cursor') / 'state.vscdb', updates)):
+            if not (result := self.db_manager.update(updates)):
                 return result
 
             return Result.ok(message="认证信息更新成功")
