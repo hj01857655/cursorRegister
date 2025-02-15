@@ -1,7 +1,7 @@
 from typing import Tuple
 from dotenv import load_dotenv
 from loguru import logger
-from cursor_utils import error_handler, Utils
+from utils import error_handler, Utils
 import random
 
 @error_handler

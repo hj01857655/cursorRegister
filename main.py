@@ -3,16 +3,16 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from typing import Dict, Optional, List, Tuple
 from dataclasses import dataclass, field
-from cursor_account_generator import generate_cursor_account
-from cursor_id_resetter import reset
-from cursor_auth_updater import process_cookies
+from account_generator import generate_cursor_account
+from id_resetter import reset
+from auth_updater import process_cookies
 from loguru import logger
 from dotenv import load_dotenv
 import os
 from pathlib import Path
-from cursor_utils import Utils, Result, error_handler
+from utils import Utils, Result, error_handler
 import threading
-from cursor_registerAc import CursorRegistration, RegistrationInterrupted
+from registerAc import CursorRegistration, RegistrationInterrupted
 from datetime import datetime
 
 
@@ -467,7 +467,7 @@ class CursorApp:
         def fetch_and_display_info():
             nonlocal loading_dialog
             try:
-                from cursor_get_trial import get_trial_info
+                from get_trial import get_trial_info
                 
                 cookie_str = self.entries['cookie'].get().strip() or os.getenv('COOKIES_STR', '').strip()
                 if not cookie_str:

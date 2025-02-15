@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 from loguru import logger
-from cursor_utils import Utils, error_handler, Result
+from utils import Utils, error_handler, Result
 
 AUTH_KEYS = {k: f"cursorAuth/{v}" for k, v in {
     "sign_up": "cachedSignUpType",

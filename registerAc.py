@@ -3,7 +3,7 @@ import time
 import random
 import os
 from dotenv import load_dotenv
-from cursor_utils import Utils
+from utils import Utils
 from loguru import logger
 
 class RegistrationInterrupted(Exception):

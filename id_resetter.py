@@ -3,7 +3,7 @@ import uuid
 import hashlib
 from pathlib import Path
 from loguru import logger
-from cursor_utils import Utils, error_handler, Result
+from utils import Utils, error_handler, Result
 
 def generate_ids() -> dict:
     return {
