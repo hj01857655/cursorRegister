@@ -102,7 +102,12 @@
 
 ## 📖 Detailed Tutorial
 
+The project has implemented fully automatic registration, and the specific usage method requires a careful reading of the code.
+
+Semi-automatic registration is recommended.
+
 Complete usage tutorial has been published
+
 at [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97)
 
 ## 🙏 Acknowledgments
@@ -111,6 +116,7 @@ Special thanks to the following open source projects:
 
 - [cursor-auto-free](https://github.com/chengazhen/cursor-auto-free)
 - [go-cursor-help](https://github.com/yuaotian/go-cursor-help)
+- [CursorRegister](https://github.com/JiuZ-Chn/CursorRegister)
 
 ## 📜 License and Disclaimer
 
