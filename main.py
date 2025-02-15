@@ -7,11 +7,12 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import ttk, messagebox
 from typing import Dict, List, Tuple
+
 from dotenv import load_dotenv
 from loguru import logger
 
 from registerAc import CursorRegistration, TrialInfoFetcher
-from utils import Utils, Result, error_handler, generate_cursor_account, reset, process_cookies
+from utils import Utils, Result, error_handler, CursorManager
 
 
 class UI:
@@ -309,7 +310,7 @@ class CursorApp:
                 raise RuntimeError("保存域名失败")
             load_dotenv(override=True)
 
-        if not (result := generate_cursor_account()):
+        if not (result := CursorManager.generate_cursor_account()):
             raise RuntimeError(result.message)
 
         email, password = result.data if isinstance(result, Result) else result
@@ -319,7 +320,7 @@ class CursorApp:
 
     @error_handler
     def reset_ID(self) -> None:
-        if not (result := reset()):
+        if not (result := CursorManager.reset()):
             raise Exception(result.message)
         UI.show_success(self.root, result.message)
         self._save_env_vars()
@@ -335,7 +336,7 @@ class CursorApp:
             UI.show_warning(self.root, "Cookie字符串格式不正确，必须包含 WorkosCursorSessionToken")
             return
 
-        if not (result := process_cookies(cookie_str)):
+        if not (result := CursorManager.process_cookies(cookie_str)):
             raise Exception(result.message)
 
         UI.show_success(self.root, result.message)

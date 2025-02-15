@@ -271,100 +271,109 @@ def error_handler(func: Callable) -> Callable:
     return wrapper
 
 
-def generate_ids() -> dict:
-    return {
-        f'telemetry.{key}': value for key, value in {
-            'machineId': f"auth0|user_{hashlib.sha256(os.urandom(32)).hexdigest()}",
-            'macMachineId': hashlib.sha256(os.urandom(32)).hexdigest(),
-            'devDeviceId': str(uuid.uuid4()),
-            'sqmId': "{" + str(uuid.uuid4()).upper() + "}"
-        }.items()
-    }
+class CursorManager:
+    @staticmethod
+    @error_handler
+    def generate_cursor_account() -> Tuple[str, str]:
+        try:
+            random_length = random.randint(5, 20)
+            email = f"{Utils.generate_random_string(random_length)}@{Utils.get_env_var('DOMAIN')}"
+            password = Utils.generate_secure_password()
 
+            logger.info("生成的Cursor账号信息：")
+            logger.info(f"邮箱: {email}")
+            logger.info(f"密码: {password}")
 
-@error_handler
-def reset() -> Result:
-    if not Utils.run_as_admin():
-        return Result.fail("需要管理员权限")
+            if not (result := Utils.update_env_vars({'EMAIL': email, 'PASSWORD': password})):
+                raise RuntimeError(result.message)
+            return email, password
+        except Exception as e:
+            logger.error(f"generate_cursor_account 执行失败: {e}")
+            raise
 
-    if not (result := Utils.kill_process(['Cursor', 'cursor'])):
-        return result
+    @staticmethod
+    @error_handler
+    def reset() -> Result:
+        try:
+            if not Utils.run_as_admin():
+                return Result.fail("需要管理员权限")
 
-    cursor_path = Utils.get_path('cursor')
-    storage_file = cursor_path / 'storage.json'
-    backup_dir = cursor_path / 'backups'
+            if not (result := Utils.kill_process(['Cursor', 'cursor'])):
+                return result
 
-    if not (result := Utils.backup_file(storage_file, backup_dir, 'storage.json.backup')):
-        return result
+            cursor_path = Utils.get_path('cursor')
+            storage_file = cursor_path / 'storage.json'
+            backup_dir = cursor_path / 'backups'
 
-    if not (result := Utils.update_json_file(storage_file, generate_ids())):
-        return Result.fail("更新配置文件失败")
+            if not (result := Utils.backup_file(storage_file, backup_dir, 'storage.json.backup')):
+                return result
+            new_ids = {
+                f'telemetry.{key}': value for key, value in {
+                    'machineId': f"auth0|user_{hashlib.sha256(os.urandom(32)).hexdigest()}",
+                    'macMachineId': hashlib.sha256(os.urandom(32)).hexdigest(),
+                    'devDeviceId': str(uuid.uuid4()),
+                    'sqmId': "{" + str(uuid.uuid4()).upper() + "}"
+                }.items()
+            }
 
-    try:
-        updater_path = Path(os.getenv('LOCALAPPDATA')) / 'cursor-updater'
+            if not (result := Utils.update_json_file(storage_file, new_ids)):
+                return Result.fail("更新配置文件失败")
 
-        if updater_path.is_dir():
             try:
-                import shutil
-                shutil.rmtree(updater_path)
+                updater_path = Path(os.getenv('LOCALAPPDATA')) / 'cursor-updater'
+
+                if updater_path.is_dir():
+                    try:
+                        import shutil
+                        shutil.rmtree(updater_path)
+                    except Exception as e:
+                        logger.warning(f"删除cursor-updater文件夹失败: {e}")
+
+                if not updater_path.exists():
+                    updater_path.touch(exist_ok=True)
+                    Utils.manage_file_permissions(updater_path)
+                else:
+                    try:
+                        Utils.manage_file_permissions(updater_path)
+                    except PermissionError:
+                        pass
+
+                return Result.ok(message="重置机器码成功，已禁用自动更新")
             except Exception as e:
-                logger.warning(f"删除cursor-updater文件夹失败: {e}")
+                return Result.fail(f"禁用自动更新失败: {e}")
+        except Exception as e:
+            logger.error(f"reset 执行失败: {e}")
+            return Result.fail(str(e))
 
-        if not updater_path.exists():
-            updater_path.touch(exist_ok=True)
-            Utils.manage_file_permissions(updater_path)
-        else:
-            try:
-                Utils.manage_file_permissions(updater_path)
-            except PermissionError:
+    @staticmethod
+    @error_handler
+    def process_cookies(cookies: str) -> Result:
+        try:
+            auth_keys = {k: f"cursorAuth/{v}" for k, v in {
+                "sign_up": "cachedSignUpType",
+                "email": "cachedEmail",
+                "access": "accessToken",
+                "refresh": "refreshToken"
+            }.items()}
 
-                pass
+            if not (result := Utils.update_env_vars({'COOKIES_STR': cookies})):
+                return result
 
-        return Result.ok(message="重置机器码成功，已禁用自动更新")
-    except Exception as e:
-        return Result.fail(f"禁用自动更新失败: {e}")
+            if not (token := Utils.extract_token(cookies, "WorkosCursorSessionToken=")):
+                return Result.fail("无效的 WorkosCursorSessionToken")
 
+            updates = {
+                auth_keys["sign_up"]: "Auth_0",
+                auth_keys["email"]: os.getenv("EMAIL", ""),
+                auth_keys["access"]: token,
+                auth_keys["refresh"]: token
+            }
 
-AUTH_KEYS = {k: f"cursorAuth/{v}" for k, v in {
-    "sign_up": "cachedSignUpType",
-    "email": "cachedEmail",
-    "access": "accessToken",
-    "refresh": "refreshToken"
-}.items()}
+            logger.info("正在更新认证信息...")
+            if not (result := Utils.update_sqlite_db(Utils.get_path('cursor') / 'state.vscdb', updates)):
+                return result
 
-
-@error_handler
-def process_cookies(cookies: str) -> Result:
-    if not (result := Utils.update_env_vars({'COOKIES_STR': cookies})):
-        return result
-
-    if not (token := Utils.extract_token(cookies, "WorkosCursorSessionToken=")):
-        return Result.fail("无效的 WorkosCursorSessionToken")
-
-    updates = {
-        AUTH_KEYS["sign_up"]: "Auth_0",
-        AUTH_KEYS["email"]: os.getenv("EMAIL", ""),
-        AUTH_KEYS["access"]: token,
-        AUTH_KEYS["refresh"]: token
-    }
-
-    logger.info("正在更新认证信息...")
-    if not (result := Utils.update_sqlite_db(Utils.get_path('cursor') / 'state.vscdb', updates)):
-        return result
-
-    return Result.ok(message="认证信息更新成功")
-
-
-@error_handler
-def generate_cursor_account() -> Tuple[str, str]:
-    random_length = random.randint(5, 20)
-    email = f"{Utils.generate_random_string(random_length)}@{Utils.get_env_var('DOMAIN')}"
-    password = Utils.generate_secure_password()
-
-    logger.info("生成的Cursor账号信息：")
-    logger.info(f"邮箱: {email}")
-    logger.info(f"密码: {password}")
-
-    if not (result := Utils.update_env_vars({'EMAIL': email, 'PASSWORD': password})):
-        raise RuntimeError(result.message)
-    return email, password
+            return Result.ok(message="认证信息更新成功")
+        except Exception as e:
+            logger.error(f"process_cookies 执行失败: {e}")
+            return Result.fail(str(e))

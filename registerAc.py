@@ -2,9 +2,11 @@ import os
 import random
 import time
 from dataclasses import dataclass
+
 from DrissionPage import ChromiumOptions, Chromium
 from dotenv import load_dotenv
 from loguru import logger
+
 from utils import Utils
 
 
@@ -149,5 +151,3 @@ class TrialInfoFetcher:
         finally:
             if self.__browser:
                 self.__browser.quit()
-
-
