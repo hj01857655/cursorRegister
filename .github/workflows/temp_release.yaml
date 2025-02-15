@@ -111,7 +111,7 @@ jobs:
           retention-days: ${{ inputs.expiry_days }}
 
   cleanup:
-    needs: [build-windows]
+    needs: [ build-windows ]
     runs-on: ubuntu-latest
     if: always()
     permissions:

@@ -1,21 +1,23 @@
-import hashlib
-import os
-import sys
-import json
-import shutil
-import random
-import string
-import sqlite3
-import subprocess
 import ctypes
+import hashlib
+import json
+import os
+import random
+import shutil
+import sqlite3
+import string
+import subprocess
+import sys
 import uuid
+from datetime import datetime
+from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, Union, TypeVar, Generic, Callable, Tuple
-from datetime import datetime
+
 from loguru import logger
-from functools import wraps
 
 T = TypeVar('T')
+
 
 class Result(Generic[T]):
     def __init__(self, success: bool, data: T = None, message: str = ""):
@@ -31,6 +33,7 @@ class Result(Generic[T]):
 
     def __bool__(self) -> bool:
         return self.success
+
 
 class Utils:
     @staticmethod
@@ -56,11 +59,11 @@ class Utils:
             env_path = Utils.get_path('env')
             content = env_path.read_text(encoding='utf-8').splitlines() if env_path.exists() else []
             updated = {line.split('=')[0]: line for line in content if '=' in line}
-            
+
             for key, value in updates.items():
                 updated[key] = f'{key}=\'{value}\''
                 os.environ[key] = value
-                
+
             env_path.write_text('\n'.join(updated.values()) + '\n', encoding='utf-8')
             logger.info(f"已更新环境变量: {', '.join(updates.keys())}")
             return Result.ok()
@@ -83,16 +86,17 @@ class Utils:
 
             if not os.access(str(source), os.R_OK):
                 return Result.fail(f"没有源文件的读取权限: {source}")
-            
+
             Utils.ensure_path(backup_dir)
-            
+
             if not os.access(str(backup_dir), os.W_OK):
                 return Result.fail(f"没有备份目录的写入权限: {backup_dir}")
-                
+
             backup_path = backup_dir / f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
 
             try:
-                backup_files = sorted(backup_dir.glob(f"{prefix}_*"), key=lambda x: x.stat().st_ctime)[:-max_backups+1]
+                backup_files = sorted(backup_dir.glob(f"{prefix}_*"), key=lambda x: x.stat().st_ctime)[
+                               :-max_backups + 1]
 
                 for f in backup_files:
                     try:
@@ -112,18 +116,18 @@ class Utils:
                                 logger.warning(f"获取权限后仍无法删除文件: {f}, 错误: {e}")
                         else:
                             logger.warning(f"无法修改文件权限: {f}")
-                            
+
                     except Exception as del_err:
                         logger.warning(f"删除旧备份文件失败: {f}, 错误: {del_err}")
-                    
+
             except Exception as e:
                 logger.warning(f"处理旧备份文件时出错: {e}")
-        
+
             shutil.copy2(source, backup_path)
-            
+
             logger.info(f"已创建备份: {backup_path}")
             return Result.ok()
-            
+
         except PermissionError as pe:
             return Result.fail(f"权限错误: {pe}")
         except Exception as e:
@@ -134,9 +138,11 @@ class Utils:
         try:
             if make_read_only:
                 subprocess.run(['takeown', '/f', str(path)], capture_output=True, check=True)
-                subprocess.run(['icacls', str(path), '/grant', f'{os.getenv("USERNAME")}:F'], capture_output=True, check=True)
+                subprocess.run(['icacls', str(path), '/grant', f'{os.getenv("USERNAME")}:F'], capture_output=True,
+                               check=True)
                 os.chmod(path, 0o444)
-                subprocess.run(['icacls', str(path), '/inheritance:r', '/grant:r', f'{os.getenv("USERNAME")}:(R)'], capture_output=True)
+                subprocess.run(['icacls', str(path), '/inheritance:r', '/grant:r', f'{os.getenv("USERNAME")}:(R)'],
+                               capture_output=True)
             else:
                 os.chmod(path, 0o666)
             return True
@@ -148,11 +154,11 @@ class Utils:
         try:
             if not file_path.exists() or (make_read_only and not Utils.manage_file_permissions(file_path, False)):
                 return Result.fail(f"文件不存在或无法获取所有权: {file_path}")
-                
+
             content = json.loads(file_path.read_text(encoding='utf-8'))
             content.update(updates)
             file_path.write_text(json.dumps(content, indent=2), encoding='utf-8')
-            
+
             if make_read_only:
                 Utils.manage_file_permissions(file_path)
             return Result.ok()
@@ -174,8 +180,8 @@ class Utils:
             if ctypes.windll.shell32.IsUserAnAdmin():
                 return True
             script = os.path.abspath(sys.argv[0])
-            ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, 
-                                                    ' '.join([script] + sys.argv[1:]), None, 1)
+            ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable,
+                                                      ' '.join([script] + sys.argv[1:]), None, 1)
             return int(ret) > 32
         except:
             return False
@@ -197,19 +203,20 @@ class Utils:
             return Result.fail(f"数据库更新失败: {e}")
 
     @staticmethod
-    def query_sqlite_db(db_path: Path, keys: Union[str, list[str]] = None, table: str = "itemTable") -> Result[Dict[str, str]]:
+    def query_sqlite_db(db_path: Path, keys: Union[str, list[str]] = None, table: str = "itemTable") -> Result[
+        Dict[str, str]]:
         try:
             with sqlite3.connect(db_path) as conn:
                 cursor = conn.cursor()
                 if isinstance(keys, str):
                     keys = [keys]
-                
+
                 if keys:
                     placeholders = ','.join(['?' for _ in keys])
                     cursor.execute(f"SELECT key, value FROM {table} WHERE key IN ({placeholders})", keys)
                 else:
                     cursor.execute(f"SELECT key, value FROM {table}")
-                
+
                 results = dict(cursor.fetchall())
                 logger.info(f"已查询 {len(results)} 条记录")
                 return Result.ok(results)
@@ -229,7 +236,7 @@ class Utils:
             random.choice("!@#$%^&*()"),
             random.choice(string.digits)
         ]
-        password = required + random.choices(chars, k=length-4)
+        password = required + random.choices(chars, k=length - 4)
         random.shuffle(password)
         return ''.join(password)
 
@@ -243,12 +250,13 @@ class Utils:
                 return token.split('::')[1]
             elif '%3A%3A' in token:
                 return token.split('%3A%3A')[1]
-            
+
             logger.error(f"在token中未找到有效的分隔符: {token}")
             return None
         except (ValueError, IndexError) as e:
             logger.error(f"无效的 {token_key}: {str(e)}")
             return None
+
 
 def error_handler(func: Callable) -> Callable:
     @wraps(func)
@@ -259,6 +267,7 @@ def error_handler(func: Callable) -> Callable:
         except Exception as e:
             logger.error(f"{func.__name__} 执行失败: {e}")
             return Result.fail(str(e))
+
     return wrapper
 
 
