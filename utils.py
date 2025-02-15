@@ -223,7 +223,7 @@ class Utils:
     @staticmethod
     def update_json_file(file_path: Path, updates: Dict[str, Any], make_read_only: bool = False) -> Result[None]:
         try:
-            with file_operation_context(file_path, require_write=True) as fp:
+            with file_operation_context(file_path, require_write=make_read_only) as fp:
                 content = json.loads(fp.read_text(encoding='utf-8'))
                 content.update(updates)
                 fp.write_text(json.dumps(content, indent=2), encoding='utf-8')
