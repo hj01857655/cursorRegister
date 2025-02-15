@@ -1,26 +1,25 @@
-import sys
-import tkinter as tk
-from tkinter import ttk, messagebox
-from typing import Dict, Optional, List, Tuple
-from dataclasses import dataclass, field
-from account_generator import generate_cursor_account
-from id_resetter import reset
-from auth_updater import process_cookies
-from loguru import logger
-from dotenv import load_dotenv
 import os
-from pathlib import Path
-from utils import Utils, Result, error_handler
+import sys
 import threading
-from registerAc import CursorRegistration, RegistrationInterrupted
+import tkinter as tk
+from dataclasses import dataclass, field
 from datetime import datetime
+from pathlib import Path
+from tkinter import ttk, messagebox
+from typing import Dict, List, Tuple
+
+from dotenv import load_dotenv
+from loguru import logger
+
+from registerAc import CursorRegistration, RegistrationInterrupted, get_trial_info
+from utils import Utils, Result, error_handler, generate_cursor_account, reset, process_cookies
 
 
 class UI:
     FONT = ('Microsoft YaHei UI', 10)
-    BUTTON_PADDING = (8, 4)  
-    BUTTON_GRID_PADDING = 4  
-    BUTTON_GRID_MARGIN = 3  
+    BUTTON_PADDING = (8, 4)
+    BUTTON_GRID_PADDING = 4
+    BUTTON_GRID_MARGIN = 3
     COLORS = {
         'primary': '#2563EB',
         'secondary': '#64748B',
@@ -50,68 +49,68 @@ class UI:
         style.configure('TFrame', background=UI.COLORS['bg'])
 
         style.configure('TLabelframe',
-            background=UI.COLORS['card_bg'],
-            padding=10,
-            relief='flat',
-            borderwidth=1
-        )
+                        background=UI.COLORS['card_bg'],
+                        padding=10,
+                        relief='flat',
+                        borderwidth=1
+                        )
 
         style.configure('TLabelframe.Label',
-            font=(UI.FONT[0], 11, 'bold'),
-            foreground=UI.COLORS['title_fg'],
-            background=UI.COLORS['bg'],
-            padding=(0, 4)
-        )
+                        font=(UI.FONT[0], 11, 'bold'),
+                        foreground=UI.COLORS['title_fg'],
+                        background=UI.COLORS['bg'],
+                        padding=(0, 4)
+                        )
 
         style.configure('Custom.TButton',
-            font=(UI.FONT[0], 10, 'bold'),
-            padding=UI.BUTTON_PADDING,
-            background=UI.COLORS['primary'],
-            foreground='black',
-            borderwidth=0,
-            relief='flat'
-        )
+                        font=(UI.FONT[0], 10, 'bold'),
+                        padding=UI.BUTTON_PADDING,
+                        background=UI.COLORS['primary'],
+                        foreground='black',
+                        borderwidth=0,
+                        relief='flat'
+                        )
 
         style.map('Custom.TButton',
-            background=[
-                ('pressed', UI.COLORS['pressed']),
-                ('active', UI.COLORS['hover']),
-                ('disabled', UI.COLORS['disabled'])
-            ],
-            foreground=[
-                ('pressed', 'black'),
-                ('active', 'black'),
-                ('disabled', '#94A3B8')
-            ]
-        )
+                  background=[
+                      ('pressed', UI.COLORS['pressed']),
+                      ('active', UI.COLORS['hover']),
+                      ('disabled', UI.COLORS['disabled'])
+                  ],
+                  foreground=[
+                      ('pressed', 'black'),
+                      ('active', 'black'),
+                      ('disabled', '#94A3B8')
+                  ]
+                  )
 
         style.configure('TEntry',
-            padding=8,
-            relief='flat',
-            borderwidth=1,
-            selectbackground=UI.COLORS['primary'],
-            selectforeground='white',
-            fieldbackground=UI.COLORS['input_bg']
-        )
+                        padding=8,
+                        relief='flat',
+                        borderwidth=1,
+                        selectbackground=UI.COLORS['primary'],
+                        selectforeground='white',
+                        fieldbackground=UI.COLORS['input_bg']
+                        )
 
         style.configure('TLabel',
-            font=(UI.FONT[0], 10),
-            background=UI.COLORS['bg'],
-            foreground=UI.COLORS['label_fg'],
-            padding=(4, 2)
-        )
+                        font=(UI.FONT[0], 10),
+                        background=UI.COLORS['bg'],
+                        foreground=UI.COLORS['label_fg'],
+                        padding=(4, 2)
+                        )
 
         style.configure('Footer.TLabel',
-            font=(UI.FONT[0], 9),
-            foreground=UI.COLORS['subtitle_fg'],
-            background=UI.COLORS['bg']
-        )
+                        font=(UI.FONT[0], 9),
+                        foreground=UI.COLORS['subtitle_fg'],
+                        background=UI.COLORS['bg']
+                        )
 
         style.configure('Title.TLabel',
-            font=(UI.FONT[0], 14, 'bold'),
-            foreground=UI.COLORS['title_fg'],
-            background=UI.COLORS['bg']
-        )
+                        font=(UI.FONT[0], 14, 'bold'),
+                        foreground=UI.COLORS['title_fg'],
+                        background=UI.COLORS['bg']
+                        )
 
     @staticmethod
     def create_labeled_entry(parent, label_text: str, row: int, **kwargs) -> ttk.Entry:
@@ -174,10 +173,10 @@ class UI:
         dialog.grab_set()
         dialog.resizable(False, False)
         dialog.configure(bg=UI.COLORS['bg'])
-        
+
         frame = ttk.Frame(dialog, style='TFrame')
         frame.pack(expand=True)
-        
+
         ttk.Label(
             frame,
             text=message,
@@ -185,8 +184,9 @@ class UI:
             justify="center",
             style="TLabel"
         ).pack(pady=10)
-        
+
         return dialog
+
 
 @dataclass
 class WindowConfig:
@@ -205,6 +205,7 @@ class WindowConfig:
         ("获取试用信息", "show_trial_info"),
         ("备份账号", "backup_account")
     ])
+
 
 class CursorApp:
     def __init__(self, root: tk.Tk) -> None:
@@ -292,10 +293,10 @@ class CursorApp:
 
         backup_dir = Path(self.config.backup_dir)
         backup_dir.mkdir(exist_ok=True)
-        
+
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         backup_path = backup_dir / f".env_backup_{timestamp}"
-        
+
         import shutil
         shutil.copy2(env_path, backup_path)
 
@@ -352,7 +353,7 @@ class CursorApp:
             if loading_dialog:
                 loading_dialog.destroy()
                 loading_dialog = None
-                
+
             dialog = tk.Toplevel(self.root)
             dialog.title("等待确认")
             dialog.geometry("250x180")
@@ -467,8 +468,7 @@ class CursorApp:
         def fetch_and_display_info():
             nonlocal loading_dialog
             try:
-                from get_trial import get_trial_info
-                
+
                 cookie_str = self.entries['cookie'].get().strip() or os.getenv('COOKIES_STR', '').strip()
                 if not cookie_str:
                     raise ValueError("未找到Cookie信息，请先更新账号信息")
@@ -490,6 +490,7 @@ class CursorApp:
         loading_dialog = UI.create_loading_dialog(self.root, "正在获取账号信息，请稍候...")
         threading.Thread(target=fetch_and_display_info, daemon=True).start()
 
+
 def setup_logging() -> None:
     logger.remove()
     logger.add(
@@ -503,6 +504,7 @@ def setup_logging() -> None:
         diagnose=True,
         level="DEBUG"
     )
+
 
 def main() -> None:
     try:
@@ -518,6 +520,7 @@ def main() -> None:
         logger.error(f"程序启动失败: {e}")
         if 'root' in locals():
             UI.show_error(root, "程序启动失败", e)
+
 
 if __name__ == "__main__":
     main()

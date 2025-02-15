@@ -13,9 +13,6 @@ a = Analysis(
         'loguru',
         'python-dotenv',
         'drissionpage',
-        'account_generator',
-        'id_resetter',
-        'auth_updater',
         'utils',
         'registerAc',
         'email'
