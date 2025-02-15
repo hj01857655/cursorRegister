@@ -105,7 +105,7 @@
 
 有疑问可以进群交流:
 
-![进群交流](assets/wx_20250215215655.jpg)
+<img src="assets/wx_20250215215655.jpg" width="300" height="450" alt="进群交流" style="float: left; margin-right: 20px;">
 
 ## 🙏 致谢
 
