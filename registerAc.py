@@ -8,10 +8,6 @@ from loguru import logger
 from utils import Utils
 
 
-class RegistrationInterrupted(Exception):
-    pass
-
-
 class CursorRegistration:
     def __init__(self):
         load_dotenv()
@@ -86,10 +82,10 @@ class CursorRegistration:
                 if wait_callback:
                     try:
                         wait_callback(message)
-                    except RegistrationInterrupted:
+                    except Exception as e:
                         logger.info("用户终止了注册流程")
                         return None
-                self._safe_action(step)
+                    self._safe_action(step)
 
             self._safe_action(self.get_user_info)
             if token := self._safe_action(self.get_cursor_token):
@@ -98,55 +94,60 @@ class CursorRegistration:
             return token
 
         except Exception as e:
-            if not isinstance(e, RegistrationInterrupted):
-                logger.error(f"注册过程发生错误: {str(e)}")
+            logger.error(f"注册过程发生错误: {str(e)}")
             raise
         finally:
             if self.browser:
                 self.browser.quit()
 
 
-def main():
-    try:
-        registrar = CursorRegistration()
-        if token := registrar.register(lambda msg: input(f"{msg}，完成后按回车键继续...")):
-            logger.info(f"获取到的Cookie: WorkosCursorSessionToken={token}")
-            logger.info("Cookie已成功更新到环境变量COOKIES_STR")
-        else:
-            logger.error("获取Cookie失败")
-    except Exception as e:
-        logger.error(f"程序执行失败: {str(e)}")
+class TrialInfoFetcher:
+    @dataclass
+    class __TrialInfo:
+        usage: str
+        days: str
 
+    def __init__(self, cookies: str):
+        self.__cookies = cookies
+        self.__browser = None
+        self.__tab = None
 
-@dataclass
-class TrialInfo:
-    usage: str
-    days: str
+    def __init_browser(self):
+        co = ChromiumOptions().incognito().headless()
+        self.__browser = Chromium(co)
+        self.__tab = self.__browser.latest_tab
 
+    def __setup_page(self):
+        self.__tab.get('https://www.cursor.com/settings')
+        self.__tab.set.cookies(self.__cookies)
+        self.__tab.get("https://www.cursor.com/settings")
 
-def get_trial_info(cookies: str) -> TrialInfo:
-    co = ChromiumOptions().incognito().headless()
-    browser = Chromium(co)
-    try:
-        tab = browser.latest_tab
-        tab.get('https://www.cursor.com/settings')
-        tab.set.cookies(cookies)
-        tab.get("https://www.cursor.com/settings")
-
-        usage_ele = tab.ele(
+    def __get_elements(self):
+        usage_ele = self.__tab.ele(
             "css:div.col-span-2 > div > div > div > div > div:nth-child(1) > div.flex.items-center.justify-between.gap-2 > span.font-mono.text-sm\\/\\[0\\.875rem\\]")
-        trial_days = tab.ele("css:div > span.ml-1\\.5.opacity-50")
+        trial_days = self.__tab.ele("css:div > span.ml-1\\.5.opacity-50")
 
         if not usage_ele or not trial_days:
             raise ValueError("无法获取试用信息，页面结构可能已更改")
 
-        return TrialInfo(
-            usage=usage_ele.text or "未知",
-            days=trial_days.text or "未知"
-        )
-    except Exception as e:
-        if isinstance(e, ValueError):
-            raise
-        raise ValueError(f"获取试用信息失败: {str(e)}")
-    finally:
-        browser.quit()
+        return usage_ele, trial_days
+
+    def get_info(self) -> '__TrialInfo':
+        try:
+            self.__init_browser()
+            self.__setup_page()
+            usage_ele, trial_days = self.__get_elements()
+
+            return self.__TrialInfo(
+                usage=usage_ele.text or "未知",
+                days=trial_days.text or "未知"
+            )
+        except Exception as e:
+            if isinstance(e, ValueError):
+                raise
+            raise ValueError(f"获取试用信息失败: {str(e)}")
+        finally:
+            if self.__browser:
+                self.__browser.quit()
+
+

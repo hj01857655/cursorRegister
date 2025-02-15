@@ -7,11 +7,10 @@ from datetime import datetime
 from pathlib import Path
 from tkinter import ttk, messagebox
 from typing import Dict, List, Tuple
-
 from dotenv import load_dotenv
 from loguru import logger
 
-from registerAc import CursorRegistration, RegistrationInterrupted, get_trial_info
+from registerAc import CursorRegistration, TrialInfoFetcher
 from utils import Utils, Result, error_handler, generate_cursor_account, reset, process_cookies
 
 
@@ -399,7 +398,7 @@ class CursorApp:
 
             dialog.wait_window()
             if not result['continue']:
-                raise RegistrationInterrupted()
+                raise Exception("用户终止了注册流程")
 
         def update_ui_success(token):
             nonlocal loading_dialog
@@ -425,11 +424,12 @@ class CursorApp:
                     self.root.after(0, lambda: update_ui_success(token))
                 else:
                     self.root.after(0, lambda: update_ui_warning("注册流程未完成"))
-            except RegistrationInterrupted:
-                self.root.after(0, lambda: update_ui_warning("注册流程已被终止"))
             except Exception as e:
-                logger.error(f"注册过程发生错误: {str(e)}")
-                self.root.after(0, lambda: update_ui_warning(f"注册失败: {str(e)}"))
+                if str(e) == "用户终止了注册流程":
+                    self.root.after(0, lambda: update_ui_warning("注册流程已被终止"))
+                else:
+                    logger.error(f"注册过程发生错误: {str(e)}")
+                    self.root.after(0, lambda: update_ui_warning(f"注册失败: {str(e)}"))
             finally:
                 if registrar and registrar.browser:
                     registrar.browser.quit()
@@ -468,21 +468,21 @@ class CursorApp:
         def fetch_and_display_info():
             nonlocal loading_dialog
             try:
-
                 cookie_str = self.entries['cookie'].get().strip() or os.getenv('COOKIES_STR', '').strip()
                 if not cookie_str:
                     raise ValueError("未找到Cookie信息，请先更新账号信息")
 
                 if "WorkosCursorSessionToken=" not in cookie_str:
                     cookie_str = f"WorkosCursorSessionToken={cookie_str}"
-
-                trial_info = get_trial_info(cookie_str)
+                fetcher = TrialInfoFetcher(cookie_str)
+                trial_info = fetcher.get_info()
                 self.root.after(0, lambda: UI.show_success(
                     self.root,
                     f"账户可用额度: {trial_info.usage}\n试用天数: {trial_info.days}"
                 ))
             except Exception as e:
-                self.root.after(0, lambda: UI.show_error(self.root, "获取账号信息失败", e))
+                error_message = str(e)
+                self.root.after(0, lambda: UI.show_error(self.root, "获取账号信息失败", error_message))
             finally:
                 if loading_dialog:
                     self.root.after(0, loading_dialog.destroy)
