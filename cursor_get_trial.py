@@ -1,7 +1,13 @@
 from DrissionPage import ChromiumOptions, Chromium
 from typing import Optional, Tuple
+from dataclasses import dataclass
 
-def get_trial_info(cookies: str) -> Optional[Tuple[str, str]]:
+@dataclass
+class TrialInfo:
+    usage: str
+    days: str
+
+def get_trial_info(cookies: str) -> TrialInfo:
     co = ChromiumOptions().incognito().headless()
     browser = Chromium(co)
     try:
@@ -14,11 +20,16 @@ def get_trial_info(cookies: str) -> Optional[Tuple[str, str]]:
             "css:div.col-span-2 > div > div > div > div > div:nth-child(1) > div.flex.items-center.justify-between.gap-2 > span.font-mono.text-sm\\/\\[0\\.875rem\\]")
         trial_days = tab.ele("css:div > span.ml-1\\.5.opacity-50")
         
-        usage = usage_ele.text if usage_ele else "未知"
-        days = trial_days.text if trial_days else "未知"
+        if not usage_ele or not trial_days:
+            raise ValueError("无法获取试用信息，页面结构可能已更改")
         
-        return usage, days
+        return TrialInfo(
+            usage=usage_ele.text or "未知",
+            days=trial_days.text or "未知"
+        )
     except Exception as e:
-        raise Exception(f"获取试用信息失败: {str(e)}")
+        if isinstance(e, ValueError):
+            raise
+        raise ValueError(f"获取试用信息失败: {str(e)}")
     finally:
         browser.quit()

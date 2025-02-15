@@ -13,6 +13,7 @@ from pathlib import Path
 from cursor_utils import Utils, Result, error_handler
 import threading
 from cursor_registerAc import CursorRegistration, RegistrationInterrupted
+from datetime import datetime
 
 
 class UI:
@@ -193,7 +194,6 @@ class WindowConfig:
     height: int = 485
     title: str = "Cursor注册小助手"
     backup_dir: str = "env_backups"
-    max_backups: int = 10
     env_vars: List[Tuple[str, str]] = field(default_factory=lambda: [
         ('DOMAIN', '域名'), ('EMAIL', '邮箱'), ('PASSWORD', '密码')
     ])
@@ -201,8 +201,8 @@ class WindowConfig:
         ("生成账号", "generate_account"),
         ("自动注册", "auto_register"),
         ("重置机器ID", "reset_ID"),
-        ("刷新账号cookie", "update_auth"),
-        ("获取账号试用信息", "show_trial_info"),
+        ("刷新cookie", "update_auth"),
+        ("获取试用信息", "show_trial_info"),
         ("备份账号", "backup_account")
     ])
 
@@ -291,12 +291,19 @@ class CursorApp:
             raise Exception(f"未找到.env文件: {env_path}")
 
         backup_dir = Path(self.config.backup_dir)
-        if not Utils.backup_file(env_path, backup_dir, '.env', self.config.max_backups):
-            raise Exception("备份文件失败")
+        backup_dir.mkdir(exist_ok=True)
+        
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        backup_path = backup_dir / f".env_backup_{timestamp}"
+        
+        import shutil
+        shutil.copy2(env_path, backup_path)
 
     @error_handler
     def generate_account(self) -> None:
-
+        logger.info(f"当前环境变量 DOMAIN: {os.getenv('DOMAIN', '未设置')}")
+        logger.info(f"当前环境变量 EMAIL: {os.getenv('EMAIL', '未设置')}")
+        logger.info(f"当前环境变量 PASSWORD: {os.getenv('PASSWORD', '未设置')}")
         if domain := self.entries['DOMAIN'].get().strip():
             if not Utils.update_env_vars({'DOMAIN': domain}):
                 raise RuntimeError("保存域名失败")
@@ -456,46 +463,41 @@ class CursorApp:
 
     @error_handler
     def show_trial_info(self) -> None:
-        try:
-            loading_dialog = None
-            
-            def get_trial_info():
-                nonlocal loading_dialog
-                try:
-                    from cursor_get_trial import get_trial_info as get_info
-                    cookie_str = os.getenv('COOKIES_STR', '').strip()
-                    if not cookie_str:
-                        raise Exception("未找到Cookie信息，请先更新账号信息")
-                    
-                    if "WorkosCursorSessionToken=" not in cookie_str:
-                        cookie_str = f"WorkosCursorSessionToken={cookie_str}"
-                    
-                    usage, days = get_info(cookie_str)
-                    self.root.after(0, lambda: UI.show_success(
-                        self.root, 
-                        f"账户可用额度: {usage}\n试用天数: {days}"
-                    ))
-                finally:
-                    if loading_dialog:
-                        self.root.after(0, loading_dialog.destroy)
+        loading_dialog = None
 
-            self._save_env_vars()
-            load_dotenv(override=True)
-            loading_dialog = UI.create_loading_dialog(self.root, "正在获取账号信息，请稍候...")
-            thread = threading.Thread(target=get_trial_info, daemon=True)
-            thread.start()
-        except Exception as e:
-            if loading_dialog:
-                loading_dialog.destroy()
-            UI.show_error(self.root, "获取账号信息失败", e)
+        def fetch_and_display_info():
+            nonlocal loading_dialog
+            try:
+                from cursor_get_trial import get_trial_info
+                
+                cookie_str = self.entries['cookie'].get().strip() or os.getenv('COOKIES_STR', '').strip()
+                if not cookie_str:
+                    raise ValueError("未找到Cookie信息，请先更新账号信息")
+
+                if "WorkosCursorSessionToken=" not in cookie_str:
+                    cookie_str = f"WorkosCursorSessionToken={cookie_str}"
+
+                trial_info = get_trial_info(cookie_str)
+                self.root.after(0, lambda: UI.show_success(
+                    self.root,
+                    f"账户可用额度: {trial_info.usage}\n试用天数: {trial_info.days}"
+                ))
+            except Exception as e:
+                self.root.after(0, lambda: UI.show_error(self.root, "获取账号信息失败", e))
+            finally:
+                if loading_dialog:
+                    self.root.after(0, loading_dialog.destroy)
+
+        loading_dialog = UI.create_loading_dialog(self.root, "正在获取账号信息，请稍候...")
+        threading.Thread(target=fetch_and_display_info, daemon=True).start()
 
 def setup_logging() -> None:
     logger.remove()
     logger.add(
-        sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD_HH}.log",
+        sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD}.log",
         format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
-        rotation="10 MB",
-        retention="14 days",
+        rotation="50 MB",
+        retention="30 days",
         compression="gz",
         enqueue=True,
         backtrace=True,

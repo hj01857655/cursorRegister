@@ -30,7 +30,7 @@ def reset() -> Result:
     if not (result := Utils.backup_file(storage_file, backup_dir, 'storage.json.backup')):
         return result
 
-    if not (result := Utils.update_json_file(storage_file, generate_ids(), make_read_only=True)):
+    if not (result := Utils.update_json_file(storage_file, generate_ids())):
         return Result.fail("更新配置文件失败")
 
     try:

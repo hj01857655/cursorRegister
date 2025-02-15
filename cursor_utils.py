@@ -195,6 +195,26 @@ class Utils:
             return Result.fail(f"数据库更新失败: {e}")
 
     @staticmethod
+    def query_sqlite_db(db_path: Path, keys: Union[str, list[str]] = None, table: str = "itemTable") -> Result[Dict[str, str]]:
+        try:
+            with sqlite3.connect(db_path) as conn:
+                cursor = conn.cursor()
+                if isinstance(keys, str):
+                    keys = [keys]
+                
+                if keys:
+                    placeholders = ','.join(['?' for _ in keys])
+                    cursor.execute(f"SELECT key, value FROM {table} WHERE key IN ({placeholders})", keys)
+                else:
+                    cursor.execute(f"SELECT key, value FROM {table}")
+                
+                results = dict(cursor.fetchall())
+                logger.info(f"已查询 {len(results)} 条记录")
+                return Result.ok(results)
+        except Exception as e:
+            return Result.fail(f"数据库查询失败: {e}")
+
+    @staticmethod
     def generate_random_string(length: int, chars: str = string.ascii_lowercase + string.digits) -> str:
         return ''.join(random.choices(chars, k=length))
 
