@@ -1,5 +1,7 @@
 # Cursor 注册助手
 
+[English Version](./README_EN.md)
+
 > 一个帮助你轻松使用 Cursor 的小工具
 
 ## 📥 下载 Cursor
