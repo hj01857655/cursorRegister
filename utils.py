@@ -10,7 +10,7 @@ import subprocess
 import ctypes
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Union, TypeVar, Generic, Callable
+from typing import Any, Dict, Union, TypeVar, Generic, Callable, Tuple
 from datetime import datetime
 from loguru import logger
 from functools import wraps

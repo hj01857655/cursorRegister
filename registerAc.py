@@ -1,3 +1,5 @@
+from dataclasses import dataclass
+
 from DrissionPage import ChromiumOptions, Chromium
 import time
 import random
