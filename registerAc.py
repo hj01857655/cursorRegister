@@ -46,7 +46,7 @@ class CursorRegistration:
     def init_browser(self):
         co = ChromiumOptions()
         co.incognito()
-        co.add_extension("turnstilePatch")
+        co.add_extension("./turnstilePatch")
         if self.headless:
             co.headless()
         self.browser = Chromium(co)
