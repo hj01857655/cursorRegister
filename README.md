@@ -35,14 +35,18 @@
 <div align="center">
 
 ```shell
-🎉 让 Cursor 注册变得简单而优雅 ��
+🎉 让 Cursor 注册变得简单而优雅 
 ```
 
 </div>
 
 ---
 
+<div align="center">
+
 ## ⚡ 快速开始
+
+</div>
 
 ### 🌟 核心特性
 
@@ -62,7 +66,11 @@
 - 🌐 稳定的网络连接
 - 📮 可用的邮箱服务
 
+<div align="center">
+
 ## 📥 下载安装
+
+</div>
 
 <details>
 <summary><b>🖥️ Cursor 编辑器</b></summary>
@@ -81,7 +89,11 @@
 
 </details>
 
+<div align="center">
+
 ## 📑 功能目录
+
+</div>
 
 <table>
 <tr>
@@ -96,7 +108,11 @@
 </tr>
 </table>
 
+<div align="center">
+
 ## 🎯 使用方法
+
+</div>
 
 ### 🔰 前期准备
 
@@ -155,7 +171,11 @@
 </tr>
 </table>
 
+<div align="center">
+
 ## 🎯 注册方式
+
+</div>
 
 
 ### 🌈 支持的注册方式
@@ -274,7 +294,11 @@
 
 </details>
 
+<div align="center">
+
 ## 🎯 常见问题
+
+</div>
 
 <details>
 <summary><b>💡 临时邮箱 vs 自有域名？</b></summary>
@@ -305,7 +329,11 @@
 
 </details>
 
+<div align="center">
+
 ## 🤝 社区交流
+
+</div>
 
 <div align="center">
 <table>
@@ -329,11 +357,19 @@
 </table>
 </div>
 
+<div align="center">
+
 ## 详细教程 📖
+
+</div>
 
 访问 [Cursor 注册助手食用指南](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97) 获取完整教程。
 
+<div align="center">
+
 ## 🌟 致谢
+
+</div>
 
 感谢以下开源项目的贡献：
 
@@ -370,7 +406,11 @@
 
 </div>
 
+<div align="center">
+
 ## 📜 许可证与声明
+
+</div>
 
 ### 📋 许可说明
 本项目采用 [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/) 许可证
