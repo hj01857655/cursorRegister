@@ -311,14 +311,13 @@ class CursorRegistration:
                 raise Exception("在输入验证码时超时")
 
     def github_action_register(self):
-        register = CursorRegistration()
-        token = register.admin_auto_register()
+        self.headless = True
+        token =self.admin_auto_register()
         if token:
             env_updates = {
                 "COOKIES_STR": f"WorkosCursorSessionToken={token}",
-                "EMAIL": os.getenv('EMAIL'),
-                "PASSWORD": os.getenv('PASSWORD'),
-                "DOMAIN": os.getenv('DOMAIN')
+                "EMAIL": self.email,
+                "PASSWORD": self.password
             }
             Utils.update_env_vars(env_updates)
             try:
@@ -329,9 +328,8 @@ class CursorRegistration:
                 logger.info("环境变量已保存到 env_variables.csv 文件中")
             except Exception as e:
                 logger.error(f"保存环境变量到文件时出错: {str(e)}")
-            load_dotenv(override=True)
 
 
 
 if __name__ == "__main__":
-    pass
+    CursorRegistration().github_action_register()
