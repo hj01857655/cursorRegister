@@ -14,7 +14,7 @@ from loguru import logger
 from registerAc import CursorRegistration
 from utils import Utils, Result, error_handler, CursorManager
 
-console_mode = True
+console_mode = False
 
 
 class UI:
