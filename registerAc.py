@@ -23,10 +23,11 @@ class CursorRegistration:
 
     def __init__(self):
         load_dotenv()
-        required_vars = ['EMAIL', 'PASSWORD', 'DOMAIN']
-        if not all(os.getenv(var) for var in required_vars):
-            raise ValueError("请确保.env文件中配置了 EMAIL、PASSWORD 和 DOMAIN")
         self.headless = False
+        if not os.getenv('GITHUB_ACTIONS'):
+            required_vars = ['EMAIL', 'PASSWORD', 'DOMAIN']
+            if not all(os.getenv(var) for var in required_vars):
+                raise ValueError("请确保.env文件中配置了 EMAIL、PASSWORD 和 DOMAIN")
         self.email = os.getenv('EMAIL')
         self.password = os.getenv('PASSWORD')
         self.domain = os.getenv('DOMAIN')
@@ -332,4 +333,5 @@ class CursorRegistration:
 
 
 if __name__ == "__main__":
+    load_dotenv()
     CursorRegistration().github_action_register()
