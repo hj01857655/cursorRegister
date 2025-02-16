@@ -85,7 +85,7 @@ class CursorRegistration:
 
     def input_field(self, fields_dict):
         for name, value in fields_dict.items():
-            time.sleep(random.uniform(1, 3))
+            time.sleep(random.uniform(2, 5))
             self.tab.ele(f'@name={name}').input(value)
             logger.info(f"成功输入 {name}")
 
