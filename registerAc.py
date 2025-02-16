@@ -175,7 +175,7 @@ class CursorRegistration:
                 raise Exception("无法进入邮箱验证页面")
 
             if self.admin:
-                email_data = self.get_email_data
+                email_data = self.get_email_data()
                 verify_code = self.parse_cursor_verification_code(email_data)
                 self._safe_action(self.input_email_verification, verify_code)
             else:

@@ -162,6 +162,7 @@ jobs:
           PASSWORD=
           COOKIES_STR=
           API_KEY=
+          MOE_MAIL_URL=
           EOL
 
       - name: 创建发布压缩包

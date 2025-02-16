@@ -461,7 +461,7 @@ class MoemailManager:
             'Content-Type': 'application/json',
             'X-API-Key': self.api_key
         }
-        self.base_url = "https://moemail.app/api"
+        self.base_url = os.getenv("MOE_MAIL_URL")
         self.available_domains = ["moemail.app", "bitibiti.cc"]
     
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
