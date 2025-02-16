@@ -12,13 +12,13 @@ from utils import Utils
 
 class CursorRegistration:
     CURSOR_URL = "https://www.cursor.com/"
-    CURSOR_SIGNIN_URL = "https://authenticator.cursor.sh"  # 登录页
-    CURSOR_PASSWORD_URL = "https://authenticator.cursor.sh/password"  # 密码输入页
-    CURSOR_MAGAIC_CODE_URL = "https://authenticator.cursor.sh/magic-code"  # 验证码输入页
-    CURSOR_SIGNUP_URL = "https://authenticator.cursor.sh/sign-up"  # 注册页
-    CURSOR_SIGNUP_PASSWORD_URL = "https://authenticator.cursor.sh/sign-up/password"  # 注册密码设置页
-    CURSOR_SETTING_URL = "https://www.cursor.com/settings"  # 个人信息设置页
-    CURSOR_EMAIL_VERIFICATION_URL = "https://authenticator.cursor.sh/email-verification"  # 邮箱验证页
+    CURSOR_SIGNIN_URL = "https://authenticator.cursor.sh"
+    CURSOR_PASSWORD_URL = "https://authenticator.cursor.sh/password"
+    CURSOR_MAGAIC_CODE_URL = "https://authenticator.cursor.sh/magic-code"
+    CURSOR_SIGNUP_URL = "https://authenticator.cursor.sh/sign-up"
+    CURSOR_SIGNUP_PASSWORD_URL = "https://authenticator.cursor.sh/sign-up/password"
+    CURSOR_SETTING_URL = "https://www.cursor.com/settings"
+    CURSOR_EMAIL_VERIFICATION_URL = "https://authenticator.cursor.sh/email-verification"
 
     def __init__(self):
         load_dotenv()
@@ -197,7 +197,9 @@ class CursorRegistration:
                 self.browser.quit()
     def admin_auto_register(self, wait_callback=None):
         self.admin = True
-        self._safe_action(self.auto_register, wait_callback)
+        self.headless = True
+        token = self._safe_action(self.auto_register, wait_callback)
+        return token
     def _cursor_turnstile(self):
         max_retries = 5
         for retry in range(max_retries):
@@ -241,7 +243,8 @@ class CursorRegistration:
             verify_code = re.search(r'(?:\r?\n)(\d{6})(?:\r?\n)', message).group(1)
 
         return verify_code
-    def get_email_verification(self, email_data):
+    def get_email_verification(self):
+        apikey = os.getenv("API_KEY")
         pass
 
     def input_email_verification(self, verify_code):
@@ -267,3 +270,25 @@ class CursorRegistration:
             if retry == self.retry_times - 1:
                 logger.error("在输入验证码时超时")
                 raise Exception("在输入验证码时超时")
+
+
+if __name__ == "__main__":
+    register = CursorRegistration()
+    token = register.admin_auto_register()
+    if token:
+        env_updates = {
+            "COOKIES_STR": f"WorkosCursorSessionToken={token}",
+            "EMAIL": os.getenv('EMAIL'),
+            "PASSWORD": os.getenv('PASSWORD'),
+            "DOMAIN": os.getenv('DOMAIN')
+        }
+        Utils.update_env_vars(env_updates)
+        try:
+            with open('env_variables.csv', 'w', encoding='utf-8', newline='') as f:
+                f.write("variable,value\n")
+                for key, value in env_updates.items():
+                    f.write(f"{key},{value}\n")
+            logger.info("环境变量已保存到 env_variables.csv 文件中")
+        except Exception as e:
+            logger.error(f"保存环境变量到文件时出错: {str(e)}")
+        load_dotenv(override=True)

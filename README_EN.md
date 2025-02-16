@@ -42,6 +42,19 @@
 
 #### 1️⃣ Account Registration
 
+- **Fully Automatic Registration (Recommended):**
+    1. Fork this project to your GitHub account
+    2. Get API KEY from [moemail](https://github.com/beilunyang/moemail) project
+    3. Configure Secrets in your forked project:
+        - Go to project settings -> Secrets and variables -> Actions
+        - Add a secret named `API_KEY` with the value of your obtained API KEY
+    4. Manually trigger GitHub Action:
+        - Go to Actions tab
+        - Select `Register Account` workflow
+        - Click "Run workflow"
+    5. Wait for the Action to complete, account information will be saved automatically
+    > ⚠️ Note: It's recommended to deploy your own moemail service for stability
+
 - **Register with Temporary Email:**
     - Enter the temporary email address in the email input field
     - Select "Auto Register", the program will automatically fill in registration information
@@ -106,9 +119,11 @@ The project has implemented fully automatic registration.
 
 Semi-automatic registration is recommended.
 
-Complete usage tutorial has been published
+Complete usage tutorial has been published at [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97)
 
-at [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97)
+If you have any questions, you can join the group chat:
+
+<img src="assets/wx_20250215215655.jpg" width="300" height="450" alt="Join Group Chat" style="float: left; margin-right: 20px;">
 
 ## 🙏 Acknowledgments
 
@@ -117,6 +132,7 @@ Special thanks to the following open source projects:
 - [cursor-auto-free](https://github.com/chengazhen/cursor-auto-free)
 - [go-cursor-help](https://github.com/yuaotian/go-cursor-help)
 - [CursorRegister](https://github.com/JiuZ-Chn/CursorRegister)
+- [moemail](https://github.com/beilunyang/moemail) - Provides stable and reliable temporary email service
 
 ## 📜 License and Disclaimer
 

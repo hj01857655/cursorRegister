@@ -161,6 +161,7 @@ jobs:
           EMAIL=
           PASSWORD=
           COOKIES_STR=
+          API_KEY=
           EOL
 
       - name: 创建发布压缩包

@@ -42,6 +42,19 @@
 
 #### 1️⃣ 账号注册
 
+- **全自动注册（推荐）：**
+    1. Fork 本项目到你的 GitHub 账号
+    2. 从 [moemail](https://github.com/beilunyang/moemail) 项目获取 API KEY
+    3. 在你 Fork 的项目中配置 Secrets：
+        - 进入项目设置 -> Secrets and variables -> Actions
+        - 添加名为 `API_KEY` 的 secret，值为获取到的 API KEY
+    4. 手动触发 GitHub Action：
+        - 进入 Actions 标签页
+        - 选择 `注册账号` workflow
+        - 点击 "Run workflow"
+    5. 等待 Action 执行完成，账号信息将自动保存
+    > ⚠️ 注意：建议自行部署 moemail 服务以确保稳定性
+
 - **使用临时邮箱注册：**
     - 在邮箱输入框中填入临时邮箱地址
     - 选择"自动注册"，程序将自动填写注册信息
@@ -115,10 +128,10 @@
 
 特别感谢以下开源项目的贡献：
 
-
 - [cursor-auto-free](https://github.com/chengazhen/cursor-auto-free)
 - [go-cursor-help](https://github.com/yuaotian/go-cursor-help)
 - [CursorRegister](https://github.com/JiuZ-Chn/CursorRegister)
+- [moemail](https://github.com/beilunyang/moemail) - 提供了稳定可靠的临时邮箱服务
 
 ## 📜 许可证与声明
 

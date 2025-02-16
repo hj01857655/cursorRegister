@@ -99,6 +99,7 @@ jobs:
           EMAIL=
           PASSWORD=
           COOKIES_STR=
+          API_KEY=
           "@ | Out-File -FilePath .env -Encoding UTF8
 
       - name: 上传构建产物
