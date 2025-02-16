@@ -1,26 +1,36 @@
-# Cursor 注册助手 🚀
+# 🎯 Cursor 注册助手
 
 <div align="center">
 
-[English Version](./README_EN.md)
+[🌍 English Version](./README_EN.md) | [🇨🇳 中文版](./README.md)
 
-> 一个帮助你轻松使用 Cursor 的小工具，支持多种注册方式，操作简单便捷。
+> 🚀 一个帮助你轻松使用 Cursor 的小工具，支持多种注册方式，操作简单便捷。
 
 ![GitHub release (latest by date)](https://img.shields.io/github/v/release/ktovoz/cursorRegister)
 ![License](https://img.shields.io/badge/license-CC%20BY--NC--ND%204.0-lightgrey.svg)
 ![GitHub stars](https://img.shields.io/github/stars/ktovoz/cursorRegister)
 ![Windows Support](https://img.shields.io/badge/Windows-0078D6?style=flat&logo=windows&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.7+-blue.svg?logo=python&logoColor=white)
+[![GitHub issues](https://img.shields.io/github/issues/ktovoz/cursorRegister)](https://github.com/ktovoz/cursorRegister/issues)
+[![GitHub forks](https://img.shields.io/github/forks/ktovoz/cursorRegister)](https://github.com/ktovoz/cursorRegister/network)
 
 </div>
 
 <p align="center">
-  <a href="#快速开始-">快速开始</a> •
-  <a href="#下载安装-">下载安装</a> •
-  <a href="#使用方法-">使用方法</a> •
-  <a href="#注册方式-">注册方式</a> •
-  <a href="#常见问题-">常见问题</a>
+  <a href="#-快速开始">快速开始</a> •
+  <a href="#-下载安装">下载安装</a> •
+  <a href="#-使用方法">使用方法</a> •
+  <a href="#-注册方式">注册方式</a> •
+  <a href="#-常见问题">常见问题</a>
 </p>
+
+<div align="center">
+
+```shell
+🎉 让 Cursor 注册变得简单而优雅 🎉
+```
+
+</div>
 
 ---
 
@@ -28,26 +38,28 @@
 
 <table>
 <tr>
-<td width="50%">
+<td width="50%" style="border: none;">
 
-### 🔥 特性
+### 🌟 核心特性
 
-- 🚀 全自动注册流程
-- 📧 多种邮箱配置方案
+- 🚀 全自动化注册流程
+- 📧 多样化邮箱配置方案
 - 🔒 安全可靠的账号管理
-- 🛠️ 简单易用的界面
-- 🔄 自动更新保护
+- 🎨 简洁优雅的操作界面
+- 🔄 智能的自动更新保护
+- 🌐 多平台兼容支持
+- ⚙️ 灵活的配置选项
 
 </td>
-<td width="50%">
+<td width="50%" style="border: none;">
 
-### 📋 前置要求
+### 📋 系统要求
 
-- Windows 系统
-- Cursor v0.44.11
-- Python 3.7+
-- 网络连接
-- 邮箱服务
+- 💻 Windows 系统
+- 🎯 Cursor v0.44.11
+- 🐍 Python 3.7+
+- 🌐 稳定的网络连接
+- 📮 可用的邮箱服务
 
 </td>
 </tr>
@@ -74,39 +86,75 @@
 
 ## 目录 📑
 
-- [快速开始](#快速开始-)
-- [下载安装](#下载安装-)
-- [使用方法](#使用方法-)
-- [注册方式](#注册方式-)
-- [常见问题](#常见问题-)
+- [快速开始](#-快速开始)
+- [下载安装](#-下载安装)
+- [使用方法](#-使用方法)
+- [注册方式](#-注册方式)
+- [常见问题](#-常见问题)
 - [交流群](#交流群-)
 - [致谢](#致谢-)
 - [许可证与声明](#许可证与声明-)
 
-## 快速开始 🚀
+## 🎯 使用方法
 
-1. 下载并安装 Cursor v0.44.11
-2. 下载最新版本注册助手
-3. 选择注册方式（全自动/半自动）
-4. 按提示完成注册配置
+### 🔰 前期准备
 
-## 使用方法 🔐
+#### 📧 邮箱配置（二选一）
 
-### 前期准备
+<table>
+<tr>
+<th>方案类型</th>
+<th>配置步骤</th>
+<th>优势</th>
+</tr>
+<tr>
+<td>
 
-#### 邮箱配置（二选一）
+**📨 临时邮箱**
+*(简单快捷)*
 
-##### 方案1：临时邮箱（简单快捷）
-- 使用临时邮箱服务（如 temp-mail.org）
-- 确保可以接收验证邮件
+</td>
+<td>
 
-##### 方案2：自有域名（推荐）
+1. 访问临时邮箱服务
+2. 获取临时邮箱地址
+3. 确保可接收验证邮件
+
+</td>
+<td>
+
+- ⚡ 即开即用
+- 🆓 完全免费
+- 🔄 随用随换
+
+</td>
+</tr>
+<tr>
+<td>
+
+**🌐 自有域名**
+*(推荐方案)*
+
+</td>
+<td>
+
 1. 准备一个域名
-2. 在 Cloudflare 配置：
-   - DNS 记录
-   - 邮箱转发功能
+2. Cloudflare 配置：
+   - DNS 记录设置
+   - 邮箱转发规则
 
-## 注册方式 📝
+</td>
+<td>
+
+- 🔒 更高安全性
+- ♾️ 永久可用
+- 🎛️ 完全控制
+
+</td>
+</tr>
+</table>
+
+## 🎯 注册方式
 
 ### 1. 全自动注册（推荐新手）
 
@@ -159,7 +207,7 @@
 > - 及时从 Artifacts 下载并删除账号信息
 > - 妥善保管生成的 token
 
-## 常见问题 ❓
+## 🎯 常见问题
 
 ### 1. 临时邮箱 vs 自有域名？
 
@@ -181,21 +229,24 @@
 3. 在 Network 中找到 Cookie
 4. 复制并更新到程序中
 
-## 🤝 交流群
+## 🤝 社区交流
 
 <div align="center">
 <table>
 <tr>
-<td>
-<img src="assets/wx_20250215215655.jpg" width="300" height="450" alt="进群交流">
+<td align="center">
+<img src="assets/wx_20250215215655.jpg" width="280" height="420" alt="社区交流群">
 </td>
 <td>
 
-### 扫码加入交流群
-- 获取最新更新
-- 解决使用问题
-- 分享使用经验
-- 交流技术话题
+### 🌟 加入我们的社区
+
+- 📢 获取最新项目动态
+- 💡 解决使用过程疑难
+- 🎯 分享使用心得体会
+- 🔧 探讨技术实现细节
+
+#### 扫描左侧二维码，立即加入交流群！
 
 </td>
 </tr>
@@ -221,25 +272,26 @@
 <tr>
 <td width="70%">
 
-### 许可证说明
+### 📋 许可说明
 本项目采用 [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/) 许可证
 
-✅ 允许：
-- 分享 — 在任何媒介以任何形式复制、发行本作品
+#### ✅ 您可以：
+- 📤 分享 — 在任何媒介以任何形式复制、发行本作品
 
-❌ 不允许：
-- 商业使用
-- 修改原作品
-- 二次分发
+#### ❌ 但是不能：
+- 💰 商业使用
+- ✏️ 修改原作品
+- 🔄 二次分发
 
 </td>
 <td width="30%">
 
 ### ⚠️ 免责声明
-- 仅供学习交流
-- 禁止商业用途
-- 使用后果自负
-- 作者免责声明
+
+- 📚 仅供学习交流
+- 🚫 禁止商业用途
+- ⚖️ 使用后果自负
+- 🔒 作者不承担责任
 
 </td>
 </tr>
@@ -249,6 +301,10 @@
 
 <div align="center">
 
-**[⬆ 返回顶部](#cursor-注册助手-)**
+**[⬆ 返回顶部](#-cursor-注册助手)**
+
+<br>
+
+*用 ❤️ 制作*
 
 </div>
