@@ -107,7 +107,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: dist/
+          path: |
+            dist/${{ env.EXE_NAME }}
+            turnstilePatch
+            .env.example
           retention-days: 5
 
   create-release:
@@ -145,7 +148,6 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: artifacts
-          merge-multiple: true
 
       - name: 生成更新日志
         id: changelog
@@ -154,9 +156,9 @@ jobs:
           echo "" >> changelog.md
           git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" >> changelog.md
 
-      - name: 生成空白.env文件
+      - name: 创建空白.env文件
         run: |
-          cd artifacts
+          cd artifacts/${{ env.ARTIFACT_NAME }}
           cat > .env << 'EOL'
           DOMAIN=
           EMAIL=
@@ -169,7 +171,10 @@ jobs:
       - name: 创建发布压缩包
         run: |
           cd artifacts
-          zip -r ${{ env.ZIP_NAME }} *
+          # 复制额外文件到构建产物目录
+          cp -r ../turnstilePatch ${{ env.ARTIFACT_NAME }}/
+          cp ../.env.example ${{ env.ARTIFACT_NAME }}/
+          zip -r ${{ env.ZIP_NAME }} ${{ env.ARTIFACT_NAME }}/
 
       - name: 调试信息
         run: |
