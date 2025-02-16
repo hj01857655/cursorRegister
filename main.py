@@ -571,12 +571,13 @@ class CursorApp:
                 if "WorkosCursorSessionToken=" not in cookie_str:
                     cookie_str = f"WorkosCursorSessionToken={cookie_str}"
                 self.registrar = CursorRegistration()
+                self.registrar.headless = True
                 self.registrar.init_browser()
                 trial_info = self.registrar.get_trial_info(cookie=cookie_str)
                 self.registrar.browser.quit()
                 self.root.after(0, lambda: UI.show_success(
                     self.root,
-                    f"账户可用额度: {trial_info.usage}\n试用天数: {trial_info.days}"
+                    f"账户可用额度: {trial_info[0]}\n试用天数: {trial_info[1]}"
                 ))
             except Exception as e:
                 error_message = str(e)
