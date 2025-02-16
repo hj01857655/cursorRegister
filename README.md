@@ -35,28 +35,16 @@
 <div align="center">
 
 ```shell
-🎉 让 Cursor 注册变得简单而优雅 🎉
+🎉 让 Cursor 注册变得简单而优雅 ��
 ```
 
 </div>
 
 ---
 
-<div align="center">
-
 ## ⚡ 快速开始
 
-</div>
-
-<table width="100%">
-<tr>
-<td width="50%" style="border: none; padding: 20px;">
-
-<div align="center">
-
 ### 🌟 核心特性
-
-</div>
 
 - 🚀 全自动化注册流程
 - 📧 多样化邮箱配置方案
@@ -66,14 +54,7 @@
 - 🌐 多平台兼容支持
 - ⚙️ 灵活的配置选项
 
-</td>
-<td width="50%" style="border: none; padding: 20px;">
-
-<div align="center">
-
 ### 📋 系统要求
-
-</div>
 
 - 💻 Windows 系统
 - 🎯 Cursor v0.44.11
@@ -81,15 +62,7 @@
 - 🌐 稳定的网络连接
 - 📮 可用的邮箱服务
 
-</td>
-</tr>
-</table>
-
-<div align="center">
-
 ## 📥 下载安装
-
-</div>
 
 <details>
 <summary><b>🖥️ Cursor 编辑器</b></summary>
@@ -108,11 +81,7 @@
 
 </details>
 
-<div align="center">
-
 ## 📑 功能目录
-
-</div>
 
 <table>
 <tr>
@@ -188,11 +157,9 @@
 
 ## 🎯 注册方式
 
-<div align="center">
 
 ### 🌈 支持的注册方式
 
-</div>
 
 ### 1️⃣ 全自动注册
 推荐新手使用
@@ -405,10 +372,6 @@
 
 ## 📜 许可证与声明
 
-<table>
-<tr>
-<td width="70%">
-
 ### 📋 许可说明
 本项目采用 [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/) 许可证
 
@@ -420,19 +383,12 @@
 - ✏️ 修改原作品
 - 🔄 二次分发
 
-</td>
-<td width="30%">
-
 ### ⚠️ 免责声明
 
 - 📚 仅供学习交流
 - 🚫 禁止商业用途
 - ⚖️ 使用后果自负
 - 🔒 作者不承担责任
-
-</td>
-</tr>
-</table>
 
 ---
 
