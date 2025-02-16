@@ -4,7 +4,7 @@
 
 [🌍 English Version](./README_EN.md) | [🇨🇳 中文版](./README.md)
 
-> 🚀 A tool to help you easily use Cursor with multiple registration methods and simple operations.
+> 🚀 A tool to help you easily use Cursor with multiple registration methods and simple, convenient operations.
 > 
 > 💫 Making registration simple and elegant
 
@@ -27,8 +27,13 @@
   <a href="#-quick-start">Quick Start</a> •
   <a href="#-download-and-installation">Download & Installation</a> •
   <a href="#-how-to-use">How to Use</a> •
+  <a href="#-roadmap">Roadmap</a> •
   <a href="#-registration-methods">Registration Methods</a> •
-  <a href="#-faq">FAQ</a>
+  <a href="#-contribution-guide">Contribution Guide</a> •
+  <a href="#-faq">FAQ</a> •
+  <a href="#-wechat-group">WeChat Group</a> •
+  <a href="#detailed-tutorial-">Detailed Tutorial</a> •
+  <a href="#-acknowledgments">Acknowledgments</a>
   </b>
 </p>
 
@@ -48,42 +53,23 @@
 
 </div>
 
-<table>
-<tr>
-<td width="50%" style="border: none;">
-
-<div align="center">
-
 ### 🌟 Core Features
-
-</div>
 
 - 🚀 Fully automated registration process
 - 📧 Multiple email configuration options
-- 🔒 Secure account management
+- 🔒 Secure and reliable account management
 - 🎨 Clean and elegant interface
 - 🔄 Smart automatic update protection
 - 🌐 Multi-platform compatibility
 - ⚙️ Flexible configuration options
 
-</td>
-<td width="50%" style="border: none;">
-
-<div align="center">
-
 ### 📋 System Requirements
-
-</div>
 
 - 💻 Windows OS
 - 🎯 Cursor v0.44.11
 - 🐍 Python 3.7+
 - 🌐 Stable internet connection
 - 📮 Available email service
-
-</td>
-</tr>
-</table>
 
 <div align="center">
 
@@ -110,35 +96,40 @@
 
 <div align="center">
 
-## 📑 Feature Directory
+## 🗺️ Roadmap
 
 </div>
 
-<table>
-<tr>
-<td width="33%" align="center"><a href="#-quick-start">⚡ Quick Start</a></td>
-<td width="33%" align="center"><a href="#-download-and-installation">📥 Download & Installation</a></td>
-<td width="33%" align="center"><a href="#-how-to-use">🎯 How to Use</a></td>
-</tr>
-<tr>
-<td width="33%" align="center"><a href="#-registration-methods">📝 Registration Methods</a></td>
-<td width="33%" align="center"><a href="#-faq">❓ FAQ</a></td>
-<td width="33%" align="center"><a href="#-community">🤝 Community</a></td>
-</tr>
-</table>
+### 🎯 Current Goals 
 
-## Table of Contents 📑
+- 🚀 Optimize automatic registration success rate
+- 🤖 Use GitHub Actions for automatic registration
+- 🎨 Improve user interface experience
+- 📝 Enhance documentation
 
-- [Quick Start](#quick-start-)
-- [Download and Installation](#download-and-installation-)
-- [How to Use](#how-to-use-)
-- [Registration Methods](#registration-methods-)
-- [FAQ](#faq-)
-- [Community](#community-)
-- [Acknowledgments](#acknowledgments-)
-- [License and Disclaimer](#license-and-disclaimer-)
+### ✅ Implemented Features
+
+- 💫 Fully automatic registration process
+- 🔒 Seamless cookie refresh for software login
+- 📧 Multiple registration methods: semi-automatic, fully automatic, manual
+- 💰 Trial quota query
+- 🎯 Registration assistance
+- 🔄 Machine ID reset
+- 🎨 Clean interface 
+- 📦 One-click packaging and release
+- 💾 Account backup functionality
+
+### 🔮 Future Plans
+
+- 🔄 Batch account management
+
+> 💡 Roadmap will be adjusted based on community feedback and actual needs
+
+<div align="center">
 
 ## 🎯 How to Use
+
+</div>
 
 ### 🔰 Preparation
 
@@ -197,13 +188,13 @@
 </tr>
 </table>
 
-## 🎯 Registration Methods
-
 <div align="center">
 
-### 🌈 Supported Registration Methods
+## 🎯 Registration Methods
 
 </div>
+
+### 🌈 Supported Registration Methods
 
 ### 1️⃣ Fully Automatic Registration
 Recommended for beginners
@@ -317,8 +308,35 @@ Supports multiple email solutions
 - Can achieve automated batch registration
 
 </details>
+## 🤝 Contribution Guide
+
+</div>
+
+### 🌟 How to Contribute
+
+We warmly welcome and appreciate all forms of contributions! Here are some ways to participate:
+
+- 🐛 Submit bug reports
+- 💡 Suggest new features
+- 📝 Improve documentation
+- ⚙️ Provide code contributions
+- 🌍 Help with translations
+- 💬 Answer other users' questions
+
+### 📋 Contribution Steps
+
+1. Fork this repository
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+> 💡 **PRs are welcome!** If you have any ideas for improvement, we look forward to your contribution.
+<div align="center">
 
 ## 🎯 FAQ
+
+</div>
 
 <details>
 <summary><b>💡 Temporary Email vs Own Domain?</b></summary>
@@ -349,76 +367,102 @@ Supports multiple email solutions
 
 </details>
 
-## 🤝 Community
+<div align="center">
+
+## 🤝 WeChat Group
+
+</div>
 
 <div align="center">
 <table>
 <tr>
 <td align="center">
-<img src="assets/wx_20250215215655.jpg" width="280" height="420" alt="Community Group">
+<img src="assets/wx_20250215215655.jpg" width="280" height="420" alt="WeChat Group">
 </td>
 <td>
 
-### 🌟 Join Our Community
+### 🌟 Join WeChat Group
 
-- 📢 Get latest project updates
-- 💡 Solve usage issues
-- 🎯 Share usage experiences
-- 🔧 Discuss technical details
+- 📱 Scan QR code to join WeChat group
+- 💬 Share experiences with other users
+- ❓ Get help with usage issues
+- 📢 Receive latest updates and information
 
-#### Scan the QR code on the left to join our community!
+#### Scan the QR code on the left to join our WeChat group!
 
 </td>
 </tr>
 </table>
 </div>
-
-## Detailed Tutorial 📖
-
-Visit [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97) for complete tutorial.
-
-## 🌟 Acknowledgments
-
-Thanks to these open source projects:
 
 <div align="center">
 
+## Detailed Tutorial 📖
+
+</div>
+
+Visit [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97) for complete tutorial.
+
+<div align="center">
+
+## 🌟 Acknowledgments
+
+</div>
+
+### 👥 Project Contributors
+
+Thanks to all contributors who make this project better!
+
+<div align="center">
+<a href="https://github.com/ktovoz/cursorRegister/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ktovoz/cursorRegister&max=100" />
+</a>
+</div>
+
+### 🏆 Special Thanks
+
+Thanks to the following open source projects and their authors for providing inspiration and reference:
+
+<div align="center">
 <table>
 <tr>
 <td align="center">
-<a href="https://github.com/chengazhen/cursor-auto-free">
-<img src="https://github.com/chengazhen.png" width="50px;" alt="cursor-auto-free"/><br/>
-<sub><b>cursor-auto-free</b></sub>
+<a href="https://github.com/chengazhen">
+<img src="https://github.com/chengazhen.png" width="100px;" alt="chengazhen"/><br/>
+<sub><b>chengazhen</b></sub><br/>
+<sub><a href="https://github.com/chengazhen/cursor-auto-free">cursor-auto-free</a></sub><br/>
 </a>
 </td>
 <td align="center">
-<a href="https://github.com/yuaotian/go-cursor-help">
-<img src="https://github.com/yuaotian.png" width="50px;" alt="go-cursor-help"/><br/>
-<sub><b>go-cursor-help</b></sub>
+<a href="https://github.com/yuaotian">
+<img src="https://github.com/yuaotian.png" width="100px;" alt="yuaotian"/><br/>
+<sub><b>yuaotian</b></sub><br/>
+<sub><a href="https://github.com/yuaotian/go-cursor-help">go-cursor-help</a></sub><br/>
 </a>
 </td>
 <td align="center">
-<a href="https://github.com/JiuZ-Chn/CursorRegister">
-<img src="https://github.com/JiuZ-Chn.png" width="50px;" alt="CursorRegister"/><br/>
-<sub><b>CursorRegister</b></sub>
+<a href="https://github.com/JiuZ-Chn">
+<img src="https://github.com/JiuZ-Chn.png" width="100px;" alt="JiuZ-Chn"/><br/>
+<sub><b>JiuZ-Chn</b></sub><br/>
+<sub><a href="https://github.com/JiuZ-Chn/CursorRegister">CursorRegister</a></sub><br/>
 </a>
 </td>
 <td align="center">
-<a href="https://github.com/beilunyang/moemail">
-<img src="https://github.com/beilunyang.png" width="50px;" alt="moemail"/><br/>
-<sub><b>moemail</b></sub>
+<a href="https://github.com/beilunyang">
+<img src="https://github.com/beilunyang.png" width="100px;" alt="beilunyang"/><br/>
+<sub><b>beilunyang</b></sub><br/>
+<sub><a href="https://github.com/beilunyang/moemail">moemail</a></sub><br/>
 </a>
 </td>
 </tr>
 </table>
-
 </div>
+
+<div align="center">
 
 ## 📜 License and Disclaimer
 
-<table>
-<tr>
-<td width="70%">
+</div>
 
 ### 📋 License
 This project is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/)
@@ -431,19 +475,12 @@ This project is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/lic
 - ✏️ Modify the original work
 - 🔄 Redistribute
 
-</td>
-<td width="30%">
-
 ### ⚠️ Disclaimer
 
 - 📚 For learning only
 - 🚫 No commercial use
 - ⚖️ Use at own risk
 - 🔒 Author not liable
-
-</td>
-</tr>
-</table>
 
 ---
 
@@ -453,6 +490,7 @@ This project is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/lic
 
 <br/>
 
-<sub>Made with ❤️ | Copyright © 2024 ktovoz</sub>
+<sub>Made with ❤️ | Copyright © 2025 ktovoz</sub>
 
-</div> 
+</div>
+

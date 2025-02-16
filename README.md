@@ -29,7 +29,11 @@
   <a href="#-使用方法">使用方法</a> •
   <a href="#-开发路线图">开发路线图</a> •
   <a href="#-注册方式">注册方式</a> •
-  <a href="#-常见问题">常见问题</a>
+  <a href="#-贡献指南">贡献指南</a> •
+  <a href="#-常见问题">常见问题</a> •
+  <a href="#-微信交流群">微信交流群</a> •
+  <a href="#详细教程-">详细教程</a> •
+  <a href="#-致谢">致谢</a>
   </b>
 </p>
 
@@ -92,29 +96,6 @@
 
 <div align="center">
 
-## 📑 文档目录
-
-</div>
-
-<table>
-<tr>
-<td width="33%" align="center"><a href="#-快速开始">⚡ 快速开始</a></td>
-<td width="33%" align="center"><a href="#-下载安装">📥 下载安装</a></td>
-<td width="33%" align="center"><a href="#-使用方法">🎯 使用方法</a></td>
-</tr>
-<tr>
-<td width="33%" align="center"><a href="#-注册方式">📝 注册方式</a></td>
-<td width="33%" align="center"><a href="#-贡献指南">🤝 贡献指南</a></td>
-<td width="33%" align="center"><a href="#-常见问题">❓ 常见问题</a></td>
-</tr>
-<tr>
-<td width="33%" align="center"><a href="#-微信交流群">💬 微信交流群</a></td>
-<td width="33%" align="center"><a href="#详细教程-">📖 详细教程</a></td>
-<td width="33%" align="center"><a href="#-致谢">🌟 致谢</a></td>
-</tr>
-</table>
-
-<div align="center">
 
 ## 🗺️ 开发路线图
 
