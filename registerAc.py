@@ -159,7 +159,6 @@ class CursorRegistration:
     def auto_register(self, wait_callback=None):
         try:
             self._safe_action(self.init_browser)
-
             self._safe_action(self.fill_registration_form)
             self.tab.ele("@type=submit").click()
             if not self._handle_page_transition(
@@ -326,7 +325,6 @@ class CursorRegistration:
             diagnose=True,
             level="DEBUG"
         )
-        self.headless = True
         token =self.admin_auto_register()
         if token:
             env_updates = {

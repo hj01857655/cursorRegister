@@ -59,7 +59,7 @@
 > - 注册过程中可能需要手动完成人机验证
 > - 注册成功后程序会自动配置所有必要信息
 
-##### 方式二：GitHub Action 自动注册（进阶用户推荐）
+##### ~~方式二：GitHub Action 自动注册（进阶用户推荐）~~ [ ！ 研发中 ]
 1. Fork 本项目到你的 GitHub 账号
 2. 从 [moemail](https://github.com/beilunyang/moemail) 项目获取 API KEY
 3. 配置 GitHub Secrets：
