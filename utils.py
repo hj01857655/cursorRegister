@@ -464,7 +464,7 @@ class MoemailManager:
         self.base_url = os.getenv("MOE_MAIL_URL")
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
         try:
-            url = f"{self.base_url}/{endpoint.lstrip('/')}"
+            url = f"{self.base_url}/api/{endpoint.lstrip('/')}"
             response = requests.request(method, url, headers=self.headers, **kwargs)
             
             if response.status_code == 200:
