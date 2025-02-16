@@ -2,6 +2,8 @@ import os
 import random
 import re
 import time
+from pathlib import Path
+
 import requests
 from utils import MoemailManager
 from DrissionPage import ChromiumOptions, Chromium
@@ -312,6 +314,18 @@ class CursorRegistration:
                 raise Exception("在输入验证码时超时")
 
     def github_action_register(self):
+        logger.remove()
+        logger.add(
+            sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD}.log",
+            format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
+            rotation="50 MB",
+            retention="30 days",
+            compression="gz",
+            enqueue=True,
+            backtrace=True,
+            diagnose=True,
+            level="DEBUG"
+        )
         self.headless = True
         token =self.admin_auto_register()
         if token:
