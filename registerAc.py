@@ -199,7 +199,7 @@ class CursorRegistration:
                 self.browser.quit()
     def admin_auto_register(self, wait_callback=None):
         self.moe = MoemailManager()
-        email_address = self.moe.create_email()
+        email_address = self.moe.create_email(DOMAIN=os.getenv("DOMAIN"))
         self.email = email_address.data
         self.password = Utils.generate_secure_password()
         self.admin = True

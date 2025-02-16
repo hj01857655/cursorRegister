@@ -2,6 +2,11 @@ name: 注册账号
 
 on:
   workflow_dispatch:
+    inputs:
+      DOMAIN:
+        description: '请输入域名'
+        required: true
+        type: string
 
 env:
   PYTHON_VERSION: '3.11'
@@ -36,6 +41,7 @@ jobs:
         run: python registerAc.py
         env:
           API_KEY: ${{ secrets.API_KEY }}
+          DOMAIN: ${{ inputs.DOMAIN }}
 
       - name: 上传CSV文件
         uses: actions/upload-artifact@v4

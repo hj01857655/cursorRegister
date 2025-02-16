@@ -462,8 +462,6 @@ class MoemailManager:
             'X-API-Key': self.api_key
         }
         self.base_url = os.getenv("MOE_MAIL_URL")
-        self.available_domains = ["moemail.app", "bitibiti.cc"]
-    
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
         try:
             url = f"{self.base_url}/{endpoint.lstrip('/')}"
@@ -478,13 +476,13 @@ class MoemailManager:
         except Exception as e:
             return Result.fail(f"请求出错: {str(e)}")
     
-    def create_email(self, expiry_time: int = 3600000) -> Result[dict]:
+    def create_email(self,DOMAIN, expiry_time: int = 3600000) -> Result[dict]:
         try:
             random_length = random.randint(5, 20)
             data = {
                 "name": Utils.generate_random_string(random_length),
                 "expiryTime": expiry_time,
-                "domain": random.choice(self.available_domains)
+                "domain": DOMAIN
             }
             
             result = self._make_request("POST", "/emails/generate", json=data)
