@@ -251,6 +251,8 @@ class Utils:
             script = os.path.abspath(sys.argv[0])
             ret = ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable,
                                                       ' '.join([script] + sys.argv[1:]), None, 1)
+            if int(ret) > 32:
+                sys.exit(0)
             return int(ret) > 32
         except:
             return False
