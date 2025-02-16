@@ -48,12 +48,20 @@
     3. 在你 Fork 的项目中配置 Secrets：
         - 进入项目设置 -> Secrets and variables -> Actions
         - 添加名为 `API_KEY` 的 secret，值为获取到的 API KEY
+        - 添加名为 `MOE_MAIL_URL` 的 secret，值为 moemail 服务的 URL
     4. 手动触发 GitHub Action：
         - 进入 Actions 标签页
         - 选择 `注册账号` workflow
         - 点击 "Run workflow"
     5. 等待 Action 执行完成，账号信息将自动保存
-    > ⚠️ 注意：建议自行部署 moemail 服务以确保稳定性
+    > ⚠️ 注意：
+    > - 建议自行部署 moemail 服务以确保稳定性
+    > - Action 执行完成后，请及时从 Artifacts 中下载生成的账号信息
+    > - 下载后请立即删除 Artifacts，并妥善保管生成的 token
+    6. 使用生成的账号：
+        - 打开注册助手程序
+        - 将下载的账号信息填入
+        - 点击"刷新cookie"即可开始使用
 
 - **使用临时邮箱注册：**
     - 在邮箱输入框中填入临时邮箱地址
@@ -113,8 +121,6 @@
 - 点击"更新账号信息"按钮更新登录信息
 
 ## 📖 详细教程
-
-项目已经实现全自动注册。
 
 推荐使用半自动注册。
 

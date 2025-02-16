@@ -48,12 +48,20 @@
     3. Configure Secrets in your forked project:
         - Go to project settings -> Secrets and variables -> Actions
         - Add a secret named `API_KEY` with the value of your obtained API KEY
+        - Add a secret named `MOE_MAIL_URL` with the value of moemail service URL
     4. Manually trigger GitHub Action:
         - Go to Actions tab
         - Select `Register Account` workflow
         - Click "Run workflow"
     5. Wait for the Action to complete, account information will be saved automatically
-    > ⚠️ Note: It's recommended to deploy your own moemail service for stability
+    > ⚠️ Note:
+    > - It's recommended to deploy your own moemail service for stability
+    > - After the Action completes, promptly download the generated account information from Artifacts
+    > - Delete the Artifacts after downloading and securely store the generated token
+    6. Using the generated account:
+        - Open the registration assistant program
+        - Fill in the downloaded account information
+        - Click "Refresh Cookie" to start using
 
 - **Register with Temporary Email:**
     - Enter the temporary email address in the email input field
@@ -114,8 +122,6 @@
 - Click "Update Account Info" button to update login information
 
 ## 📖 Detailed Tutorial
-
-The project has implemented fully automatic registration.
 
 Semi-automatic registration is recommended.
 
