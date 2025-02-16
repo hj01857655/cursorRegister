@@ -41,5 +41,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: registered-accounts
-          path: "**/*.csv"
+          path: "**/*.{csv,log}"
           retention-days: 7

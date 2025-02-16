@@ -2,7 +2,8 @@ import os
 import random
 import re
 import time
-
+import requests
+from utils import MoemailManager
 from DrissionPage import ChromiumOptions, Chromium
 from dotenv import load_dotenv
 from loguru import logger
@@ -31,7 +32,7 @@ class CursorRegistration:
         self.domain = os.getenv('DOMAIN')
         self.first_name = self.last_name = Utils.generate_random_string(4)
         self.retry_times = 5
-        self.browser = self.tab = None
+        self.browser = self.tab = self.moe = None
         self.admin = False
 
     def _safe_action(self, action, *args, **kwargs):
@@ -174,7 +175,8 @@ class CursorRegistration:
                 raise Exception("无法进入邮箱验证页面")
 
             if self.admin:
-                verify_code = self._safe_action(self.get_email_verification)
+                email_data = self.get_email_data
+                verify_code = self.parse_cursor_verification_code(email_data)
                 self._safe_action(self.input_email_verification, verify_code)
             else:
                 if wait_callback:
@@ -196,8 +198,11 @@ class CursorRegistration:
             if self.browser:
                 self.browser.quit()
     def admin_auto_register(self, wait_callback=None):
+        self.moe = MoemailManager()
+        email_address = self.moe.create_email()
+        self.email = email_address.data
+        self.password = Utils.generate_secure_password()
         self.admin = True
-        self.headless = True
         token = self._safe_action(self.auto_register, wait_callback)
         return token
     def _cursor_turnstile(self):
@@ -229,66 +234,104 @@ class CursorRegistration:
         logger.error("验证码处理失败")
         return False
 
-    def parse_cursor_verification_code(self, email_data):
-        message = ""
-        verify_code = None
-
-        if "content" in email_data:
-            message = email_data["content"]
-            message = message.replace(" ", "")
-            verify_code = re.search(r'(?:\r?\n)(\d{6})(?:\r?\n)', message).group(1)
-        elif "text" in email_data:
-            message = email_data["text"]
-            message = message.replace(" ", "")
-            verify_code = re.search(r'(?:\r?\n)(\d{6})(?:\r?\n)', message).group(1)
-
-        return verify_code
-    def get_email_verification(self):
-        apikey = os.getenv("API_KEY")
-        pass
-
-    def input_email_verification(self, verify_code):
+    def get_email_data(self):
         for retry in range(self.retry_times):
             try:
+                logger.info(f"尝试获取最新邮件，第 {retry + 1} 次尝试")
+                email_data = self.moe.get_latest_email_messages().data
+                logger.info("成功获取最新邮件数据")
+                logger.debug(f"邮件数据结构: {email_data.keys() if isinstance(email_data, dict) else type(email_data)}")
+                return email_data
+            except Exception as e:
+                logger.error(f"获取邮件内容时出错 (第 {retry + 1} 次尝试): {str(e)}")
+                if retry == self.retry_times - 1:
+                    logger.error(f"已达到最大重试次数 {self.retry_times}，获取邮件失败")
+                    raise Exception("获取邮件内容失败")
+            time.sleep(2)
+
+    def parse_cursor_verification_code(self, email_data):
+        verify_code = None
+        logger.info("开始解析邮件内容获取验证码")
+
+        try:
+            if isinstance(email_data, dict) and 'message' in email_data:
+                message = email_data['message']
+                if 'content' in message:
+                    content = message['content']
+
+                    match = re.search(r'\n(\d{6})\n', content)
+                    if match:
+                        verify_code = match.group(1)
+                        logger.info(f"成功提取验证码: {verify_code}")
+                    else:
+                        logger.error("未在邮件内容中找到6位数字验证码")
+                else:
+                    logger.error("邮件message中未找到content字段")
+            else:
+                logger.error("邮件数据格式不正确，缺少message字段")
+
+            if not verify_code:
+                raise Exception("无法从邮件内容中提取验证码")
+
+            return verify_code
+
+        except Exception as e:
+            logger.error(f"解析验证码时出错: {str(e)}")
+            raise
+
+    def input_email_verification(self, verify_code):
+        logger.info(f"开始输入验证码: {verify_code}")
+        for retry in range(self.retry_times):
+            try:
+                logger.info(f"尝试输入验证码，第 {retry + 1} 次尝试")
                 for idx, digit in enumerate(verify_code, start=0):
-                    self.tab.ele(f"xpath=//input[@data-index={idx}]").input(digit, clear=True)
-                    self.tab.wait(0.1, 0.3)
+                    input_element = self.tab.ele(f"xpath=//input[@data-index={idx}]")
+                    if input_element:
+                        input_element.input(digit, clear=True)
+                        logger.debug(f"成功在位置 {idx} 输入数字 {digit}")
+                    else:
+                        logger.error(f"未找到位置 {idx} 的输入框")
                 self.tab.wait(0.5, 1.5)
 
-                if not self.tab.wait.url_change(self.CURSOR_URL,
-                                                timeout=3) and self.CURSOR_EMAIL_VERIFICATION_URL in self.tab.url:
+                if not self.tab.wait.url_change(self.CURSOR_URL, timeout=3) and self.CURSOR_EMAIL_VERIFICATION_URL in self.tab.url:
+                    logger.info("检测到需要验证码验证，开始处理")
                     self._cursor_turnstile()
 
             except Exception as e:
-                logger.error("在处理邮箱验证码时出现错误.")
-                logger.error(e)
+                logger.error(f"在处理邮箱验证码时出现错误 (第 {retry + 1} 次尝试): {str(e)}")
 
             if self.tab.wait.url_change(self.CURSOR_URL, timeout=3):
+                logger.info("验证码验证成功，页面已跳转")
                 break
 
+            logger.warning(f"验证码可能未生效，刷新页面重试 (第 {retry + 1} 次)")
             self.tab.refresh()
             if retry == self.retry_times - 1:
-                logger.error("在输入验证码时超时")
+                logger.error("在输入验证码时超时，已达到最大重试次数")
                 raise Exception("在输入验证码时超时")
+
+    def github_action_register(self):
+        register = CursorRegistration()
+        token = register.admin_auto_register()
+        if token:
+            env_updates = {
+                "COOKIES_STR": f"WorkosCursorSessionToken={token}",
+                "EMAIL": os.getenv('EMAIL'),
+                "PASSWORD": os.getenv('PASSWORD'),
+                "DOMAIN": os.getenv('DOMAIN')
+            }
+            Utils.update_env_vars(env_updates)
+            try:
+                with open('env_variables.csv', 'w', encoding='utf-8', newline='') as f:
+                    f.write("variable,value\n")
+                    for key, value in env_updates.items():
+                        f.write(f"{key},{value}\n")
+                logger.info("环境变量已保存到 env_variables.csv 文件中")
+            except Exception as e:
+                logger.error(f"保存环境变量到文件时出错: {str(e)}")
+            load_dotenv(override=True)
+
 
 
 if __name__ == "__main__":
-    register = CursorRegistration()
-    token = register.admin_auto_register()
-    if token:
-        env_updates = {
-            "COOKIES_STR": f"WorkosCursorSessionToken={token}",
-            "EMAIL": os.getenv('EMAIL'),
-            "PASSWORD": os.getenv('PASSWORD'),
-            "DOMAIN": os.getenv('DOMAIN')
-        }
-        Utils.update_env_vars(env_updates)
-        try:
-            with open('env_variables.csv', 'w', encoding='utf-8', newline='') as f:
-                f.write("variable,value\n")
-                for key, value in env_updates.items():
-                    f.write(f"{key},{value}\n")
-            logger.info("环境变量已保存到 env_variables.csv 文件中")
-        except Exception as e:
-            logger.error(f"保存环境变量到文件时出错: {str(e)}")
-        load_dotenv(override=True)
+    pass

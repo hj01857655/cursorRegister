@@ -9,6 +9,9 @@ import string
 import subprocess
 import sys
 import uuid
+import re
+import time
+import requests
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
@@ -21,7 +24,8 @@ from typing import (
     Generic,
     Tuple,
     TypeVar,
-    Union
+    Union,
+    Optional
 )
 
 from loguru import logger
@@ -444,4 +448,118 @@ class CursorManager:
             return Result.ok(message="认证信息更新成功")
         except Exception as e:
             logger.error(f"process_cookies 执行失败: {e}")
+            return Result.fail(str(e))
+
+class MoemailManager:
+    
+    def __init__(self):
+        self.api_key = os.getenv("API_KEY")
+        if not self.api_key:
+            raise ValueError("未设置API_KEY环境变量")
+        
+        self.headers = {
+            'Content-Type': 'application/json',
+            'X-API-Key': self.api_key
+        }
+        self.base_url = "https://moemail.app/api"
+        self.available_domains = ["moemail.app", "bitibiti.cc"]
+    
+    def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
+        try:
+            url = f"{self.base_url}/{endpoint.lstrip('/')}"
+            response = requests.request(method, url, headers=self.headers, **kwargs)
+            
+            if response.status_code == 200:
+                response_data = response.json()
+                logger.info(f"API响应数据: {response_data}")
+                return Result.ok(response_data)
+            return Result.fail(f"请求失败: {response.text}")
+            
+        except Exception as e:
+            return Result.fail(f"请求出错: {str(e)}")
+    
+    def create_email(self, expiry_time: int = 3600000) -> Result[dict]:
+        try:
+            random_length = random.randint(5, 20)
+            data = {
+                "name": Utils.generate_random_string(random_length),
+                "expiryTime": expiry_time,
+                "domain": random.choice(self.available_domains)
+            }
+            
+            result = self._make_request("POST", "/emails/generate", json=data)
+            if not result.success:
+                logger.error(f"创建邮箱失败: {result.message}")
+                return result
+
+            email_data = result.data
+            email_address = email_data.get('email')
+            return Result.ok(email_address)
+            
+        except Exception as e:
+            logger.error(f"创建邮箱时出错: {str(e)}")
+            return Result.fail(str(e))
+    
+    def get_email_list(self, cursor: Optional[str] = None) -> Result[dict]:
+        params = {"cursor": cursor} if cursor else {}
+        return self._make_request("GET", "/emails", params=params)
+    
+    def get_email_messages(self, email_id: str, cursor: Optional[str] = None) -> Result[dict]:
+        params = {"cursor": cursor} if cursor else {}
+        return self._make_request("GET", f"/emails/{email_id}", params=params)
+    
+    def get_message_detail(self, email_id: str, message_id: str) -> Result[dict]:
+        return self._make_request("GET", f"/emails/{email_id}/{message_id}")
+
+    def get_latest_email_messages(self) -> Result[dict]:
+        try:
+            logger.info("开始获取最新邮件内容...")
+
+            result = self.get_email_list()
+            if not result.success:
+                logger.error(f"获取邮箱列表失败: {result.message}")
+                return Result.fail(f"获取邮箱列表失败: {result.message}")
+            
+            emails = result.data.get('emails', [])
+            if not emails:
+                logger.warning("没有找到任何邮箱")
+                return Result.fail("没有找到任何邮箱")
+            
+            logger.info(f"成功获取邮箱列表，共找到 {len(emails)} 个邮箱")
+            latest_email = max(emails, key=lambda x: x.get('createdAt', ''))
+            email_id = latest_email.get('id')
+            
+            if not email_id:
+                logger.error("无法获取邮箱ID")
+                return Result.fail("无法获取邮箱ID")
+            
+            logger.info(f"正在获取邮箱 {email_id} 的邮件列表...")
+            messages_result = self.get_email_messages(email_id)
+            if not messages_result.success:
+                logger.error(f"获取邮件列表失败: {messages_result.message}")
+                return Result.fail(f"获取邮件列表失败: {messages_result.message}")
+            
+            messages = messages_result.data.get('messages', [])
+            if not messages:
+                logger.warning(f"邮箱 {email_id} 中没有任何邮件")
+                return Result.fail("邮箱中没有任何邮件")
+            
+            logger.info(f"成功获取邮件列表，共找到 {len(messages)} 封邮件")
+            latest_message = max(messages, key=lambda x: x.get('received_at', 0))
+            message_id = latest_message.get('id')
+            
+            if not message_id:
+                logger.error("无法获取邮件ID")
+                return Result.fail("无法获取邮件ID")
+            
+            logger.info(f"正在获取邮件 {message_id} 的详细内容...")
+            detail_result = self.get_message_detail(email_id, message_id)
+            if not detail_result.success:
+                return Result.fail(f"获取邮件详细内容失败: {detail_result.message}")
+
+            logger.info(f"成功获取最新邮件的详细内容")
+            return Result.ok(detail_result.data)
+            
+        except Exception as e:
+            logger.error(f"获取最新邮件内容时发生错误: {str(e)}")
             return Result.fail(str(e))
