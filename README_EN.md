@@ -102,7 +102,7 @@
 
 ## 📖 Detailed Tutorial
 
-The project has implemented fully automatic registration, and the specific usage method requires a careful reading of the code.
+The project has implemented fully automatic registration.
 
 Semi-automatic registration is recommended.
 

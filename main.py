@@ -11,8 +11,10 @@ from typing import Dict, List, Tuple
 from dotenv import load_dotenv
 from loguru import logger
 
-from registerAc import CursorRegistration, TrialInfoFetcher
+from registerAc import CursorRegistration
 from utils import Utils, Result, error_handler, CursorManager
+
+console_mode = False
 
 
 class UI:
@@ -112,6 +114,17 @@ class UI:
                         background=UI.COLORS['bg']
                         )
 
+        style.configure('TRadiobutton',
+                        font=UI.FONT,
+                        background=UI.COLORS['bg'],
+                        foreground=UI.COLORS['label_fg']
+                        )
+
+        style.map('TRadiobutton',
+                  background=[('active', UI.COLORS['bg'])],
+                  foreground=[('active', UI.COLORS['primary'])]
+                  )
+
     @staticmethod
     def create_labeled_entry(parent, label_text: str, row: int, **kwargs) -> ttk.Entry:
         frame = ttk.Frame(parent, style='TFrame')
@@ -164,7 +177,7 @@ class UI:
         UI.show_message(window, "警告", message, 'showwarning')
 
     @staticmethod
-    def create_loading_dialog(window: tk.Tk, message: str) -> tk.Toplevel:
+    def create_loading_dialog(window: tk.Tk, message: str, on_close=None) -> tk.Toplevel:
         dialog = tk.Toplevel(window)
         dialog.title("处理中")
         dialog.geometry("250x100")
@@ -173,6 +186,9 @@ class UI:
         dialog.grab_set()
         dialog.resizable(False, False)
         dialog.configure(bg=UI.COLORS['bg'])
+
+        if on_close:
+            dialog.protocol("WM_DELETE_WINDOW", on_close)
 
         frame = ttk.Frame(dialog, style='TFrame')
         frame.pack(expand=True)
@@ -191,7 +207,7 @@ class UI:
 @dataclass
 class WindowConfig:
     width: int = 450
-    height: int = 485
+    height: int = 520
     title: str = "Cursor注册小助手"
     backup_dir: str = "env_backups"
     env_vars: List[Tuple[str, str]] = field(default_factory=lambda: [
@@ -212,6 +228,7 @@ class CursorApp:
         self.root = root
         self.config = WindowConfig()
         self.entries: Dict[str, ttk.Entry] = {}
+        self.selected_mode = tk.StringVar(value="semi")
 
         self.root.title(self.config.title)
         UI.center_window(self.root, self.config.width, self.config.height)
@@ -222,6 +239,7 @@ class CursorApp:
 
         UI.setup_styles()
         self.setup_ui()
+        self.registrar = None
 
     def setup_ui(self) -> None:
         main_frame = ttk.Frame(self.root, padding="10", style='TFrame')
@@ -251,6 +269,39 @@ class CursorApp:
         else:
             self.entries['cookie'].insert(0, "WorkosCursorSessionToken")
 
+        radio_frame = ttk.Frame(content_frame, style='TFrame')
+        radio_frame.pack(fill=tk.X, pady=(8, 0))
+
+        mode_label = ttk.Label(radio_frame, text="注册模式:", style='TLabel')
+        mode_label.pack(side=tk.LEFT, padx=(3, 8))
+
+        semi_radio = ttk.Radiobutton(
+            radio_frame,
+            text="半自动注册",
+            variable=self.selected_mode,
+            value="semi",
+            style='TRadiobutton'
+        )
+        semi_radio.pack(side=tk.LEFT, padx=10)
+
+        auto_radio = ttk.Radiobutton(
+            radio_frame,
+            text="自动注册",
+            variable=self.selected_mode,
+            value="auto",
+            style='TRadiobutton'
+        )
+        auto_radio.pack(side=tk.LEFT, padx=10)
+
+        admin_radio = ttk.Radiobutton(
+            radio_frame,
+            text="开发者模式",
+            variable=self.selected_mode,
+            value="admin",
+            style='TRadiobutton'
+        )
+        admin_radio.pack(side=tk.LEFT, padx=10)
+
         button_frame = ttk.Frame(content_frame, style='TFrame')
         button_frame.pack(fill=tk.X, pady=(8, 0))
 
@@ -261,12 +312,19 @@ class CursorApp:
                 button_frame,
                 text=text,
                 command=getattr(self, command),
-                style='Custom.TButton'
+                style='Custom.TButton',
+                width=8
             )
-            btn.grid(row=row, column=col, padx=UI.BUTTON_GRID_PADDING, pady=UI.BUTTON_GRID_MARGIN, sticky='ew')
+            btn.grid(
+                row=row,
+                column=col,
+                padx=3,
+                pady=2,
+                sticky='nsew'
+            )
 
-        button_frame.grid_columnconfigure(0, weight=1)
-        button_frame.grid_columnconfigure(1, weight=1)
+        for i in range(2):
+            button_frame.grid_columnconfigure(i, weight=1)
 
         footer = ttk.Label(
             main_frame,
@@ -345,6 +403,10 @@ class CursorApp:
 
     @error_handler
     def auto_register(self) -> None:
+        mode = self.selected_mode.get()
+        self._register_account(mode=mode)
+
+    def _register_account(self, mode: str) -> None:
         self._save_env_vars()
         load_dotenv(override=True)
         loading_dialog = None
@@ -354,14 +416,12 @@ class CursorApp:
             if loading_dialog:
                 loading_dialog.destroy()
                 loading_dialog = None
-
             dialog = tk.Toplevel(self.root)
             dialog.title("等待确认")
             dialog.geometry("250x180")
             UI.center_window(dialog, 300, 180)
             dialog.transient(self.root)
             dialog.grab_set()
-
             ttk.Label(
                 dialog,
                 text=message,
@@ -416,42 +476,76 @@ class CursorApp:
                 loading_dialog.destroy()
             UI.show_warning(self.root, message)
 
+        def _terminate_registration():
+            nonlocal loading_dialog
+            if loading_dialog:
+                loading_dialog.destroy()
+                loading_dialog = None
+            if self.registrar and self.registrar.browser:
+                self.registrar.browser.quit()
+            self.root.after(0, lambda: update_ui_warning("注册流程已被终止"))
+
         def register_thread():
             nonlocal loading_dialog
-            registrar = None
-            try:
-                loading_dialog = UI.create_loading_dialog(self.root, "正在启动注册流程，请稍候...")
-                registrar = CursorRegistration()
-                if token := registrar.register(create_dialog):
-                    self.root.after(0, lambda: update_ui_success(token))
-                else:
-                    self.root.after(0, lambda: update_ui_warning("注册流程未完成"))
-            except Exception as e:
-                if str(e) == "用户终止了注册流程":
-                    self.root.after(0, lambda: update_ui_warning("注册流程已被终止"))
-                else:
-                    logger.error(f"注册过程发生错误: {str(e)}")
-                    self.root.after(0, lambda: update_ui_warning(f"注册失败: {str(e)}"))
-            finally:
-                if registrar and registrar.browser:
-                    registrar.browser.quit()
+            is_terminated = False
 
-        for widget in self.root.winfo_children():
-            if isinstance(widget, ttk.Frame):
-                for child in widget.winfo_children():
-                    if isinstance(child, ttk.Button) and child['text'] == "自动注册":
-                        child.configure(state='disabled')
+            def on_loading_dialog_close():
+                nonlocal is_terminated
+                is_terminated = True
+                _terminate_registration()
+
+            try:
+                self.registrar = CursorRegistration()
+                loading_dialog = UI.create_loading_dialog(
+                    self.root,
+                    "正在启动注册流程，请稍候...",
+                    on_close=on_loading_dialog_close
+                )
+
+                if not (register_method := {
+                    "auto": self.registrar.auto_register,
+                    "semi": self.registrar.semi_auto_register,
+                    "admin": self.registrar.admin_auto_register
+                }.get(mode)):
+                    raise ValueError(f"未知的注册模式: {mode}")
+
+                if is_terminated:
+                    return
+
+                if token := register_method(create_dialog):
+                    if not is_terminated:
+                        self.root.after(0, lambda: update_ui_success(token))
+                elif not is_terminated:
+                    self.root.after(0, lambda: update_ui_warning("注册流程未完成"))
+
+            except Exception as e:
+                error_msg = str(e)
+                if error_msg == "用户终止了注册流程":
+                    self._terminate_registration()
+                else:
+                    logger.error(f"注册过程发生错误: {error_msg}")
+                    if not is_terminated:
+                        self.root.after(0, lambda: update_ui_warning(f"注册失败: {error_msg}"))
+            finally:
+                if self.registrar and self.registrar.browser:
+                    self.registrar.browser.quit()
+
+        def find_and_update_button(state: str):
+            for widget in self.root.winfo_children():
+                if isinstance(widget, ttk.Frame):
+                    for child in widget.winfo_children():
+                        if isinstance(child, ttk.Button) and child['text'] == button_text:
+                            self.root.after(0, lambda: child.configure(state=state))
+
+        button_text = "自动注册"
+        find_and_update_button('disabled')
 
         thread = threading.Thread(target=register_thread, daemon=True)
         thread.start()
 
         def restore_button():
             thread.join()
-            for widget in self.root.winfo_children():
-                if isinstance(widget, ttk.Frame):
-                    for child in widget.winfo_children():
-                        if isinstance(child, ttk.Button) and child['text'] == "自动注册":
-                            self.root.after(0, lambda: child.configure(state='normal'))
+            find_and_update_button('normal')
 
         threading.Thread(target=restore_button, daemon=True).start()
 
@@ -476,8 +570,9 @@ class CursorApp:
 
                 if "WorkosCursorSessionToken=" not in cookie_str:
                     cookie_str = f"WorkosCursorSessionToken={cookie_str}"
-                fetcher = TrialInfoFetcher(cookie_str)
-                trial_info = fetcher.get_info()
+                self.registrar = CursorRegistration()
+                self.registrar.init_browser()
+                trial_info = self.registrar.get_trial_info(cookie=cookie_str)
                 self.root.after(0, lambda: UI.show_success(
                     self.root,
                     f"账户可用额度: {trial_info.usage}\n试用天数: {trial_info.days}"
@@ -506,6 +601,15 @@ def setup_logging() -> None:
         diagnose=True,
         level="DEBUG"
     )
+    if console_mode:
+        logger.add(
+            sink=sys.stderr,
+            colorize=True,
+            enqueue=True,
+            backtrace=True,
+            diagnose=True,
+            level="DEBUG"
+        )
 
 
 def main() -> None:
