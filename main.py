@@ -277,7 +277,7 @@ class CursorApp:
 
         semi_radio = ttk.Radiobutton(
             radio_frame,
-            text="半自动注册",
+            text="人工过验证",
             variable=self.selected_mode,
             value="semi",
             style='TRadiobutton'
@@ -286,7 +286,7 @@ class CursorApp:
 
         auto_radio = ttk.Radiobutton(
             radio_frame,
-            text="自动注册",
+            text="自动过验证",
             variable=self.selected_mode,
             value="auto",
             style='TRadiobutton'
@@ -295,7 +295,7 @@ class CursorApp:
 
         admin_radio = ttk.Radiobutton(
             radio_frame,
-            text="开发者模式",
+            text="全自动注册",
             variable=self.selected_mode,
             value="admin",
             style='TRadiobutton'
