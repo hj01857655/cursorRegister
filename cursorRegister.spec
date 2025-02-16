@@ -15,7 +15,9 @@ a = Analysis(
         'drissionpage',
         'utils',
         'registerAc',
-        'email'
+        'email',
+        'ssl',
+        '_ssl'
     ],
     hookspath=[],
     hooksconfig={},
@@ -44,9 +46,13 @@ excluded_binaries = [
     'mkl_*.dll'
 ]
 
-a.binaries = TOC([x for x in a.binaries if not any(pattern.lower() in x[0].lower() for pattern in excluded_binaries)])
+a.binaries = TOC([x for x in a.binaries if not any(pattern.lower() in x[0].lower() 
+                 and not x[0].lower().endswith(('libssl-1_1.dll', 'libcrypto-1_1.dll', 'libffi-7.dll')) 
+                 for pattern in excluded_binaries)])
 
 a.datas = TOC([x for x in a.datas if not x[0].startswith(('numpy', 'matplotlib')) and x[0] not in ['.env', 'README.md']])
+
+a.datas += collect_data_files('certifi')
 
 pyz = PYZ(a.pure, cipher=block_cipher)
 

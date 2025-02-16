@@ -54,6 +54,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pyinstaller wheel setuptools
           pip install -r requirements.txt
+          pip install certifi --upgrade
 
       - name: 缓存PyInstaller构建
         uses: actions/cache@v4
