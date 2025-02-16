@@ -37,6 +37,29 @@ class CursorRegistration:
         self.retry_times = 5
         self.browser = self.tab = self.moe = None
         self.admin = False
+        self.user_agent = self._generate_random_fingerprint()
+
+    def _generate_random_fingerprint(self):
+        chrome_versions = [
+            '133.0.6943.98',  # Stable
+            '134.0.6998.15',  # Beta
+            '135.0.6999.2',   # Dev
+            '135.0.7019.0'    # Canary
+        ]
+        
+        platforms = [
+            'Windows NT 10.0; Win64; x64',
+            'Windows NT 10.0; WOW64',
+            'Macintosh; Intel Mac OS X 10_15_7',
+            'X11; Linux x86_64'
+        ]
+        
+        version = random.choice(chrome_versions)
+        platform = random.choice(platforms)
+        
+        user_agent = f'Mozilla/5.0 ({platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}'
+        logger.info(f"生成随机User-Agent: {user_agent}")
+        return user_agent
 
     def _safe_action(self, action, *args, **kwargs):
         try:
@@ -48,6 +71,9 @@ class CursorRegistration:
     def init_browser(self):
         co = ChromiumOptions()
         co.incognito()
+        co.new_env()
+        co.ignore_certificate_errors()
+        co.set_user_agent(user_agent=self.user_agent)
         if self.headless:
             co.headless()
         else:
