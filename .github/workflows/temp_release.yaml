@@ -56,11 +56,7 @@ jobs:
 
       - name: 构建可执行文件
         run: |
-          $env:PYTHONOPTIMIZE = 2
-          $env:PYTHONHASHSEED = 42
           pyinstaller ${{ env.APP_NAME }}.spec --clean
-        env:
-          PYTHONOPTIMIZE: 2
 
       - name: 验证构建
         run: |
