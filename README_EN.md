@@ -1,205 +1,254 @@
-# Cursor Registration Assistant
+# Cursor Registration Assistant 🚀
+
+<div align="center">
 
 [中文版](./README.md)
 
-> A tool to help you easily use Cursor
+> A tool to help you easily use Cursor with multiple registration methods and simple operations.
 
-## 📥 Download Cursor
+![GitHub release (latest by date)](https://img.shields.io/github/v/release/ktovoz/cursorRegister)
+![License](https://img.shields.io/badge/license-CC%20BY--NC--ND%204.0-lightgrey.svg)
+![GitHub stars](https://img.shields.io/github/stars/ktovoz/cursorRegister)
+![Windows Support](https://img.shields.io/badge/Windows-0078D6?style=flat&logo=windows&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.7+-blue.svg?logo=python&logoColor=white)
+
+</div>
+
+<p align="center">
+  <a href="#quick-start-">Quick Start</a> •
+  <a href="#download-and-installation-">Download & Installation</a> •
+  <a href="#how-to-use-">How to Use</a> •
+  <a href="#registration-methods-">Registration Methods</a> •
+  <a href="#faq-">FAQ</a>
+</p>
+
+---
+
+## ⚡ Quick Start
+
+<table>
+<tr>
+<td width="50%">
+
+### 🔥 Features
+
+- 🚀 Fully automated registration process
+- 📧 Multiple email configuration options
+- 🔒 Secure account management
+- 🛠️ User-friendly interface
+- 🔄 Automatic update protection
+
+</td>
+<td width="50%">
+
+### 📋 Prerequisites
+
+- Windows OS
+- Cursor v0.44.11
+- Python 3.7+
+- Internet connection
+- Email service
+
+</td>
+</tr>
+</table>
+
+## 📥 Download and Installation
+
+<details>
+<summary>Cursor Editor</summary>
 
 ### Windows Version (v0.44.11)
+- 🔗 [Official Download](https://downloader.cursor.sh/builds/250103fqxdt5u9z/windows/nsis/x64)
+- 🔄 [Alternative Download](https://download.todesktop.com/230313mzl4w4u92/Cursor%20Setup%200.44.11%20-%20Build%20250103fqxdt5u9z-x64.exe)
 
-- ⚡ [Official Cursor Download](https://downloader.cursor.sh/builds/250103fqxdt5u9z/windows/nsis/x64)
+</details>
 
-🔄 [ToDesktop Alternative Download](https://download.todesktop.com/230313mzl4w4u92/Cursor%20Setup%200.44.11%20-%20Build%20250103fqxdt5u9z-x64.exe)
-
-### Registration Assistant Download
+<details>
+<summary>Registration Assistant</summary>
 
 - 📦 [Download from Release Page](https://github.com/ktovoz/cursorRegister/releases)
-  > Download the latest version of the registration assistant from the Release page
+> 💡 Please download the latest version for the best experience
 
-## 🔐 How to Use
+</details>
+
+## Table of Contents 📑
+
+- [Quick Start](#quick-start-)
+- [Download and Installation](#download-and-installation-)
+- [How to Use](#how-to-use-)
+- [Registration Methods](#registration-methods-)
+- [FAQ](#faq-)
+- [Community](#community-)
+- [Acknowledgments](#acknowledgments-)
+- [License and Disclaimer](#license-and-disclaimer-)
+
+## Quick Start 🚀
+
+1. Download and install Cursor v0.44.11
+2. Download the latest version of Registration Assistant
+3. Choose registration method (Fully/Semi-automatic)
+4. Follow prompts to complete registration
+
+## How to Use 🔐
 
 ### Preparation
 
-#### 1️⃣ Download and Install
+#### Email Configuration (Choose One)
 
-- Download the latest version of the registration assistant from the Release page
-- Ensure Cursor v0.44.11 is installed
+##### Option 1: Temporary Email (Quick & Easy)
+- Use temporary email services (like temp-mail.org)
+- Ensure you can receive verification emails
 
-#### 2️⃣ Email Configuration (Choose One)
+##### Option 2: Own Domain (Recommended)
+1. Prepare a domain
+2. Configure in Cloudflare:
+   - DNS records
+   - Email forwarding
 
-- **Option 1: Use Temporary Email** (Quick and Easy)
-    - Use temporary email services (like temp-mail.org, 10minutemail.com, etc.)
-    - Ensure you can access the temporary email to receive verification emails
+## Registration Methods 📝
 
-- **Option 2: Use Your Own Domain** (Recommended for Long-term Use)
-    1. Prepare an available domain (recommend using affordable domain registrars)
-    2. Complete configuration on Cloudflare:
-        - Add domain and configure DNS records
-        - Enable and set up Cloudflare Email Routing
+### 1. Fully Automatic Registration (Recommended for Beginners)
 
-### Registration and Configuration Steps
-
-#### 1️⃣ Account Registration Methods (Choose One)
-
-##### Method 1: Software Fully Automatic Registration (Recommended for Beginners)
-1. Get from [moemail](https://github.com/beilunyang/moemail) service:
-    - API KEY
-    - Available DOMAIN
-2. Configure software:
-    - Open .env file
-    - Fill in `API_KEY=your_api_key`
-    - Fill in `DOMAIN=your_domain`
+1. Get required information:
+   - Get API KEY from [moemail](https://github.com/beilunyang/moemail)
+   - Get available DOMAIN
+2. Configure .env file:
+   ```
+   API_KEY=your_api_key
+   DOMAIN=your_domain
+   ```
 3. Start registration:
-    - Check "Fully Automatic Registration" option
-    - Click "Auto Register" button
-    - Wait for the program to complete registration process
-> ⚠️ Note:
-> - Ensure the API KEY and DOMAIN entered are valid
-> - Manual CAPTCHA verification may be required during registration
-> - The program will automatically configure all necessary information after successful registration
+   - Check "Fully Automatic Registration"
+   - Click "Auto Register"
+   - Wait for completion
 
-##### Method 2: GitHub Action Automatic Registration (Recommended for Advanced Users)
+### 2. Register with Temporary Email
+
+1. Prepare temporary email
+2. Fill in information and choose verification method
+3. Wait for verification code
+4. Complete registration
+
+### 3. Register with Own Domain
+
+1. Complete domain configuration
+2. Generate random email
+3. Follow prompts to complete registration
+
+### 4. GitHub Action Automatic Registration ⚠️ [In Development]
+
 1. Fork this project to your GitHub account
-2. Get API KEY from [moemail](https://github.com/beilunyang/moemail) project
+2. Get API KEY from [moemail](https://github.com/beilunyang/moemail)
 3. Configure GitHub Secrets:
-    - Go to project settings -> Secrets and variables -> Actions
-    - Add a secret named `API_KEY` with the value of your obtained API KEY
-    - Add a secret named `MOE_MAIL_URL` with the value of moemail service URL
-4. Trigger registration process:
-    - Go to Actions tab
-    - Select `Register Account` workflow
-    - Click "Run workflow"
-    - Enter `DOMAIN` value in the popup dialog (domain obtained from moemail service)
+   - Go to project settings -> Secrets and variables -> Actions
+   - Add `API_KEY` secret with your API KEY
+   - Add `MOE_MAIL_URL` secret with moemail service URL
+4. Trigger registration:
+   - Go to Actions tab
+   - Select `Register Account` workflow
+   - Click "Run workflow"
+   - Enter `DOMAIN` value in popup
 5. Use generated account:
-    - Download account information from Artifacts
-    - Fill information into registration assistant program
-    - Click "Refresh Cookie" to complete configuration
-> ⚠️ Note:
-> - It's recommended to deploy your own moemail service for stability
-> - Promptly download and delete account information from Artifacts
-> - Securely store the generated token
+   - Download account info from Artifacts
+   - Fill info into registration assistant
+   - Click "Refresh cookie" to complete
 
-##### Method 3: Register with Temporary Email (Simple but Unstable)
-1. Prepare temporary email address (like temp-mail.org, 10minutemail.com, etc.)
-2. In the program:
-    - Enter temporary email address
-    - Check "Manual Verification" or "Auto Verification" option
-    - Click "Auto Register" button
-3. Verification steps:
-    - Wait for registration email
-    - Check verification code in temporary email
-    - Manually enter verification code into program
-    - Wait for registration to complete
-> ⚠️ Note:
-> - Some temporary email services may be blocked by Cursor
-> - Ensure you can receive and enter verification code promptly
-> - Verification codes have short validity periods, quick action required
+> ⚠️ Note: This feature is under development
+> - Recommended to deploy your own moemail service
+> - Download and delete account info from Artifacts promptly
+> - Store generated token securely
 
-##### Method 4: Register with Your Own Domain (Stable and Reliable)
-1. Domain configuration:
-    - Prepare an available domain
-    - Configure DNS and email forwarding in Cloudflare
-2. Registration process:
-    - Click "Generate Account" to get random email and password
-    - Check "Manual Verification" or "Auto Verification" option
-    - Click "Auto Register" button
-3. Verification steps:
-    - Wait for registration email to be sent to domain email
-    - Get verification code from forwarded email
-    - Manually enter verification code into program
-    - Wait for registration to complete
-> ⚠️ Note:
-> - Ensure domain email forwarding is configured correctly
-> - Verification codes have short validity periods, check and enter promptly
-> - If verification code not received, check email forwarding settings
+## FAQ ❓
 
-#### 2️⃣ Login Credentials Configuration
+### 1. Temporary Email vs Own Domain?
 
-After registration, the program will automatically:
-- Get account Cookie information
-- Fill Cookie into corresponding input field
-- Update .env configuration file
-- Click "Refresh Cookie" button to enable auto-login for local Cursor
+| Method | Pros | Cons |
+|--------|------|------|
+| Temporary Email | Quick & Easy | May be blocked |
+| Own Domain | Stable & Reliable | Requires setup |
 
-#### 3️⃣ ID Reset and Update Protection
+### 2. Registration Failure Solutions
 
-After registration completion:
-- Click "Reset ID" button
-- The program will automatically:
-    - Reset device machine code
-    - Disable auto-update function
-    - Ensure normal account usage
+- Try different temporary email services
+- Switch to own domain method
+- Check network connection
 
-### ⚙️ Additional Notes
+### 3. Manual Cookie Retrieval
 
-- The program will automatically disable Cursor's auto-update function to prevent updates to unsupported new versions
-- Recommend regularly backing up the .env configuration file in case reconfiguration is needed
+1. Open browser developer tools (F12)
+2. Visit cursor.sh and login
+3. Find Cookie in Network tab
+4. Copy and update in program
 
-### ❓ Frequently Asked Questions (FAQ)
+## 🤝 Community
 
-#### 1. Why is using your own domain recommended over temporary email?
+<div align="center">
+<table>
+<tr>
+<td>
+<img src="assets/wx_20250215215655.jpg" width="300" height="450" alt="Join Community">
+</td>
+<td>
 
-- Well-known temporary email services (like temp-mail.org, 10minutemail.com) may be blocked by Cursor, causing
-  registration failure
-- Your own domain can be used stably long-term and won't be identified as temporary email
-- Using your own domain allows generating multiple random email accounts, providing more flexibility
+### Scan to Join Community
+- Get latest updates
+- Solve usage issues
+- Share experiences
+- Discuss technical topics
 
-#### 2. What to do if registration with temporary email fails?
+</td>
+</tr>
+</table>
+</div>
 
-- Try using less common temporary email services
-- Recommend switching to own domain registration method, which is the most stable and reliable solution
-- If you must use temporary email, try several different temporary email services
+## Detailed Tutorial 📖
 
-#### 3. What to do if auto-registration is unavailable?
+Visit [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97) for complete tutorial.
 
-- You can complete the registration process manually in browser
-- After successful registration, get Cookie from browser developer tools:
-    1. Open browser developer tools (F12)
-    2. Go to Network tab
-    3. Visit cursor.sh website and register/login
-    4. Search for `WorkosCursorSessionToken` in requests to find request containing complete Cookie information
-    5. Copy Cookie value
-- Paste the obtained Cookie into the program
-- Click "Update Account Info" button to update login information
+## Acknowledgments 🙏
 
-## 📖 Detailed Tutorial
-
-Semi-automatic registration is recommended.
-
-A complete usage tutorial has been published at [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97)
-
-If you have any questions, you can join the group chat:
-
-<img src="assets/wx_20250215215655.jpg" width="300" height="450" alt="Join Group Chat" style="float: left; margin-right: 20px;">
-
-## 🙏 Acknowledgments
-
-Special thanks to the following open source projects:
+Thanks to these open source projects:
 
 - [cursor-auto-free](https://github.com/chengazhen/cursor-auto-free)
 - [go-cursor-help](https://github.com/yuaotian/go-cursor-help)
 - [CursorRegister](https://github.com/JiuZ-Chn/CursorRegister)
-- [moemail](https://github.com/beilunyang/moemail) - Provides stable and reliable temporary email service
+- [moemail](https://github.com/beilunyang/moemail)
 
 ## 📜 License and Disclaimer
 
+<table>
+<tr>
+<td width="70%">
+
 ### License
+This project is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
-This project is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/), which allows you
-to:
+✅ Allowed:
+- Share — copy and redistribute the material in any medium or format
 
-- ✅ Share — copy and redistribute the material in any medium or format
+❌ Not Allowed:
+- Commercial use
+- Modifications
+- Redistribution
 
-With the following restrictions:
+</td>
+<td width="30%">
 
-- ❌ No commercial use
-- ❌ No modifications to the original work
-- ✅ Must provide attribution to the original author
+### ⚠️ Disclaimer
+- For learning only
+- No commercial use
+- Use at own risk
+- Author not liable
 
-### Disclaimer
+</td>
+</tr>
+</table>
 
-> ⚠️ Important Notice:
-> - This project is for learning and communication purposes only, commercial use is strictly prohibited
-> - Users are responsible for any consequences arising from using this project
-> - The author is not responsible for any issues that may occur during use 
+---
+
+<div align="center">
+
+**[⬆ Back to Top](#cursor-registration-assistant-)**
+
+</div> 
