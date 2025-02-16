@@ -27,6 +27,7 @@
   <a href="#-快速开始">快速开始</a> •
   <a href="#-下载安装">下载安装</a> •
   <a href="#-使用方法">使用方法</a> •
+  <a href="#-开发路线图">开发路线图</a> •
   <a href="#-注册方式">注册方式</a> •
   <a href="#-常见问题">常见问题</a>
   </b>
@@ -91,7 +92,7 @@
 
 <div align="center">
 
-## 📑 功能目录
+## 📑 文档目录
 
 </div>
 
@@ -103,10 +104,47 @@
 </tr>
 <tr>
 <td width="33%" align="center"><a href="#-注册方式">📝 注册方式</a></td>
+<td width="33%" align="center"><a href="#-贡献指南">🤝 贡献指南</a></td>
 <td width="33%" align="center"><a href="#-常见问题">❓ 常见问题</a></td>
-<td width="33%" align="center"><a href="#-社区交流">🤝 社区交流</a></td>
+</tr>
+<tr>
+<td width="33%" align="center"><a href="#-微信交流群">💬 微信交流群</a></td>
+<td width="33%" align="center"><a href="#详细教程-">📖 详细教程</a></td>
+<td width="33%" align="center"><a href="#-致谢">🌟 致谢</a></td>
 </tr>
 </table>
+
+<div align="center">
+
+## 🗺️ 开发路线图
+
+</div>
+
+### 🎯 当前目标 
+
+- 🚀 优化自动注册流程的成功率
+- 🤖 使用github action 进行自动注册
+- 🎨 改进用户界面体验
+- 📝 完善使用文档
+
+### ✅ 已实现功能
+
+- 💫 全自动注册流程
+- 🔒 无感刷新cookie登录软件账号
+- 📧 半自动，全自动，手动多种注册方式
+- 💰 查询试用额度
+- 🎯 辅助注册
+- 🔄 重置机器ID
+- 🎨 简洁的操作界面 
+- 📦 支持一键打包发布
+- 💾 账号备份功能
+
+### 🔮 未来规划
+
+- 🔄 批量账号管理
+
+
+> 💡 路线图会根据社区反馈和实际需求动态调整
 
 <div align="center">
 
@@ -260,225 +298,4 @@
    - 进入 Actions 标签页
    - 选择 `注册账号` workflow
    - 点击 "Run workflow"
-   - 在弹出的对话框中输入 `DOMAIN` 值
-5. 使用生成的账号：
-   - 从 Artifacts 下载账号信息
-   - 打开注册助手程序填入信息
-   - 点击"刷新cookie"完成配置
-
-> ⚠️ 注意事项：
-> - 建议自行部署 moemail 服务以确保稳定性
-> - 及时从 Artifacts 下载并删除账号信息
-> - 妥善保管生成的 token
-
-</details>
-
-### ⭐ 使用建议
-
-<details>
-<summary><b>📝 如何选择？</b></summary>
-
-#### 🔰 新手推荐
-- 选择全自动注册
-- 方便快捷，一键完成
-- ⚠️ 需要配置部署moemail邮箱
-
-#### 🎯 稳定需求
-- 选择手动注册
-- 最为稳定可靠
-- 无需额外配置
-
-#### 🔄 批量需求
-- 等待 GitHub Action 功能
-- 可以实现自动化批量注册
-
-</details>
-
-<div align="center">
-
-## 🤝 贡献指南
-
-</div>
-
-### 🌟 如何贡献
-
-我们非常欢迎并感谢所有形式的贡献！以下是一些参与项目的方式：
-
-- 🐛 提交 Bug 报告
-- 💡 提出新功能建议
-- 📝 改进文档内容
-- ⚙️ 提供代码贡献
-- 🌍 帮助翻译文档
-- 💬 回答其他用户问题
-
-### 📋 贡献步骤
-
-1. Fork 本仓库
-2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
-3. 提交您的更改 (`git commit -m 'Add some AmazingFeature'`)
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-5. 打开一个 Pull Request
-
-> 💡 **欢迎提交 PR！** 如果您有任何改进想法，我们非常期待您的贡献。
-
-<div align="center">
-
-## 🎯 常见问题
-
-</div>
-
-<details>
-<summary><b>💡 临时邮箱 vs 自有域名？</b></summary>
-
-| 方式 | 优点 | 缺点 |
-|:------:|:------:|:------:|
-| 📨 临时邮箱 | ⚡ 快速便捷 | ⚠️ 可能被屏蔽 |
-| 🌐 自有域名 | 🔒 稳定可靠 | ⚙️ 需要配置 |
-
-</details>
-
-<details>
-<summary><b>🔧 注册失败解决方案</b></summary>
-
-- 🔄 尝试不同的临时邮箱服务
-- 🌐 切换到自有域名方式
-- 📡 检查网络连接
-
-</details>
-
-<details>
-<summary><b>🍪 手动获取 Cookie</b></summary>
-
-1. 🔍 打开浏览器开发者工具（F12）
-2. 🌐 访问 cursor.sh 并登录
-3. 🔎 在 Network 中找到 Cookie
-4. 📋 复制并更新到程序中
-
-</details>
-
-<div align="center">
-
-## 🤝 微信交流群
-
-</div>
-
-<div align="center">
-<table>
-<tr>
-<td align="center">
-<img src="assets/wx_20250215215655.jpg" width="280" height="420" alt="微信交流群">
-</td>
-<td>
-
-### 🌟 加入微信群
-
-- 📱 扫描左侧二维码加入微信群
-- 💬 与其他用户交流使用心得
-- ❓ 解决使用过程中的问题
-- 📢 获取最新版本和更新信息
-
-#### 扫描左侧二维码，立即加入微信群！
-
-</td>
-</tr>
-</table>
-</div>
-
-<div align="center">
-
-## 详细教程 📖
-
-</div>
-
-访问 [Cursor 注册助手食用指南](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97) 获取完整教程。
-
-<div align="center">
-
-## 🌟 致谢
-
-</div>
-
-### 👥 项目贡献者
-
-感谢所有让这个项目变得更好的贡献者们！
-
-<div align="center">
-<a href="https://github.com/ktovoz/cursorRegister/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=ktovoz/cursorRegister&max=100" />
-</a>
-</div>
-
-### 🏆 特别感谢
-
-感谢以下开源项目及其作者为本项目提供的灵感和参考：
-
-<div align="center">
-<table>
-<tr>
-<td align="center">
-<a href="https://github.com/chengazhen">
-<img src="https://github.com/chengazhen.png" width="100px;" alt="chengazhen"/><br/>
-<sub><b>chengazhen</b></sub><br/>
-<sub><a href="https://github.com/chengazhen/cursor-auto-free">cursor-auto-free</a></sub><br/>
-</a>
-</td>
-<td align="center">
-<a href="https://github.com/yuaotian">
-<img src="https://github.com/yuaotian.png" width="100px;" alt="yuaotian"/><br/>
-<sub><b>yuaotian</b></sub><br/>
-<sub><a href="https://github.com/yuaotian/go-cursor-help">go-cursor-help</a></sub><br/>
-</a>
-</td>
-<td align="center">
-<a href="https://github.com/JiuZ-Chn">
-<img src="https://github.com/JiuZ-Chn.png" width="100px;" alt="JiuZ-Chn"/><br/>
-<sub><b>JiuZ-Chn</b></sub><br/>
-<sub><a href="https://github.com/JiuZ-Chn/CursorRegister">CursorRegister</a></sub><br/>
-</a>
-</td>
-<td align="center">
-<a href="https://github.com/beilunyang">
-<img src="https://github.com/beilunyang.png" width="100px;" alt="beilunyang"/><br/>
-<sub><b>beilunyang</b></sub><br/>
-<sub><a href="https://github.com/beilunyang/moemail">moemail</a></sub><br/>
-</a>
-</td>
-</tr>
-</table>
-</div>
-
-<div align="center">
-
-## 📜 许可证与声明
-
-</div>
-
-### 📋 许可说明
-本项目采用 [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/) 许可证
-
-#### ✅ 您可以：
-- 📤 分享 — 在任何媒介以任何形式复制、发行本作品
-
-#### ❌ 但是不能：
-- 💰 商业使用
-- ✏️ 修改原作品
-- 🔄 二次分发
-
-### ⚠️ 免责声明
-
-- 📚 仅供学习交流
-- 🚫 禁止商业用途
-- ⚖️ 使用后果自负
-- 🔒 作者不承担责任
-
----
-
-<div align="center">
-
-**[⬆ 返回顶部](#-cursor-注册助手)**
-
-<br/>
-
-<sub>用 ❤️ 制作 | Copyright © 2025 ktovoz</sub>
-
-</div>
+   - 在弹出的对话框中输入 `
