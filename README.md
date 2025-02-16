@@ -48,9 +48,9 @@
 
 </div>
 
-<table>
+<table width="100%">
 <tr>
-<td width="50%" style="border: none;">
+<td width="50%" style="border: none; padding: 20px;">
 
 <div align="center">
 
@@ -67,7 +67,7 @@
 - ⚙️ 灵活的配置选项
 
 </td>
-<td width="50%" style="border: none;">
+<td width="50%" style="border: none; padding: 20px;">
 
 <div align="center">
 
