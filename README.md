@@ -296,6 +296,33 @@
 
 <div align="center">
 
+## 🤝 贡献指南
+
+</div>
+
+### 🌟 如何贡献
+
+我们非常欢迎并感谢所有形式的贡献！以下是一些参与项目的方式：
+
+- 🐛 提交 Bug 报告
+- 💡 提出新功能建议
+- 📝 改进文档内容
+- ⚙️ 提供代码贡献
+- 🌍 帮助翻译文档
+- 💬 回答其他用户问题
+
+### 📋 贡献步骤
+
+1. Fork 本仓库
+2. 创建您的特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交您的更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 打开一个 Pull Request
+
+> 💡 **欢迎提交 PR！** 如果您有任何改进想法，我们非常期待您的贡献。
+
+<div align="center">
+
 ## 🎯 常见问题
 
 </div>
@@ -331,7 +358,7 @@
 
 <div align="center">
 
-## 🤝 社区交流
+## 🤝 微信交流群
 
 </div>
 
@@ -339,18 +366,18 @@
 <table>
 <tr>
 <td align="center">
-<img src="assets/wx_20250215215655.jpg" width="280" height="420" alt="社区交流群">
+<img src="assets/wx_20250215215655.jpg" width="280" height="420" alt="微信交流群">
 </td>
 <td>
 
-### 🌟 加入我们的社区
+### 🌟 加入微信群
 
-- 📢 获取最新项目动态
-- 💡 解决使用过程疑难
-- 🎯 分享使用心得体会
-- 🔧 探讨技术实现细节
+- 📱 扫描左侧二维码加入微信群
+- 💬 与其他用户交流使用心得
+- ❓ 解决使用过程中的问题
+- 📢 获取最新版本和更新信息
 
-#### 扫描左侧二维码，立即加入交流群！
+#### 扫描左侧二维码，立即加入微信群！
 
 </td>
 </tr>
@@ -371,39 +398,53 @@
 
 </div>
 
-感谢以下开源项目的贡献：
+### 👥 项目贡献者
+
+感谢所有让这个项目变得更好的贡献者们！
 
 <div align="center">
+<a href="https://github.com/ktovoz/cursorRegister/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=ktovoz/cursorRegister&max=100" />
+</a>
+</div>
 
+### 🏆 特别感谢
+
+感谢以下开源项目及其作者为本项目提供的灵感和参考：
+
+<div align="center">
 <table>
 <tr>
 <td align="center">
-<a href="https://github.com/chengazhen/cursor-auto-free">
-<img src="https://github.com/chengazhen.png" width="50px;" alt="cursor-auto-free"/><br/>
-<sub><b>cursor-auto-free</b></sub>
+<a href="https://github.com/chengazhen">
+<img src="https://github.com/chengazhen.png" width="100px;" alt="chengazhen"/><br/>
+<sub><b>chengazhen</b></sub><br/>
+<sub><a href="https://github.com/chengazhen/cursor-auto-free">cursor-auto-free</a></sub><br/>
 </a>
 </td>
 <td align="center">
-<a href="https://github.com/yuaotian/go-cursor-help">
-<img src="https://github.com/yuaotian.png" width="50px;" alt="go-cursor-help"/><br/>
-<sub><b>go-cursor-help</b></sub>
+<a href="https://github.com/yuaotian">
+<img src="https://github.com/yuaotian.png" width="100px;" alt="yuaotian"/><br/>
+<sub><b>yuaotian</b></sub><br/>
+<sub><a href="https://github.com/yuaotian/go-cursor-help">go-cursor-help</a></sub><br/>
 </a>
 </td>
 <td align="center">
-<a href="https://github.com/JiuZ-Chn/CursorRegister">
-<img src="https://github.com/JiuZ-Chn.png" width="50px;" alt="CursorRegister"/><br/>
-<sub><b>CursorRegister</b></sub>
+<a href="https://github.com/JiuZ-Chn">
+<img src="https://github.com/JiuZ-Chn.png" width="100px;" alt="JiuZ-Chn"/><br/>
+<sub><b>JiuZ-Chn</b></sub><br/>
+<sub><a href="https://github.com/JiuZ-Chn/CursorRegister">CursorRegister</a></sub><br/>
 </a>
 </td>
 <td align="center">
-<a href="https://github.com/beilunyang/moemail">
-<img src="https://github.com/beilunyang.png" width="50px;" alt="moemail"/><br/>
-<sub><b>moemail</b></sub>
+<a href="https://github.com/beilunyang">
+<img src="https://github.com/beilunyang.png" width="100px;" alt="beilunyang"/><br/>
+<sub><b>beilunyang</b></sub><br/>
+<sub><a href="https://github.com/beilunyang/moemail">moemail</a></sub><br/>
 </a>
 </td>
 </tr>
 </table>
-
 </div>
 
 <div align="center">
