@@ -7,7 +7,6 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('turnstilePatch', 'turnstilePatch')],
     hiddenimports=[
         'tkinter', 
         'PIL._tkinter_finder',

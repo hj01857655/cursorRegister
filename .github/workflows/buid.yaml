@@ -107,9 +107,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.ARTIFACT_NAME }}
-          path: |
-            dist/${{ env.EXE_NAME }}
-            dist/turnstilePatch/
+          path: dist/
           retention-days: 5
 
   create-release:
@@ -156,9 +154,9 @@ jobs:
           echo "" >> changelog.md
           git log $(git describe --tags --abbrev=0 HEAD^)..HEAD --pretty=format:"* %s" >> changelog.md
 
-      - name: 创建空白.env文件
+      - name: 生成空白.env文件
         run: |
-          cd artifacts/${{ env.ARTIFACT_NAME }}
+          cd artifacts
           cat > .env << 'EOL'
           DOMAIN=
           EMAIL=
@@ -171,7 +169,7 @@ jobs:
       - name: 创建发布压缩包
         run: |
           cd artifacts
-          zip -r ${{ env.ZIP_NAME }} ${{ env.ARTIFACT_NAME }}/
+          zip -r ${{ env.ZIP_NAME }} *
 
       - name: 调试信息
         run: |
