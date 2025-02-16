@@ -40,53 +40,95 @@
 
 ### Registration and Configuration Steps
 
-#### 1️⃣ Account Registration
+#### 1️⃣ Account Registration Methods (Choose One)
 
-- **Fully Automatic Registration (Recommended):**
-    1. Fork this project to your GitHub account
-    2. Get API KEY from [moemail](https://github.com/beilunyang/moemail) project
-    3. Configure Secrets in your forked project:
-        - Go to project settings -> Secrets and variables -> Actions
-        - Add a secret named `API_KEY` with the value of your obtained API KEY
-        - Add a secret named `MOE_MAIL_URL` with the value of moemail service URL
-    4. Manually trigger GitHub Action:
-        - Go to Actions tab
-        - Select `Register Account` workflow
-        - Click "Run workflow"
-    5. Wait for the Action to complete, account information will be saved automatically
-    > ⚠️ Note:
-    > - It's recommended to deploy your own moemail service for stability
-    > - After the Action completes, promptly download the generated account information from Artifacts
-    > - Delete the Artifacts after downloading and securely store the generated token
-    6. Using the generated account:
-        - Open the registration assistant program
-        - Fill in the downloaded account information
-        - Click "Refresh Cookie" to start using
+##### Method 1: Software Fully Automatic Registration (Recommended for Beginners)
+1. Get from [moemail](https://github.com/beilunyang/moemail) service:
+    - API KEY
+    - Available DOMAIN
+2. Configure software:
+    - Open .env file
+    - Fill in `API_KEY=your_api_key`
+    - Fill in `DOMAIN=your_domain`
+3. Start registration:
+    - Check "Fully Automatic Registration" option
+    - Click "Auto Register" button
+    - Wait for the program to complete registration process
+> ⚠️ Note:
+> - Ensure the API KEY and DOMAIN entered are valid
+> - Manual CAPTCHA verification may be required during registration
+> - The program will automatically configure all necessary information after successful registration
 
-- **Register with Temporary Email:**
-    - Enter the temporary email address in the email input field
-    - Select "Auto Register", the program will automatically fill in registration information
+##### Method 2: GitHub Action Automatic Registration (Recommended for Advanced Users)
+1. Fork this project to your GitHub account
+2. Get API KEY from [moemail](https://github.com/beilunyang/moemail) project
+3. Configure GitHub Secrets:
+    - Go to project settings -> Secrets and variables -> Actions
+    - Add a secret named `API_KEY` with the value of your obtained API KEY
+    - Add a secret named `MOE_MAIL_URL` with the value of moemail service URL
+4. Trigger registration process:
+    - Go to Actions tab
+    - Select `Register Account` workflow
+    - Click "Run workflow"
+    - Enter `DOMAIN` value in the popup dialog (domain obtained from moemail service)
+5. Use generated account:
+    - Download account information from Artifacts
+    - Fill information into registration assistant program
+    - Click "Refresh Cookie" to complete configuration
+> ⚠️ Note:
+> - It's recommended to deploy your own moemail service for stability
+> - Promptly download and delete account information from Artifacts
+> - Securely store the generated token
 
-- **Register with Your Own Domain:**
+##### Method 3: Register with Temporary Email (Simple but Unstable)
+1. Prepare temporary email address (like temp-mail.org, 10minutemail.com, etc.)
+2. In the program:
+    - Enter temporary email address
+    - Check "Manual Verification" or "Auto Verification" option
+    - Click "Auto Register" button
+3. Verification steps:
+    - Wait for registration email
+    - Check verification code in temporary email
+    - Manually enter verification code into program
+    - Wait for registration to complete
+> ⚠️ Note:
+> - Some temporary email services may be blocked by Cursor
+> - Ensure you can receive and enter verification code promptly
+> - Verification codes have short validity periods, quick action required
+
+##### Method 4: Register with Your Own Domain (Stable and Reliable)
+1. Domain configuration:
+    - Prepare an available domain
+    - Configure DNS and email forwarding in Cloudflare
+2. Registration process:
     - Click "Generate Account" to get random email and password
-    - Select "Auto Register", the program will automatically fill in registration information
-
-- Complete CAPTCHA verification manually when prompted
-- Wait for registration to complete, the system will automatically save account information
+    - Check "Manual Verification" or "Auto Verification" option
+    - Click "Auto Register" button
+3. Verification steps:
+    - Wait for registration email to be sent to domain email
+    - Get verification code from forwarded email
+    - Manually enter verification code into program
+    - Wait for registration to complete
+> ⚠️ Note:
+> - Ensure domain email forwarding is configured correctly
+> - Verification codes have short validity periods, check and enter promptly
+> - If verification code not received, check email forwarding settings
 
 #### 2️⃣ Login Credentials Configuration
 
-- After registration, the program will automatically:
-    - Get account Cookie information
-    - Fill Cookie into corresponding input field
-    - Update .env configuration file
+After registration, the program will automatically:
+- Get account Cookie information
+- Fill Cookie into corresponding input field
+- Update .env configuration file
 - Click "Refresh Cookie" button to enable auto-login for local Cursor
 
 #### 3️⃣ ID Reset and Update Protection
 
-- Click "Reset ID" button, the program will automatically:
+After registration completion:
+- Click "Reset ID" button
+- The program will automatically:
     - Reset device machine code
-    - Disable Cursor auto-update function
+    - Disable auto-update function
     - Ensure normal account usage
 
 ### ⚙️ Additional Notes
@@ -125,7 +167,7 @@
 
 Semi-automatic registration is recommended.
 
-Complete usage tutorial has been published at [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97)
+A complete usage tutorial has been published at [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97)
 
 If you have any questions, you can join the group chat:
 
