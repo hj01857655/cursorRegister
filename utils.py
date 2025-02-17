@@ -535,7 +535,7 @@ class MoemailManager:
 
             messages = messages_result.data.get('messages', [])
             start_time = time.time()
-            retry_interval = 2  # 每次重试间隔2秒
+            retry_interval = 2
             
             while not messages:
                 if time.time() - start_time > timeout:
