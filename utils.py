@@ -421,7 +421,7 @@ class CursorManager:
             return Result.fail(str(e))
 
     @error_handler
-    def process_cookies(self, cookies: str) -> Result:
+    def process_cookies(self, cookies: str, email: str) -> Result:
         try:
             auth_keys = {k: f"cursorAuth/{v}" for k, v in {
                 "sign_up": "cachedSignUpType",
@@ -435,7 +435,7 @@ class CursorManager:
 
             updates = {
                 auth_keys["sign_up"]: "Auth_0",
-                auth_keys["email"]: os.getenv("EMAIL", ""),
+                auth_keys["email"]: email,
                 auth_keys["access"]: token,
                 auth_keys["refresh"]: token
             }

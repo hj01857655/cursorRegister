@@ -289,18 +289,19 @@ class ManageTab(ttk.Frame):
     def update_auth(self) -> None:
         def update_account_auth(csv_file_path: str, account_data: Dict[str, str]) -> None:
             cookie_str = account_data.get('COOKIES_STR', '')
+            email = account_data.get('EMAIL', '')
             if not cookie_str:
-                raise ValueError(f"未找到账号 {account_data['EMAIL']} 的Cookie信息")
+                raise ValueError(f"未找到账号 {email} 的Cookie信息")
 
             if "WorkosCursorSessionToken=" not in cookie_str:
                 cookie_str = f"WorkosCursorSessionToken={cookie_str}"
 
-            result = CursorManager().process_cookies(cookie_str)
+            result = CursorManager().process_cookies(cookie_str, email)
             if not result.success:
                 raise ValueError(result.message)
 
-            UI.show_success(self.winfo_toplevel(), f"账号 {account_data['EMAIL']} 的Cookie已刷新")
-            logger.info(f"已刷新账号 {account_data['EMAIL']} 的Cookie")
+            UI.show_success(self.winfo_toplevel(), f"账号 {email} 的Cookie已刷新")
+            logger.info(f"已刷新账号 {email} 的Cookie")
 
         self.handle_account_action("刷新Cookie", update_account_auth)
 
