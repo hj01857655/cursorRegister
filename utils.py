@@ -87,7 +87,7 @@ class DatabaseManager:
                         "ON CONFLICT(key) DO UPDATE SET value = ?",
                         (key, value, value)
                     )
-                    logger.info(f"已更新 {key.split('/')[-1]}")
+                    logger.debug(f"已更新 {key.split('/')[-1]}")
                 conn.commit()
                 return Result.ok()
         except Exception as e:
@@ -107,7 +107,7 @@ class DatabaseManager:
                     cursor.execute(f"SELECT key, value FROM {self.table}")
 
                 results = dict(cursor.fetchall())
-                logger.info(f"已查询 {len(results)} 条记录")
+                logger.debug(f"已查询 {len(results)} 条记录")
                 return Result.ok(results)
         except Exception as e:
             return Result.fail(f"数据库查询失败: {e}")
@@ -126,7 +126,7 @@ class EnvManager:
                 os.environ[key] = value
 
             env_path.write_text('\n'.join(updated.values()) + '\n', encoding='utf-8')
-            logger.info(f"已更新环境变量: {', '.join(updates.keys())}")
+            logger.debug(f"已更新环境变量: {', '.join(updates.keys())}")
             return Result.ok()
         except Exception as e:
             return Result.fail(f"更新环境变量失败: {e}")
@@ -170,7 +170,7 @@ class Utils:
                 os.environ[key] = value
 
             env_path.write_text('\n'.join(updated.values()) + '\n', encoding='utf-8')
-            logger.info(f"已更新环境变量: {', '.join(updates.keys())}")
+            logger.debug(f"已更新环境变量: {', '.join(updates.keys())}")
             return Result.ok()
         except Exception as e:
             return Result.fail(f"更新环境变量失败: {e}")
@@ -195,7 +195,7 @@ class Utils:
                     for f in backup_files:
                         try:
                             f.unlink()
-                            logger.info(f"成功删除旧备份文件: {f}")
+                            logger.debug(f"成功删除旧备份文件: {f}")
                         except Exception as del_err:
                             logger.warning(f"删除旧备份文件失败: {f}, 错误: {del_err}")
                 except Exception as e:
@@ -268,7 +268,7 @@ class Utils:
                         "ON CONFLICT(key) DO UPDATE SET value = ?",
                         (key, value, value)
                     )
-                    logger.info(f"已更新 {key.split('/')[-1]}")
+                    logger.debug(f"已更新 {key.split('/')[-1]}")
                 return Result.ok()
         except Exception as e:
             return Result.fail(f"数据库更新失败: {e}")
@@ -289,7 +289,7 @@ class Utils:
                     cursor.execute(f"SELECT key, value FROM {table}")
 
                 results = dict(cursor.fetchall())
-                logger.info(f"已查询 {len(results)} 条记录")
+                logger.debug(f"已查询 {len(results)} 条记录")
                 return Result.ok(results)
         except Exception as e:
             return Result.fail(f"数据库查询失败: {e}")
@@ -355,9 +355,9 @@ class CursorManager:
             email = f"{Utils.generate_random_string(random_length)}@{EnvManager.get('DOMAIN')}"
             password = Utils.generate_secure_password()
 
-            logger.info("生成的Cursor账号信息：")
-            logger.info(f"邮箱: {email}")
-            logger.info(f"密码: {password}")
+            logger.debug("生成的Cursor账号信息：")
+            logger.debug(f"邮箱: {email}")
+            logger.debug(f"密码: {password}")
 
             if not (result := EnvManager.update({'EMAIL': email, 'PASSWORD': password})):
                 raise RuntimeError(result.message)
@@ -443,7 +443,7 @@ class CursorManager:
                 auth_keys["refresh"]: token
             }
 
-            logger.info("正在更新认证信息...")
+            logger.debug("正在更新认证信息...")
             if not (result := self.db_manager.update(updates)):
                 return result
 
@@ -471,7 +471,7 @@ class MoemailManager:
             
             if response.status_code == 200:
                 response_data = response.json()
-                logger.info(f"API响应数据: {response_data}")
+                logger.debug(f"API响应数据: {response_data}")
                 return Result.ok(response_data)
             return Result.fail(f"请求失败: {response.text}")
             
