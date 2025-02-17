@@ -55,14 +55,14 @@ class CursorRegistration:
         self.browser = Chromium(co)
         self.tab = self.browser.latest_tab
         self.tab.get(self.CURSOR_SIGNUP_URL)
-        logger.info("浏览器初始化成功")
+        logger.debug("浏览器初始化成功")
 
     def input_field(self, fields_dict):
         for name, value in fields_dict.items():
             self.tab.ele(f'@name={name}').input(value)
             time.sleep(random.uniform(1, 4))
-            logger.info(f"成功输入 {name}")
-            logger.info(f"{value}")
+            logger.debug(f"成功输入 {name}")
+            logger.debug(f"{value}")
 
     def fill_registration_form(self):
         self.input_field({
@@ -119,7 +119,7 @@ class CursorRegistration:
                 for cookie in self.tab.cookies():
                     if cookie.get("name") == "WorkosCursorSessionToken":
                         return cookie["value"]
-                logger.warning(f"第 {attempt + 1} 次尝试未获取到Cookie，3秒后重试...")
+                logger.debug(f"第 {attempt + 1} 次尝试未获取到Cookie，3秒后重试...")
                 time.sleep(3)
             except Exception as e:
                 logger.error(f"获取cookie失败: {str(e)}")
@@ -129,16 +129,16 @@ class CursorRegistration:
         for retry in range(max_retries):
             try:
                 if self.tab.wait.url_change(current_url, timeout=5):
-                    logger.info(f"抵达{action_description}")
+                    logger.debug(f"抵达{action_description}")
                     wait_time = random.uniform(2, 5)
-                    logger.info(f"随机等待 {wait_time:.2f} 秒")
+                    logger.debug(f"随机等待 {wait_time:.2f} 秒")
                     time.sleep(wait_time)
 
                 if not self.tab.wait.url_change(target_url, timeout=3) and current_url in self.tab.url:
                     self._cursor_turnstile()
 
                 if self.tab.wait.url_change(target_url, timeout=5):
-                    logger.info(f"成功前往{action_description}")
+                    logger.debug(f"成功前往{action_description}")
                     return True
 
                 if self.tab.wait.eles_loaded("xpath=//div[contains(text(), 'Sign up is restricted.')]", timeout=3):
@@ -251,24 +251,24 @@ class CursorRegistration:
             try:
                 turnstile_element = self.tab.ele('@id=cf-turnstile', timeout=10)
                 if not turnstile_element:
-                    logger.warning(f"未找到验证码元素，重试 {retry + 1}/{max_retries}")
+                    logger.debug(f"未找到验证码元素，重试 {retry + 1}/{max_retries}")
                     continue
 
                 shadow_root = turnstile_element.child().shadow_root
                 iframe = shadow_root.ele("tag:iframe", timeout=10)
 
                 if not iframe:
-                    logger.warning(f"未找到验证码iframe，重试 {retry + 1}/{max_retries}")
+                    logger.debug(f"未找到验证码iframe，重试 {retry + 1}/{max_retries}")
                     continue
 
                 checkbox = iframe.ele("tag:body").sr("xpath=//input[@type='checkbox']", timeout=10)
                 if checkbox:
                     checkbox.click()
-                    logger.info("成功点击验证码")
+                    logger.debug("成功点击验证码")
                     return True
 
             except Exception as e:
-                logger.warning(f"验证码处理失败 ({retry + 1}/{max_retries}): {str(e)}")
+                logger.debug(f"验证码处理失败 ({retry + 1}/{max_retries}): {str(e)}")
                 time.sleep(1)
 
         logger.error("验证码处理失败")
@@ -277,9 +277,9 @@ class CursorRegistration:
     def get_email_data(self):
         for retry in range(self.retry_times):
             try:
-                logger.info(f"尝试获取最新邮件，第 {retry + 1} 次尝试")
+                logger.debug(f"尝试获取最新邮件，第 {retry + 1} 次尝试")
                 email_data = self.moe.get_latest_email_messages(self.email).data
-                logger.info("成功获取最新邮件数据")
+                logger.debug("成功获取最新邮件数据")
                 logger.debug(f"邮件数据结构: {email_data.keys() if isinstance(email_data, dict) else type(email_data)}")
                 return email_data
             except Exception as e:
@@ -291,7 +291,7 @@ class CursorRegistration:
 
     def parse_cursor_verification_code(self, email_data):
         verify_code = None
-        logger.info("开始解析邮件内容获取验证码")
+        logger.debug("开始解析邮件内容获取验证码")
 
         try:
             if isinstance(email_data, dict) and 'message' in email_data:
@@ -320,10 +320,10 @@ class CursorRegistration:
             raise
 
     def input_email_verification(self, verify_code):
-        logger.info(f"开始输入验证码: {verify_code}")
+        logger.debug(f"开始输入验证码: {verify_code}")
         for retry in range(self.retry_times):
             try:
-                logger.info(f"尝试输入验证码，第 {retry + 1} 次尝试")
+                logger.debug(f"尝试输入验证码，第 {retry + 1} 次尝试")
                 for idx, digit in enumerate(verify_code, start=0):
                     input_element = self.tab.ele(f"xpath=//input[@data-index={idx}]")
                     if input_element:
@@ -333,7 +333,7 @@ class CursorRegistration:
                         logger.error(f"未找到位置 {idx} 的输入框")
                 time.sleep(random.uniform(1, 3))
                 if not self.tab.wait.url_change(self.CURSOR_URL, timeout=3) and self.CURSOR_EMAIL_VERIFICATION_URL in self.tab.url:
-                    logger.info("检测到需要验证码验证，开始处理")
+                    logger.debug("检测到需要验证码验证，开始处理")
                     self._cursor_turnstile()
                     time.sleep(random.uniform(1, 3))
 
