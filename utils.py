@@ -466,7 +466,9 @@ class MoemailManager:
         self.base_url = os.getenv("MOE_MAIL_URL")
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
         try:
-            url = f"{self.base_url}/api/{endpoint.lstrip('/')}"
+            base = self.base_url.rstrip('/')
+            clean_endpoint = endpoint.lstrip('/')
+            url = f"{base}/api/{clean_endpoint}"
             response = requests.request(method, url, headers=self.headers, **kwargs)
             
             if response.status_code == 200:
@@ -560,7 +562,10 @@ class MoemailManager:
             detail_result = self.get_message_detail(target['id'], latest_message['id'])
             if not detail_result:
                 return Result.fail(f"获取邮件详情失败: {detail_result.message}")
+
             logger.debug("成功获取邮件详情")
+            logger.debug(f"邮件数据: {detail_result.data}")
+
             return Result.ok(detail_result.data)
 
         except Exception as e:
