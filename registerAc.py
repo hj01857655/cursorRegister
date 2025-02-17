@@ -133,6 +133,9 @@ class CursorRegistration:
             try:
                 if self.tab.wait.url_change(current_url, timeout=5):
                     logger.info(f"抵达{action_description}")
+                    wait_time = random.uniform(2, 5)
+                    logger.info(f"随机等待 {wait_time:.2f} 秒")
+                    time.sleep(wait_time)
 
                 if not self.tab.wait.url_change(target_url, timeout=3) and current_url in self.tab.url:
                     self._cursor_turnstile()
@@ -186,7 +189,10 @@ class CursorRegistration:
         try:
             self._safe_action(self.init_browser)
             self._safe_action(self.fill_registration_form)
-            self.tab.ele("@type=submit").click()
+            submit = self.tab.ele("@type=submit")
+            self.tab.actions.move_to(ele_or_loc=submit)
+            self.tab.actions.click(submit)
+            # self.tab.ele("@type=submit").click()
             if not self._handle_page_transition(
                     self.CURSOR_SIGNUP_URL,
                     self.CURSOR_SIGNUP_PASSWORD_URL,
@@ -195,7 +201,10 @@ class CursorRegistration:
                 raise Exception("无法进入密码设置页面")
 
             self._safe_action(self.fill_password)
-            self.tab.ele("@type=submit").click()
+            submit = self.tab.ele("@type=submit")
+            self.tab.actions.move_to(ele_or_loc=submit)
+            self.tab.actions.click(submit)
+            # self.tab.ele("@type=submit").click()
             if not self._handle_page_transition(
                     self.CURSOR_SIGNUP_PASSWORD_URL,
                     self.CURSOR_EMAIL_VERIFICATION_URL,
