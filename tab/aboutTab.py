@@ -8,6 +8,8 @@ version ="版本: 0.1.0"
 class AboutTab(ttk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, style='TFrame', **kwargs)
+        self.configure(height=420)
+        self.pack_propagate(False)  
         self.setup_ui()
 
     def open_github(self, event):
