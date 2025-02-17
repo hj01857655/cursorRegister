@@ -77,8 +77,7 @@ def main():
     print("=== Cursor Register 打包工具 ===")
     if build_executable():
         create_zip()
-        clean_build_dirs()
-        print("\n已清理构建目录")
+        # clean_build_dirs()
     print("\n打包过程完成！")
 
 if __name__ == '__main__':
