@@ -187,33 +187,6 @@ class UI:
     def show_warning(window: tk.Tk, message: str) -> None:
         UI.show_message(window, "警告", message, 'showwarning')
 
-    @staticmethod
-    def create_loading_dialog(window: tk.Tk, message: str, on_close=None) -> tk.Toplevel:
-        dialog = tk.Toplevel(window)
-        dialog.title("处理中")
-        dialog.geometry("250x100")
-        UI.center_window(dialog, 250, 100)
-        dialog.transient(window)
-        dialog.grab_set()
-        dialog.resizable(False, False)
-        dialog.configure(bg=UI.COLORS['bg'])
-
-        if on_close:
-            dialog.protocol("WM_DELETE_WINDOW", on_close)
-
-        frame = ttk.Frame(dialog, style='TFrame')
-        frame.pack(expand=True)
-
-        ttk.Label(
-            frame,
-            text=message,
-            wraplength=200,
-            justify="center",
-            style="TLabel"
-        ).pack(pady=10)
-
-        return dialog
-
 
 class LogWindow(ttk.Frame):
     def __init__(self, parent, **kwargs):
@@ -531,13 +504,8 @@ class CursorApp:
     def _register_account(self, mode: str) -> None:
         self._save_env_vars()
         load_dotenv(override=True)
-        loading_dialog = None
 
         def create_dialog(message: str) -> bool:
-            nonlocal loading_dialog
-            if loading_dialog:
-                loading_dialog.destroy()
-                loading_dialog = None
             dialog = tk.Toplevel(self.root)
             dialog.title("等待确认")
             dialog.geometry("250x180")
@@ -559,8 +527,6 @@ class CursorApp:
 
             def on_continue():
                 dialog.destroy()
-                nonlocal loading_dialog
-                loading_dialog = UI.create_loading_dialog(self.root, "正在处理，请稍候...")
 
             def on_terminate():
                 result['continue'] = False
@@ -585,44 +551,24 @@ class CursorApp:
                 raise Exception("用户终止了注册流程")
 
         def update_ui_success(token):
-            nonlocal loading_dialog
-            if loading_dialog:
-                loading_dialog.destroy()
             self.entries['cookie'].delete(0, tk.END)
             self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
             UI.show_success(self.root, "自动注册成功，Token已填入")
 
         def update_ui_warning(message):
-            nonlocal loading_dialog
-            if loading_dialog:
-                loading_dialog.destroy()
             UI.show_warning(self.root, message)
 
         def _terminate_registration():
-            nonlocal loading_dialog
-            if loading_dialog:
-                loading_dialog.destroy()
-                loading_dialog = None
             if self.registrar and self.registrar.browser:
                 self.registrar.browser.quit()
             self.root.after(0, lambda: update_ui_warning("注册流程已被终止"))
 
         def register_thread():
-            nonlocal loading_dialog
             is_terminated = False
-
-            def on_loading_dialog_close():
-                nonlocal is_terminated
-                is_terminated = True
-                _terminate_registration()
 
             try:
                 self.registrar = CursorRegistration()
-                loading_dialog = UI.create_loading_dialog(
-                    self.root,
-                    "正在启动注册流程，请稍候...",
-                    on_close=on_loading_dialog_close
-                )
+                logger.info("正在启动注册流程...")
 
                 if not (register_method := {
                     "auto": self.registrar.auto_register,
@@ -681,10 +627,7 @@ class CursorApp:
 
     @error_handler
     def show_trial_info(self) -> None:
-        loading_dialog = None
-
         def fetch_and_display_info():
-            nonlocal loading_dialog
             try:
                 logger.debug("开始获取试用信息...")
                 cookie_str = self.entries['cookie'].get().strip() or os.getenv('COOKIES_STR', '').strip()
@@ -720,12 +663,10 @@ class CursorApp:
                 logger.exception("详细错误信息:")
                 self.root.after(0, lambda: UI.show_error(self.root, "获取账号信息失败", error_message))
             finally:
-                if loading_dialog:
-                    logger.debug("关闭加载对话框")
-                    self.root.after(0, loading_dialog.destroy)
+                if hasattr(self, 'registrar') and self.registrar and self.registrar.browser:
+                    self.registrar.browser.quit()
 
-        loading_dialog = UI.create_loading_dialog(self.root, "正在获取账号信息，请稍候...")
-        logger.debug("已创建加载对话框，开始获取信息...")
+        logger.debug("开始获取信息...")
         threading.Thread(target=fetch_and_display_info, daemon=True).start()
 
 
