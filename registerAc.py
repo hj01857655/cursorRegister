@@ -33,34 +33,11 @@ class CursorRegistration:
         self.email = os.getenv('EMAIL')
         self.password = os.getenv('PASSWORD')
         self.domain = os.getenv('DOMAIN')
-        self.first_name = self.last_name = Utils.generate_random_string(4)
+        self.first_name = Utils.generate_random_string(4)
+        self.last_name = Utils.generate_random_string(4)
         self.retry_times = 5
         self.browser = self.tab = self.moe = None
         self.admin = False
-        self.user_agent = self._generate_random_fingerprint()
-
-    def _generate_random_fingerprint(self):
-        chrome_versions = [
-            '133.0.6943.98',  # Stable
-            '134.0.6998.15',  # Beta
-            '135.0.6999.2',   # Dev
-            '135.0.7019.0'    # Canary
-        ]
-        
-        platforms = [
-            'Windows NT 10.0; Win64; x64',
-            'Windows NT 10.0; WOW64',
-            'Macintosh; Intel Mac OS X 10_15_7',
-            'X11; Linux x86_64'
-        ]
-        
-        version = random.choice(chrome_versions)
-        platform = random.choice(platforms)
-        
-        user_agent = f'Mozilla/5.0 ({platform}) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{version}'
-        logger.info(f"生成随机User-Agent: {user_agent}")
-        return user_agent
-
     def _safe_action(self, action, *args, **kwargs):
         try:
             return action(*args, **kwargs)
@@ -70,10 +47,7 @@ class CursorRegistration:
 
     def init_browser(self):
         co = ChromiumOptions()
-        co.incognito()
         co.new_env()
-        co.ignore_certificate_errors()
-        co.set_user_agent(user_agent=self.user_agent)
         if self.headless:
             co.headless()
         else:
@@ -189,6 +163,7 @@ class CursorRegistration:
         try:
             self._safe_action(self.init_browser)
             self._safe_action(self.fill_registration_form)
+            time.sleep(random.uniform(2, 5))
             submit = self.tab.ele("@type=submit")
             self.tab.actions.move_to(ele_or_loc=submit)
             self.tab.actions.click(submit)
@@ -201,6 +176,7 @@ class CursorRegistration:
                 raise Exception("无法进入密码设置页面")
 
             self._safe_action(self.fill_password)
+            time.sleep(random.uniform(2, 5))
             submit = self.tab.ele("@type=submit")
             self.tab.actions.move_to(ele_or_loc=submit)
             self.tab.actions.click(submit)
@@ -215,6 +191,7 @@ class CursorRegistration:
             if self.admin:
                 email_data = self.get_email_data()
                 verify_code = self.parse_cursor_verification_code(email_data)
+                time.sleep(random.uniform(2, 5))
                 self._safe_action(self.input_email_verification, verify_code)
             else:
                 if wait_callback:
