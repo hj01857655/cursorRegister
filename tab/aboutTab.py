@@ -3,6 +3,8 @@ from tkinter import ttk
 from .ui import UI
 import webbrowser
 
+version ="版本: 0.1.0"
+
 class AboutTab(ttk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, style='TFrame', **kwargs)
@@ -33,7 +35,7 @@ class AboutTab(ttk.Frame):
 
         version_info = ttk.Label(
             title_frame,
-            text="版本: 1.0.0",
+            text=version,
             style='TLabel',
             font=('Microsoft YaHei UI', 10),
             foreground='#5f6368'  
