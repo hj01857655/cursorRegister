@@ -210,7 +210,6 @@ class LogWindow(ttk.Frame):
         self.setup_ui()
 
     def setup_ui(self):
-        # 创建日志标题和工具栏
         title_frame = ttk.Frame(self, style='TFrame')
         title_frame.pack(fill=tk.X, padx=5, pady=(0, 5))
         
@@ -229,11 +228,9 @@ class LogWindow(ttk.Frame):
         )
         clear_button.pack(side=tk.RIGHT)
 
-        # 创建日志文本框和滚动条的容器
         text_container = ttk.Frame(self, style='TFrame')
         text_container.pack(fill=tk.BOTH, expand=True)
 
-        # 创建日志文本框和滚动条
         self.text = tk.Text(
             text_container,
             wrap=tk.WORD,
@@ -251,7 +248,6 @@ class LogWindow(ttk.Frame):
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
-        # 禁用文本框编辑
         self.text.configure(state='disabled')
 
     def clear_logs(self):
@@ -263,7 +259,6 @@ class LogWindow(ttk.Frame):
     def add_log(self, message: str, level: str = "INFO"):
         self.text.configure(state='normal')
         
-        # 设置不同日志级别的颜色
         tag_colors = {
             "DEBUG": UI.COLORS['secondary'],
             "INFO": UI.COLORS['primary'],
@@ -272,28 +267,23 @@ class LogWindow(ttk.Frame):
             "ERROR": UI.COLORS['error']
         }
         
-        # 添加时间戳
         timestamp = datetime.now().strftime("%H:%M:%S")
         self.text.insert(tk.END, f"[{timestamp}] ", "timestamp")
         
-        # 添加日志级别
         self.text.insert(tk.END, f"[{level}] ", level)
         
-        # 添加消息
         self.text.insert(tk.END, f"{message}\n", "message")
         
-        # 设置标签颜色
         self.text.tag_config("timestamp", foreground=UI.COLORS['subtitle_fg'])
         self.text.tag_config(level, foreground=tag_colors.get(level, UI.COLORS['primary']))
         
-        # 滚动到最底部
         self.text.see(tk.END)
         self.text.configure(state='disabled')
 
 
 @dataclass
 class WindowConfig:
-    width: int = 800  # 修改宽度以适应日志窗体
+    width: int = 800
     height: int = 520
     title: str = "Cursor注册小助手"
     backup_dir: str = "env_backups"
@@ -329,15 +319,13 @@ class CursorApp:
         self.registrar = None
 
     def setup_ui(self) -> None:
-        # 创建主布局框架
         main_frame = ttk.Frame(self.root, padding="10", style='TFrame')
         main_frame.pack(fill=tk.BOTH, expand=True)
 
-        # 创建左侧内容区域
         content_frame = ttk.Frame(main_frame, style='TFrame')
         content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(0, 10))
-        content_frame.configure(width=450)  # 固定左侧宽度
-        content_frame.pack_propagate(False)  # 防止自动收缩
+        content_frame.configure(width=450)
+        content_frame.pack_propagate(False)
 
         title_label = ttk.Label(
             content_frame,
@@ -424,11 +412,9 @@ class CursorApp:
         )
         footer.pack(side=tk.BOTTOM, pady=2)
 
-        # 创建右侧日志窗体
         separator = ttk.Separator(main_frame, orient='vertical')
         separator.pack(side=tk.LEFT, fill=tk.Y)
 
-        # 创建右侧容器
         right_frame = ttk.Frame(main_frame, style='TFrame')
         right_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(10, 0))
 
@@ -695,7 +681,6 @@ class CursorApp:
 def setup_logging(log_window=None) -> None:
     logger.remove()
     
- 
     logger.add(
         sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD}.log",
         format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
@@ -708,7 +693,6 @@ def setup_logging(log_window=None) -> None:
         level="DEBUG"
     )
 
-   
     if console_mode:
         logger.add(
             sink=sys.stderr,
@@ -719,7 +703,6 @@ def setup_logging(log_window=None) -> None:
             level="DEBUG"
         )
     
-  
     if log_window:
         def gui_sink(message):
             record = message.record
@@ -744,7 +727,7 @@ def main() -> None:
         
         root = tk.Tk()
         app = CursorApp(root)
-        setup_logging(app.log_window)  # 在创建完app后设置日志
+        setup_logging(app.log_window)
         root.mainloop()
     except Exception as e:
         logger.error(f"程序启动失败: {e}")

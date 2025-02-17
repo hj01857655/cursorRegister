@@ -511,7 +511,7 @@ class MoemailManager:
     def get_message_detail(self, email_id: str, message_id: str) -> Result[dict]:
         return self._make_request("GET", f"/emails/{email_id}/{message_id}")
 
-    def get_latest_email_messages(self, target_email: str, timeout: int = 30) -> Result[dict]:
+    def get_latest_email_messages(self, target_email: str, timeout: int = 60) -> Result[dict]:
         logger.debug(f"开始获取邮箱 {target_email} 的最新邮件")
 
         try:
@@ -539,9 +539,9 @@ class MoemailManager:
             
             while not messages:
                 if time.time() - start_time > timeout:
-                    return Result.fail("等待邮件超时，邮箱中没有任何邮件")
+                    return Result.fail("等待邮件超时，1分钟内未收到任何邮件")
                     
-                logger.debug(f"邮箱暂无邮件，等待 {retry_interval} 秒后重试...")
+                logger.debug(f"邮箱暂无邮件，{retry_interval}秒后重试...")
                 time.sleep(retry_interval)
                 
                 messages_result = self.get_email_messages(target['id'])
@@ -549,6 +549,7 @@ class MoemailManager:
                     return Result.fail(f"获取邮件列表失败: {messages_result.message}")
                     
                 messages = messages_result.data.get('messages', [])
+                logger.debug(f"第{int((time.time() - start_time) / retry_interval)}次尝试获取邮件...")
 
             logger.debug(f"成功获取邮件列表，共有 {len(messages)} 封邮件")
 
