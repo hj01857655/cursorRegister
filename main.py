@@ -30,9 +30,6 @@ class WindowConfig:
     buttons: List[Tuple[str, str]] = field(default_factory=lambda: [
         ("生成账号", "generate_account"),
         ("自动注册", "auto_register"),
-        ("重置机器ID", "reset_ID"),
-        ("刷新cookie", "update_auth"),
-        ("获取试用信息", "show_trial_info"),
         ("备份账号", "backup_account")
     ])
 
@@ -77,9 +74,6 @@ class CursorApp:
         button_commands = {
             'generate_account': self.generate_account,
             'auto_register': self.auto_register,
-            'reset_ID': self.reset_ID,
-            'update_auth': self.update_auth,
-            'show_trial_info': self.show_trial_info,
             'backup_account': self.backup_account
         }
 
@@ -154,31 +148,6 @@ class CursorApp:
         for key, value in {'EMAIL': email, 'PASSWORD': password}.items():
             self.entries[key].delete(0, tk.END)
             self.entries[key].insert(0, value)
-
-    @error_handler
-    def reset_ID(self) -> None:
-        if not (result := CursorManager.reset()):
-            raise Exception(result.message)
-        UI.show_success(self.root, result.message)
-        self._save_env_vars()
-
-    @error_handler
-    def update_auth(self) -> None:
-        cookie_str = self.entries['cookie'].get().strip()
-        if not cookie_str:
-            UI.show_warning(self.root, "请输入Cookie字符串")
-            return
-
-        if "WorkosCursorSessionToken=" not in cookie_str:
-            UI.show_warning(self.root, "Cookie字符串格式不正确，必须包含 WorkosCursorSessionToken")
-            return
-        result = CursorManager().process_cookies(cookie_str)
-        if not result.success:
-            UI.show_warning(self.root, result.message)
-            return
-
-        UI.show_success(self.root, result.message)
-        self._save_env_vars()
 
     @error_handler
     def auto_register(self) -> None:
@@ -342,50 +311,6 @@ class CursorApp:
         except Exception as e:
             logger.error(f"账号备份失败: {str(e)}")
             UI.show_error(self.root, "账号备份失败", e)
-
-    @error_handler
-    def show_trial_info(self) -> None:
-        def fetch_and_display_info():
-            try:
-                logger.debug("开始获取试用信息...")
-                cookie_str = self.entries['cookie'].get().strip() or os.getenv('COOKIES_STR', '').strip()
-                logger.debug(f"获取到的cookie字符串长度: {len(cookie_str) if cookie_str else 0}")
-                
-                if not cookie_str:
-                    raise ValueError("未找到Cookie信息，请先更新账号信息")
-
-                if "WorkosCursorSessionToken=" not in cookie_str:
-                    logger.debug("Cookie字符串中未包含WorkosCursorSessionToken前缀，正在添加...")
-                    cookie_str = f"WorkosCursorSessionToken={cookie_str}"
-                
-                logger.debug("正在初始化浏览器...")
-                self.registrar = CursorRegistration()
-                self.registrar.headless = True
-                self.registrar.init_browser()
-                logger.debug("浏览器初始化完成")
-                
-                logger.debug("正在获取试用信息...")
-                trial_info = self.registrar.get_trial_info(cookie=cookie_str)
-                logger.info(f"成功获取试用信息: 额度={trial_info[0]}, 天数={trial_info[1]}")
-                
-                self.registrar.browser.quit()
-                logger.debug("浏览器已关闭")
-                
-                self.root.after(0, lambda: UI.show_success(
-                    self.root,
-                    f"账户可用额度: {trial_info[0]}\n试用天数: {trial_info[1]}"
-                ))
-            except Exception as e:
-                error_message = str(e)
-                logger.error(f"获取试用信息失败: {error_message}")
-                logger.exception("详细错误信息:")
-                self.root.after(0, lambda: UI.show_error(self.root, "获取账号信息失败", error_message))
-            finally:
-                if hasattr(self, 'registrar') and self.registrar and self.registrar.browser:
-                    self.registrar.browser.quit()
-
-        logger.debug("开始获取信息...")
-        threading.Thread(target=fetch_and_display_info, daemon=True).start()
 
 
 def setup_logging(log_window=None) -> None:
