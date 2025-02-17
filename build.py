@@ -27,17 +27,18 @@ def build_executable():
     
     check_requirements()
     
-    build_command = ['pyinstaller', 'cursorRegister.spec', '--clean']
+    build_command = ['pyinstaller', 'cursorRegister.spec', '--clean', '2>&1']
     try:
-        result = subprocess.run(build_command, capture_output=True, text=True, encoding='utf-8')
-    except UnicodeDecodeError:
-        result = subprocess.run(build_command, capture_output=True, text=True, encoding='gbk')
-    
-    if result.returncode != 0:
+        subprocess.run(build_command, encoding='utf-8', check=True, shell=True)
+    except subprocess.CalledProcessError as e:
         print("构建失败！")
-        print("错误信息：")
-        print(result.stderr)
         return False
+    except UnicodeDecodeError:
+        try:
+            subprocess.run(build_command, encoding='gbk', check=True, shell=True)
+        except subprocess.CalledProcessError as e:
+            print("构建失败！")
+            return False
     
     exe_path = Path('dist/cursorRegister.exe')
     if not exe_path.exists():
@@ -63,15 +64,21 @@ def create_zip():
     if not os.path.exists('dist'):
         print("dist 目录不存在，无法创建压缩包")
         return
+
+    output_dir = 'output'
+    os.makedirs(output_dir, exist_ok=True)
     
     zip_name = f"cursorRegister-Windows-{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
-    shutil.make_archive(zip_name.replace('.zip', ''), 'zip', 'dist')
-    print(f"\n已创建压缩包：{zip_name}")
+    zip_path = os.path.join(output_dir, zip_name)
+    shutil.make_archive(zip_path.replace('.zip', ''), 'zip', 'dist')
+    print(f"\n已创建压缩包：{zip_path}")
 
 def main():
     print("=== Cursor Register 打包工具 ===")
     if build_executable():
         create_zip()
+        clean_build_dirs()
+        print("\n已清理构建目录")
     print("\n打包过程完成！")
 
 if __name__ == '__main__':

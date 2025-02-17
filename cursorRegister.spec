@@ -16,9 +16,6 @@ a = Analysis(
         'utils',
         'registerAc',
         'email',
-        'ssl',
-        '_ssl',
-        'certifi',
         'ca_certificates',
         'openssl'
     ],
@@ -64,7 +61,7 @@ exe = EXE(
     name='cursorRegister',
     debug=False,
     bootloader_ignore_signals=False,
-    strip=True,
+    strip=False,
     upx=True,
     upx_exclude=[],
     runtime_tmpdir=None,
