@@ -13,7 +13,7 @@ from loguru import logger
 
 from registerAc import CursorRegistration
 from utils import Utils, Result, error_handler, CursorManager
-from tab import LogWindow, ManageTab, RegisterTab, UI
+from tab import LogWindow, ManageTab, RegisterTab, AboutTab, UI
 
 console_mode = False
 
@@ -89,6 +89,9 @@ class CursorApp:
 
         manage_tab = ManageTab(notebook)
         notebook.add(manage_tab, text="账号管理")
+
+        about_tab = AboutTab(notebook)
+        notebook.add(about_tab, text="关于")
 
         footer = ttk.Label(
             content_frame,

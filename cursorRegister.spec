@@ -21,6 +21,7 @@ a = Analysis(
         'tab',
         'tab.manageTab',
         'tab.registerTab',
+        'tab.aboutTab',
         'tab.ui',
         'tab.logWindow'
     ],
