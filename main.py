@@ -125,6 +125,17 @@ class UI:
                   foreground=[('active', UI.COLORS['primary'])]
                   )
 
+        style.configure('TCheckbutton',
+                        font=UI.FONT,
+                        background=UI.COLORS['bg'],
+                        foreground=UI.COLORS['label_fg']
+                        )
+
+        style.map('TCheckbutton',
+                  background=[('active', UI.COLORS['bg'])],
+                  foreground=[('active', UI.COLORS['primary'])]
+                  )
+
     @staticmethod
     def create_labeled_entry(parent, label_text: str, row: int, **kwargs) -> ttk.Entry:
         frame = ttk.Frame(parent, style='TFrame')
@@ -207,6 +218,7 @@ class UI:
 class LogWindow(ttk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, style='TFrame', **kwargs)
+        self.show_debug = tk.BooleanVar(value=True)
         self.setup_ui()
 
     def setup_ui(self):
@@ -218,6 +230,15 @@ class LogWindow(ttk.Frame):
             text="日志信息",
             style='Title.TLabel'
         ).pack(side=tk.LEFT)
+
+        debug_checkbox = ttk.Checkbutton(
+            title_frame,
+            text="调试模式",
+            variable=self.show_debug,
+            style='TCheckbutton',
+            command=self.refresh_logs
+        )
+        debug_checkbox.pack(side=tk.RIGHT, padx=(0, 10))
 
         clear_button = ttk.Button(
             title_frame,
@@ -249,16 +270,35 @@ class LogWindow(ttk.Frame):
         self.text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         
         self.text.configure(state='disabled')
+        self.log_buffer = []
 
     def clear_logs(self):
         self.text.configure(state='normal')
         self.text.delete(1.0, tk.END)
         self.text.configure(state='disabled')
+        self.log_buffer = []
         self.add_log("日志已清除", "INFO")
 
-    def add_log(self, message: str, level: str = "INFO"):
+    def refresh_logs(self):
         self.text.configure(state='normal')
+        self.text.delete(1.0, tk.END)
+        for message, level, timestamp in self.log_buffer:
+            if level != "DEBUG" or self.show_debug.get():
+                self._insert_log(message, level, timestamp)
+        self.text.configure(state='disabled')
+        self.text.see(tk.END)
+
+    def add_log(self, message: str, level: str = "INFO"):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.log_buffer.append((message, level, timestamp))
         
+        if level != "DEBUG" or self.show_debug.get():
+            self.text.configure(state='normal')
+            self._insert_log(message, level, timestamp)
+            self.text.see(tk.END)
+            self.text.configure(state='disabled')
+
+    def _insert_log(self, message: str, level: str, timestamp: str):
         tag_colors = {
             "DEBUG": UI.COLORS['secondary'],
             "INFO": UI.COLORS['primary'],
@@ -267,18 +307,12 @@ class LogWindow(ttk.Frame):
             "ERROR": UI.COLORS['error']
         }
         
-        timestamp = datetime.now().strftime("%H:%M:%S")
         self.text.insert(tk.END, f"[{timestamp}] ", "timestamp")
-        
         self.text.insert(tk.END, f"[{level}] ", level)
-        
         self.text.insert(tk.END, f"{message}\n", "message")
         
         self.text.tag_config("timestamp", foreground=UI.COLORS['subtitle_fg'])
         self.text.tag_config(level, foreground=tag_colors.get(level, UI.COLORS['primary']))
-        
-        self.text.see(tk.END)
-        self.text.configure(state='disabled')
 
 
 @dataclass
