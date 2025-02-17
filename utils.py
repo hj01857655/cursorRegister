@@ -511,9 +511,9 @@ class MoemailManager:
     def get_message_detail(self, email_id: str, message_id: str) -> Result[dict]:
         return self._make_request("GET", f"/emails/{email_id}/{message_id}")
 
-    def get_latest_email_messages(self) -> Result[dict]:
+    def get_latest_email_messages(self, target_email: str) -> Result[dict]:
         try:
-            logger.info("开始获取最新邮件内容...")
+            logger.info(f"开始获取邮箱 {target_email} 的邮件内容...")
 
             result = self.get_email_list()
             if not result.success:
@@ -526,9 +526,13 @@ class MoemailManager:
                 return Result.fail("没有找到任何邮箱")
             
             logger.info(f"成功获取邮箱列表，共找到 {len(emails)} 个邮箱")
-            latest_email = max(emails, key=lambda x: x.get('createdAt', ''))
-            email_id = latest_email.get('id')
             
+            target_email_info = next((email for email in emails if email.get('address') == target_email), None)
+            if not target_email_info:
+                logger.error(f"未找到目标邮箱: {target_email}")
+                return Result.fail(f"未找到目标邮箱: {target_email}")
+            
+            email_id = target_email_info.get('id')
             if not email_id:
                 logger.error("无法获取邮箱ID")
                 return Result.fail("无法获取邮箱ID")
@@ -557,9 +561,9 @@ class MoemailManager:
             if not detail_result.success:
                 return Result.fail(f"获取邮件详细内容失败: {detail_result.message}")
 
-            logger.info(f"成功获取最新邮件的详细内容")
+            logger.info(f"成功获取邮件的详细内容")
             return Result.ok(detail_result.data)
             
         except Exception as e:
-            logger.error(f"获取最新邮件内容时发生错误: {str(e)}")
+            logger.error(f"获取邮件内容时发生错误: {str(e)}")
             return Result.fail(str(e))

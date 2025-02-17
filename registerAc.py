@@ -254,7 +254,7 @@ class CursorRegistration:
         for retry in range(self.retry_times):
             try:
                 logger.info(f"尝试获取最新邮件，第 {retry + 1} 次尝试")
-                email_data = self.moe.get_latest_email_messages().data
+                email_data = self.moe.get_latest_email_messages(self.email).data
                 logger.info("成功获取最新邮件数据")
                 logger.debug(f"邮件数据结构: {email_data.keys() if isinstance(email_data, dict) else type(email_data)}")
                 return email_data
