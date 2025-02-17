@@ -263,9 +263,9 @@ class CursorApp:
                     if not is_terminated:
                         self.root.after(0, lambda: [
                             self.entries['EMAIL'].delete(0, tk.END),
-                            self.entries['EMAIL'].insert(0, self.registrar.email),
+                            self.entries['EMAIL'].insert(0, os.getenv('EMAIL', '未获取到')),
                             self.entries['PASSWORD'].delete(0, tk.END),
-                            self.entries['PASSWORD'].insert(0, self.registrar.password),
+                            self.entries['PASSWORD'].insert(0, os.getenv('PASSWORD', '未获取到')),
                             self.entries['cookie'].delete(0, tk.END),
                             self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}"),
                             UI.show_success(self.root, "自动注册成功，账号信息已填入")
@@ -307,9 +307,40 @@ class CursorApp:
     @error_handler
     def backup_account(self) -> None:
         try:
-            self.backup_env_file()
-            UI.show_success(self.root, "账号备份成功")
+        
+            env_vars = {
+                "DOMAIN": os.getenv("DOMAIN", ""),
+                "EMAIL": os.getenv("EMAIL", ""),
+                "PASSWORD": os.getenv("PASSWORD", ""),
+                "COOKIES_STR": os.getenv("COOKIES_STR", ""),
+                "API_KEY": os.getenv("API_KEY", ""),
+                "MOE_MAIL_URL": os.getenv("MOE_MAIL_URL", "")
+            }
+
+          
+            if not any(env_vars.values()):
+                raise ValueError("未找到任何账号信息，请先注册或更新账号")
+
+      
+            backup_dir = Path(self.config.backup_dir)
+            backup_dir.mkdir(exist_ok=True)
+
+       
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = backup_dir / f"cursor_account_{timestamp}.csv"
+
+        
+            with open(backup_path, 'w', encoding='utf-8', newline='') as f:
+                f.write("variable,value\n")
+                for key, value in env_vars.items():
+                    if value:  
+                        f.write(f"{key},{value}\n")
+
+            logger.info(f"账号信息已备份到: {backup_path}")
+            UI.show_success(self.root, f"账号备份成功\n保存位置: {backup_path}")
+
         except Exception as e:
+            logger.error(f"账号备份失败: {str(e)}")
             UI.show_error(self.root, "账号备份失败", e)
 
     @error_handler
