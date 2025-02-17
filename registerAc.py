@@ -59,9 +59,10 @@ class CursorRegistration:
 
     def input_field(self, fields_dict):
         for name, value in fields_dict.items():
-            time.sleep(random.uniform(2, 5))
             self.tab.ele(f'@name={name}').input(value)
+            time.sleep(random.uniform(1, 4))
             logger.info(f"成功输入 {name}")
+            logger.info(f"{value}")
 
     def fill_registration_form(self):
         self.input_field({
@@ -163,7 +164,7 @@ class CursorRegistration:
         try:
             self._safe_action(self.init_browser)
             self._safe_action(self.fill_registration_form)
-            time.sleep(random.uniform(2, 5))
+            time.sleep(random.uniform(1, 4))
             submit = self.tab.ele("@type=submit")
             self.tab.actions.move_to(ele_or_loc=submit)
             self.tab.actions.click(submit)
@@ -176,7 +177,7 @@ class CursorRegistration:
                 raise Exception("无法进入密码设置页面")
 
             self._safe_action(self.fill_password)
-            time.sleep(random.uniform(2, 5))
+            time.sleep(random.uniform(1, 4))
             submit = self.tab.ele("@type=submit")
             self.tab.actions.move_to(ele_or_loc=submit)
             self.tab.actions.click(submit)
@@ -306,11 +307,11 @@ class CursorRegistration:
                         logger.debug(f"成功在位置 {idx} 输入数字 {digit}")
                     else:
                         logger.error(f"未找到位置 {idx} 的输入框")
-                self.tab.wait(0.5, 1.5)
-
+                time.sleep(random.uniform(1, 3))
                 if not self.tab.wait.url_change(self.CURSOR_URL, timeout=3) and self.CURSOR_EMAIL_VERIFICATION_URL in self.tab.url:
                     logger.info("检测到需要验证码验证，开始处理")
                     self._cursor_turnstile()
+                    time.sleep(random.uniform(1, 3))
 
             except Exception as e:
                 logger.error(f"在处理邮箱验证码时出现错误 (第 {retry + 1} 次尝试): {str(e)}")
@@ -318,9 +319,6 @@ class CursorRegistration:
             if self.tab.wait.url_change(self.CURSOR_URL, timeout=3):
                 logger.info("验证码验证成功，页面已跳转")
                 break
-
-            logger.warning(f"验证码可能未生效，刷新页面重试 (第 {retry + 1} 次)")
-            self.tab.refresh()
             if retry == self.retry_times - 1:
                 logger.error("在输入验证码时超时，已达到最大重试次数")
                 raise Exception("在输入验证码时超时")
