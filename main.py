@@ -455,9 +455,9 @@ class CursorApp:
 
     @error_handler
     def generate_account(self) -> None:
-        logger.info(f"当前环境变量 DOMAIN: {os.getenv('DOMAIN', '未设置')}")
-        logger.info(f"当前环境变量 EMAIL: {os.getenv('EMAIL', '未设置')}")
-        logger.info(f"当前环境变量 PASSWORD: {os.getenv('PASSWORD', '未设置')}")
+        logger.debug(f"当前环境变量 DOMAIN: {os.getenv('DOMAIN', '未设置')}")
+        logger.debug(f"当前环境变量 EMAIL: {os.getenv('EMAIL', '未设置')}")
+        logger.debug(f"当前环境变量 PASSWORD: {os.getenv('PASSWORD', '未设置')}")
         if domain := self.entries['DOMAIN'].get().strip():
             if not Utils.update_env_vars({'DOMAIN': domain}):
                 raise RuntimeError("保存域名失败")
@@ -568,7 +568,7 @@ class CursorApp:
 
             try:
                 self.registrar = CursorRegistration()
-                logger.info("正在启动注册流程...")
+                logger.debug("正在启动注册流程...")
 
                 if not (register_method := {
                     "auto": self.registrar.auto_register,
@@ -648,7 +648,7 @@ class CursorApp:
                 
                 logger.debug("正在获取试用信息...")
                 trial_info = self.registrar.get_trial_info(cookie=cookie_str)
-                logger.debug(f"成功获取试用信息: 额度={trial_info[0]}, 天数={trial_info[1]}")
+                logger.info(f"成功获取试用信息: 额度={trial_info[0]}, 天数={trial_info[1]}")
                 
                 self.registrar.browser.quit()
                 logger.debug("浏览器已关闭")
