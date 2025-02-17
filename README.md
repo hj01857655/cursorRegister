@@ -151,6 +151,14 @@
 
 </div>
 
+### 📹 使用教学视频
+
+<div align="center">
+  <a href="https://www.bilibili.com/video/BV1jhwZeRE2L/">
+    <img src="https://img.shields.io/badge/bilibili-视频教程-ff69b4?style=flat&logo=bilibili" alt="Bilibili Tutorial"/>
+  </a>
+</div>
+
 ### 🔰 前期准备
 
 #### 📧 邮箱配置（二选一）
