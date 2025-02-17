@@ -15,10 +15,14 @@ a = Analysis(
         'drissionpage',
         'utils',
         'registerAc',
-        'ui',
         'email',
         'ca_certificates',
-        'openssl'
+        'openssl',
+        'tab',
+        'tab.manageTab',
+        'tab.registerTab',
+        'tab.ui',
+        'tab.logWindow'
     ],
     hookspath=[],
     hooksconfig={},

@@ -13,7 +13,7 @@ from loguru import logger
 
 from registerAc import CursorRegistration
 from utils import Utils, Result, error_handler, CursorManager
-from ui import UI, LogWindow, RegisterTab, ManageTab
+from tab import LogWindow, ManageTab, RegisterTab, UI
 
 console_mode = False
 

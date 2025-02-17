@@ -108,11 +108,6 @@ class CursorRegistration:
         logger.debug("成功获取所有试用信息")
         return usage_ele.text, trial_days.text
 
-    def get_user_info(self):
-        usage_ele, trial_days = self._safe_action(self.get_trial_info)
-        if usage_ele:
-            logger.info(f"账户可用额度: {usage_ele}\n试用天数: {trial_days}")
-
     def get_cursor_token(self):
         for attempt in range(3):
             try:
@@ -169,7 +164,6 @@ class CursorRegistration:
                         return None
                     self._safe_action(step)
 
-            self._safe_action(self.get_user_info)
             if token := self._safe_action(self.get_cursor_token):
                 if not Utils.update_env_vars({"COOKIES_STR": f"WorkosCursorSessionToken={token}"}).success:
                     logger.error("更新环境变量COOKIES_STR失败")
@@ -223,7 +217,6 @@ class CursorRegistration:
                     except Exception as e:
                         logger.info("用户终止了注册流程")
                         return None
-            self._safe_action(self.get_user_info)
             if token := self._safe_action(self.get_cursor_token):
                 if not Utils.update_env_vars({"COOKIES_STR": f"WorkosCursorSessionToken={token}"}).success:
                     logger.error("更新环境变量COOKIES_STR失败")
@@ -238,9 +231,8 @@ class CursorRegistration:
 
     def admin_auto_register(self, wait_callback=None):
         self.moe = MoemailManager()
-        email_address = self.moe.create_email(DOMAIN=os.getenv("DOMAIN"))
-        self.email = email_address.data
-        self.password = Utils.generate_secure_password()
+        email_info = self.moe.create_email(email=self.email)
+        logger.debug(f"已创建邮箱 ： {email_info.data.get('email')}")
         self.admin = True
         token = self._safe_action(self.auto_register, wait_callback)
         if token:

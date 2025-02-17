@@ -478,23 +478,21 @@ class MoemailManager:
         except Exception as e:
             return Result.fail(f"请求出错: {str(e)}")
     
-    def create_email(self,DOMAIN, expiry_time: int = 3600000) -> Result[dict]:
+    def create_email(self, email: str, expiry_time: int = 3600000) -> Result[dict]:
         try:
-            random_length = random.randint(5, 20)
+            name, domain = email.split('@')
+            
             data = {
-                "name": Utils.generate_random_string(random_length),
+                "name": name,
                 "expiryTime": expiry_time,
-                "domain": DOMAIN
+                "domain": domain
             }
             
             result = self._make_request("POST", "/emails/generate", json=data)
             if not result.success:
                 logger.error(f"创建邮箱失败: {result.message}")
                 return result
-
-            email_data = result.data
-            email_address = email_data.get('email')
-            return Result.ok(email_address)
+            return Result.ok(result.data)
             
         except Exception as e:
             logger.error(f"创建邮箱时出错: {str(e)}")
@@ -562,10 +560,7 @@ class MoemailManager:
             detail_result = self.get_message_detail(target['id'], latest_message['id'])
             if not detail_result:
                 return Result.fail(f"获取邮件详情失败: {detail_result.message}")
-
             logger.debug("成功获取邮件详情")
-            logger.debug(f"邮件数据: {detail_result.data}")
-
             return Result.ok(detail_result.data)
 
         except Exception as e:
