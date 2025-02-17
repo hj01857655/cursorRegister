@@ -430,9 +430,6 @@ class CursorManager:
                 "refresh": "refreshToken"
             }.items()}
 
-            if not (result := Utils.update_env_vars({'COOKIES_STR': cookies})):
-                return result
-
             if not (token := Utils.extract_token(cookies, "WorkosCursorSessionToken=")):
                 return Result.fail("无效的 WorkosCursorSessionToken")
 
