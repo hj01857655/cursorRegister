@@ -238,7 +238,7 @@ class LogWindow(ttk.Frame):
             style='TCheckbutton',
             command=self.refresh_logs
         )
-        debug_checkbox.pack(side=tk.RIGHT, padx=(0, 10))
+        debug_checkbox.pack(side=tk.RIGHT, padx=(20, 10))
 
         clear_button = ttk.Button(
             title_frame,

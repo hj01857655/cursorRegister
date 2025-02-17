@@ -57,58 +57,10 @@ class CursorRegistration:
         self.tab.get(self.CURSOR_SIGNUP_URL)
         logger.info("浏览器初始化成功")
 
-    def _random_wait(self, min_seconds=1, max_seconds=4, message=None):
-        """
-        随机等待一段时间
-        :param min_seconds: 最小等待秒数
-        :param max_seconds: 最大等待秒数
-        :param message: 等待时显示的消息
-        :return: 实际等待的秒数
-        """
-        wait_time = random.uniform(min_seconds, max_seconds)
-        if message:
-            logger.info(f"{message} {wait_time:.2f} 秒")
-        time.sleep(wait_time)
-        return wait_time
-
-    def _wait_for_element(self, selector, selector_type="", timeout=10, description="元素"):
-        """
-        等待元素出现
-        :param selector: 元素选择器
-        :param selector_type: 选择器类型（xpath, css, @attribute等）
-        :param timeout: 超时时间
-        :param description: 元素描述
-        :return: 找到的元素
-        """
-        try:
-            if selector_type:
-                element = self.tab.ele(f"{selector_type}:{selector}", timeout=timeout)
-            else:
-                element = self.tab.ele(selector, timeout=timeout)
-            if element:
-                logger.info(f"成功找到{description}")
-                return element
-            logger.warning(f"未找到{description}")
-            return None
-        except Exception as e:
-            logger.error(f"等待{description}时出错: {str(e)}")
-            return None
-
-    def _wait_for_url_change(self, expected_url, timeout=5, description="目标页面"):
-        try:
-            if self.tab.wait.url_change(expected_url, timeout=timeout):
-                logger.info(f"成功到达{description}")
-                return True
-            logger.warning(f"等待{description}超时")
-            return False
-        except Exception as e:
-            logger.error(f"等待{description}时出错: {str(e)}")
-            return False
-
     def input_field(self, fields_dict):
         for name, value in fields_dict.items():
             self.tab.ele(f'@name={name}').input(value)
-            self._random_wait(message=f"输入 {name} 后等待")
+            time.sleep(random.uniform(1, 4))
             logger.info(f"成功输入 {name}")
             logger.info(f"{value}")
 
@@ -176,16 +128,20 @@ class CursorRegistration:
     def _handle_page_transition(self, current_url, target_url, action_description, max_retries=5):
         for retry in range(max_retries):
             try:
-                if self._wait_for_url_change(current_url, description=action_description):
-                    self._random_wait(2, 5, "随机等待")
+                if self.tab.wait.url_change(current_url, timeout=5):
+                    logger.info(f"抵达{action_description}")
+                    wait_time = random.uniform(2, 5)
+                    logger.info(f"随机等待 {wait_time:.2f} 秒")
+                    time.sleep(wait_time)
 
-                if not self._wait_for_url_change(target_url, timeout=3) and current_url in self.tab.url:
+                if not self.tab.wait.url_change(target_url, timeout=3) and current_url in self.tab.url:
                     self._cursor_turnstile()
 
-                if self._wait_for_url_change(target_url, description=action_description):
+                if self.tab.wait.url_change(target_url, timeout=5):
+                    logger.info(f"成功前往{action_description}")
                     return True
 
-                if self._wait_for_element("//div[contains(text(), 'Sign up is restricted.')]", "xpath", 3, "注册限制提示"):
+                if self.tab.wait.eles_loaded("xpath=//div[contains(text(), 'Sign up is restricted.')]", timeout=3):
                     raise Exception("注册收到限制.")
 
                 self.tab.refresh()
@@ -230,12 +186,11 @@ class CursorRegistration:
         try:
             self._safe_action(self.init_browser)
             self._safe_action(self.fill_registration_form)
-            self._random_wait()
-            submit = self._wait_for_element("@type=submit", description="提交按钮")
-            if submit:
-                self.tab.actions.move_to(ele_or_loc=submit)
-                self.tab.actions.click(submit)
-
+            time.sleep(random.uniform(1, 4))
+            submit = self.tab.ele("@type=submit")
+            self.tab.actions.move_to(ele_or_loc=submit)
+            self.tab.actions.click(submit)
+            # self.tab.ele("@type=submit").click()
             if not self._handle_page_transition(
                     self.CURSOR_SIGNUP_URL,
                     self.CURSOR_SIGNUP_PASSWORD_URL,
@@ -244,12 +199,11 @@ class CursorRegistration:
                 raise Exception("无法进入密码设置页面")
 
             self._safe_action(self.fill_password)
-            self._random_wait()
-            submit = self._wait_for_element("@type=submit", description="提交按钮")
-            if submit:
-                self.tab.actions.move_to(ele_or_loc=submit)
-                self.tab.actions.click(submit)
-
+            time.sleep(random.uniform(1, 4))
+            submit = self.tab.ele("@type=submit")
+            self.tab.actions.move_to(ele_or_loc=submit)
+            self.tab.actions.click(submit)
+            # self.tab.ele("@type=submit").click()
             if not self._handle_page_transition(
                     self.CURSOR_SIGNUP_PASSWORD_URL,
                     self.CURSOR_EMAIL_VERIFICATION_URL,
@@ -260,7 +214,7 @@ class CursorRegistration:
             if self.admin:
                 email_data = self.get_email_data()
                 verify_code = self.parse_cursor_verification_code(email_data)
-                self._random_wait(2, 5)
+                time.sleep(random.uniform(2, 5))
                 self._safe_action(self.input_email_verification, verify_code)
             else:
                 if wait_callback:
@@ -281,6 +235,7 @@ class CursorRegistration:
         finally:
             if self.browser:
                 self.browser.quit()
+
     def admin_auto_register(self, wait_callback=None):
         self.moe = MoemailManager()
         email_address = self.moe.create_email(DOMAIN=os.getenv("DOMAIN"))
@@ -289,17 +244,18 @@ class CursorRegistration:
         self.admin = True
         token = self._safe_action(self.auto_register, wait_callback)
         return token
+
     def _cursor_turnstile(self):
         max_retries = 5
         for retry in range(max_retries):
             try:
-                turnstile_element = self._wait_for_element('@id=cf-turnstile', description="验证码元素")
+                turnstile_element = self.tab.ele('@id=cf-turnstile', timeout=10)
                 if not turnstile_element:
                     logger.warning(f"未找到验证码元素，重试 {retry + 1}/{max_retries}")
                     continue
 
                 shadow_root = turnstile_element.child().shadow_root
-                iframe = self._wait_for_element("tag:iframe", description="验证码iframe", timeout=10)
+                iframe = shadow_root.ele("tag:iframe", timeout=10)
 
                 if not iframe:
                     logger.warning(f"未找到验证码iframe，重试 {retry + 1}/{max_retries}")
@@ -313,7 +269,7 @@ class CursorRegistration:
 
             except Exception as e:
                 logger.warning(f"验证码处理失败 ({retry + 1}/{max_retries}): {str(e)}")
-                self._random_wait(1, 1)
+                time.sleep(1)
 
         logger.error("验证码处理失败")
         return False
