@@ -56,15 +56,15 @@
 </div>
 
 <div align="center">
-<img src="assets/preview1.png" alt="软件预览图1" width="600" height="400"/>
+<img src="assets/preview1.png" alt="软件预览图1" width="800" height="450"/>
 </div>
 
 <div align="center">
-<img src="assets/preview2.png" alt="软件预览图2"  width="600" height="400"/>
+<img src="assets/preview2.png" alt="软件预览图2"  width="800" height="450"/>
 </div>
 
 <div align="center">
-<img src="assets/preview3.png" alt="软件预览图3"  width="600" height="400"/>
+<img src="assets/preview3.png" alt="软件预览图3"  width="800" height="450"/>
 </div>
 
 ---
