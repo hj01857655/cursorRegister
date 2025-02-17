@@ -15,7 +15,10 @@ a = Analysis(
         'drissionpage',
         'utils',
         'registerAc',
-        'email'
+        'email',
+        'ssl',
+        '_ssl',
+        'certifi'
     ],
     hookspath=[],
     hooksconfig={},
@@ -32,14 +35,9 @@ a = Analysis(
 )
 
 excluded_binaries = [
-    'VCRUNTIME140.dll',
-    'MSVCP140.dll',
-    'ucrtbase.dll',
-    'api-ms-win*.dll',
     'Qt*.dll',
     'PySide*.dll',
     'sip*.dll',
-    'python*.dll',
     'libopenblas*.dll',
     'mkl_*.dll'
 ]
