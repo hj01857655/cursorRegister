@@ -283,7 +283,7 @@ class LogWindow(ttk.Frame):
 
 @dataclass
 class WindowConfig:
-    width: int = 800
+    width: int = 900
     height: int = 520
     title: str = "Cursor注册小助手"
     backup_dir: str = "env_backups"
