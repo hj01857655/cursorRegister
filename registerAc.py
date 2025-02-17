@@ -95,13 +95,6 @@ class CursorRegistration:
             return None
 
     def _wait_for_url_change(self, expected_url, timeout=5, description="目标页面"):
-        """
-        等待URL变化到期望的URL
-        :param expected_url: 期望的URL
-        :param timeout: 超时时间
-        :param description: 页面描述
-        :return: 是否成功变化到期望的URL
-        """
         try:
             if self.tab.wait.url_change(expected_url, timeout=timeout):
                 logger.info(f"成功到达{description}")
