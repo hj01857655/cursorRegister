@@ -19,11 +19,11 @@ console_mode = False
 
 class UI:
     FONT = ('Microsoft YaHei UI', 10)
-    BUTTON_PADDING = (8, 4)
+    BUTTON_PADDING = (12, 6)
     BUTTON_GRID_PADDING = 4
     BUTTON_GRID_MARGIN = 3
     COLORS = {
-        'primary': '#2563EB',
+        'primary': '#60A5FA',
         'secondary': '#64748B',
         'success': '#059669',
         'error': '#DC2626',
@@ -31,8 +31,8 @@ class UI:
         'bg': '#F8FAFC',
         'card_bg': '#FFFFFF',
         'disabled': '#94A3B8',
-        'hover': '#1D4ED8',
-        'pressed': '#1E40AF',
+        'hover': '#3B82F6',
+        'pressed': '#2563EB',
         'border': '#E2E8F0',
         'input_bg': '#FFFFFF',
         'label_fg': '#334155',
@@ -68,10 +68,16 @@ class UI:
                         font=(UI.FONT[0], 10, 'bold'),
                         padding=UI.BUTTON_PADDING,
                         background=UI.COLORS['primary'],
-                        foreground='black',
+                        foreground='white',
                         borderwidth=0,
                         relief='flat'
                         )
+
+        style.layout('Custom.TButton', [
+            ('Button.padding', {'children': [
+                ('Button.label', {'sticky': 'nswe'})
+            ], 'sticky': 'nswe'})
+        ])
 
         style.map('Custom.TButton',
                   background=[
@@ -80,8 +86,8 @@ class UI:
                       ('disabled', UI.COLORS['disabled'])
                   ],
                   foreground=[
-                      ('pressed', 'black'),
-                      ('active', 'black'),
+                      ('pressed', 'white'),
+                      ('active', 'white'),
                       ('disabled', '#94A3B8')
                   ]
                   )
@@ -207,7 +213,7 @@ class UI:
 @dataclass
 class WindowConfig:
     width: int = 450
-    height: int = 520
+    height: int = 510
     title: str = "Cursor注册小助手"
     backup_dir: str = "env_backups"
     env_vars: List[Tuple[str, str]] = field(default_factory=lambda: [
