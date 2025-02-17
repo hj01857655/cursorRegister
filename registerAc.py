@@ -3,6 +3,7 @@ import random
 import re
 import time
 from pathlib import Path
+from typing import Any, Callable
 
 import requests
 from utils import MoemailManager
@@ -23,6 +24,96 @@ class CursorRegistration:
     CURSOR_SETTING_URL = "https://www.cursor.com/settings"
     CURSOR_EMAIL_VERIFICATION_URL = "https://authenticator.cursor.sh/email-verification"
 
+    class WaitHelper:
+        def __init__(self, tab, retry_times=5):
+            self.tab = tab
+            self.retry_times = retry_times
+
+        def random_wait(self, min_time=1, max_time=4):
+            """随机等待一段时间"""
+            wait_time = random.uniform(min_time, max_time)
+            logger.info(f"随机等待 {wait_time:.2f} 秒")
+            time.sleep(wait_time)
+
+        def wait_for_url_change(self, current_url: str, target_url: str, action_description: str, max_retries=5) -> bool:
+            """等待页面URL变化"""
+            for retry in range(max_retries):
+                try:
+                    if self.tab.wait.url_change(current_url, timeout=5):
+                        logger.info(f"抵达{action_description}")
+                        self.random_wait(2, 5)
+
+                    if not self.tab.wait.url_change(target_url, timeout=3) and current_url in self.tab.url:
+                        self._handle_turnstile()
+
+                    if self.tab.wait.url_change(target_url, timeout=5):
+                        logger.info(f"成功前往{action_description}")
+                        return True
+
+                    if self.tab.wait.eles_loaded("xpath=//div[contains(text(), 'Sign up is restricted.')]", timeout=3):
+                        raise Exception("注册收到限制.")
+
+                    self.tab.refresh()
+
+                except Exception as e:
+                    logger.error(f"在{action_description}时出现错误: {str(e)}")
+                    if retry == max_retries - 1:
+                        raise Exception(f"在{action_description}时超时")
+            return False
+
+        def wait_for_element(self, selector: str, timeout: int = 10, description: str = "") -> Any:
+            """等待元素出现"""
+            try:
+                element = self.tab.ele(selector, timeout=timeout)
+                if element:
+                    logger.info(f"找到元素: {description or selector}")
+                    return element
+                logger.warning(f"未找到元素: {description or selector}")
+                return None
+            except Exception as e:
+                logger.error(f"等待元素时出错: {str(e)}")
+                return None
+
+        def retry_operation(self, operation: Callable, error_msg: str, max_retries: int = None) -> Any:
+            """重试操作"""
+            retries = max_retries or self.retry_times
+            for retry in range(retries):
+                try:
+                    result = operation()
+                    return result
+                except Exception as e:
+                    logger.error(f"{error_msg} (第 {retry + 1} 次尝试): {str(e)}")
+                    if retry == retries - 1:
+                        raise Exception(f"{error_msg}，已达到最大重试次数")
+                    self.random_wait(1, 2)
+
+        def _handle_turnstile(self):
+            """处理Turnstile验证码"""
+            max_retries = 5
+            for retry in range(max_retries):
+                try:
+                    turnstile_element = self.wait_for_element('@id=cf-turnstile', 10, "验证码元素")
+                    if not turnstile_element:
+                        continue
+
+                    shadow_root = turnstile_element.child().shadow_root
+                    iframe = self.wait_for_element("tag:iframe", 10, "验证码iframe", parent=shadow_root)
+                    if not iframe:
+                        continue
+
+                    checkbox = iframe.ele("tag:body").sr("xpath=//input[@type='checkbox']", timeout=10)
+                    if checkbox:
+                        checkbox.click()
+                        logger.info("成功点击验证码")
+                        return True
+
+                except Exception as e:
+                    logger.warning(f"验证码处理失败 ({retry + 1}/{max_retries}): {str(e)}")
+                    self.random_wait(1, 2)
+
+            logger.error("验证码处理失败")
+            return False
+
     def __init__(self):
         load_dotenv()
         self.headless = False
@@ -38,6 +129,8 @@ class CursorRegistration:
         self.retry_times = 5
         self.browser = self.tab = self.moe = None
         self.admin = False
+        self.wait_helper = None
+
     def _safe_action(self, action, *args, **kwargs):
         try:
             return action(*args, **kwargs)
@@ -55,12 +148,13 @@ class CursorRegistration:
         self.browser = Chromium(co)
         self.tab = self.browser.latest_tab
         self.tab.get(self.CURSOR_SIGNUP_URL)
+        self.wait_helper = self.WaitHelper(self.tab, self.retry_times)
         logger.info("浏览器初始化成功")
 
     def input_field(self, fields_dict):
         for name, value in fields_dict.items():
             self.tab.ele(f'@name={name}').input(value)
-            time.sleep(random.uniform(1, 4))
+            self.wait_helper.random_wait()
             logger.info(f"成功输入 {name}")
             logger.info(f"{value}")
 
@@ -164,12 +258,12 @@ class CursorRegistration:
         try:
             self._safe_action(self.init_browser)
             self._safe_action(self.fill_registration_form)
-            time.sleep(random.uniform(1, 4))
+            self.wait_helper.random_wait()
             submit = self.tab.ele("@type=submit")
             self.tab.actions.move_to(ele_or_loc=submit)
             self.tab.actions.click(submit)
-            # self.tab.ele("@type=submit").click()
-            if not self._handle_page_transition(
+
+            if not self.wait_helper.wait_for_url_change(
                     self.CURSOR_SIGNUP_URL,
                     self.CURSOR_SIGNUP_PASSWORD_URL,
                     "密码设置页面"
@@ -177,12 +271,12 @@ class CursorRegistration:
                 raise Exception("无法进入密码设置页面")
 
             self._safe_action(self.fill_password)
-            time.sleep(random.uniform(1, 4))
+            self.wait_helper.random_wait()
             submit = self.tab.ele("@type=submit")
             self.tab.actions.move_to(ele_or_loc=submit)
             self.tab.actions.click(submit)
-            # self.tab.ele("@type=submit").click()
-            if not self._handle_page_transition(
+
+            if not self.wait_helper.wait_for_url_change(
                     self.CURSOR_SIGNUP_PASSWORD_URL,
                     self.CURSOR_EMAIL_VERIFICATION_URL,
                     "邮箱验证页面"
@@ -192,7 +286,7 @@ class CursorRegistration:
             if self.admin:
                 email_data = self.get_email_data()
                 verify_code = self.parse_cursor_verification_code(email_data)
-                time.sleep(random.uniform(2, 5))
+                self.wait_helper.random_wait(2, 5)
                 self._safe_action(self.input_email_verification, verify_code)
             else:
                 if wait_callback:
@@ -213,6 +307,7 @@ class CursorRegistration:
         finally:
             if self.browser:
                 self.browser.quit()
+
     def admin_auto_register(self, wait_callback=None):
         self.moe = MoemailManager()
         email_address = self.moe.create_email(DOMAIN=os.getenv("DOMAIN"))
@@ -221,6 +316,7 @@ class CursorRegistration:
         self.admin = True
         token = self._safe_action(self.auto_register, wait_callback)
         return token
+
     def _cursor_turnstile(self):
         max_retries = 5
         for retry in range(max_retries):
@@ -251,19 +347,10 @@ class CursorRegistration:
         return False
 
     def get_email_data(self):
-        for retry in range(self.retry_times):
-            try:
-                logger.info(f"尝试获取最新邮件，第 {retry + 1} 次尝试")
-                email_data = self.moe.get_latest_email_messages(self.email).data
-                logger.info("成功获取最新邮件数据")
-                logger.debug(f"邮件数据结构: {email_data.keys() if isinstance(email_data, dict) else type(email_data)}")
-                return email_data
-            except Exception as e:
-                logger.error(f"获取邮件内容时出错 (第 {retry + 1} 次尝试): {str(e)}")
-                if retry == self.retry_times - 1:
-                    logger.error(f"已达到最大重试次数 {self.retry_times}，获取邮件失败")
-                    raise Exception("获取邮件内容失败")
-            time.sleep(2)
+        return self.wait_helper.retry_operation(
+            lambda: self.moe.get_latest_email_messages(self.email).data,
+            "获取邮件内容时出错"
+        )
 
     def parse_cursor_verification_code(self, email_data):
         verify_code = None
@@ -297,31 +384,35 @@ class CursorRegistration:
 
     def input_email_verification(self, verify_code):
         logger.info(f"开始输入验证码: {verify_code}")
-        for retry in range(self.retry_times):
-            try:
-                logger.info(f"尝试输入验证码，第 {retry + 1} 次尝试")
-                for idx, digit in enumerate(verify_code, start=0):
-                    input_element = self.tab.ele(f"xpath=//input[@data-index={idx}]")
-                    if input_element:
-                        input_element.input(digit, clear=True)
-                        logger.debug(f"成功在位置 {idx} 输入数字 {digit}")
-                    else:
-                        logger.error(f"未找到位置 {idx} 的输入框")
-                time.sleep(random.uniform(1, 3))
-                if not self.tab.wait.url_change(self.CURSOR_URL, timeout=3) and self.CURSOR_EMAIL_VERIFICATION_URL in self.tab.url:
-                    logger.info("检测到需要验证码验证，开始处理")
-                    self._cursor_turnstile()
-                    time.sleep(random.uniform(1, 3))
-
-            except Exception as e:
-                logger.error(f"在处理邮箱验证码时出现错误 (第 {retry + 1} 次尝试): {str(e)}")
-
-            if self.tab.wait.url_change(self.CURSOR_URL, timeout=3):
-                logger.info("验证码验证成功，页面已跳转")
-                break
-            if retry == self.retry_times - 1:
-                logger.error("在输入验证码时超时，已达到最大重试次数")
-                raise Exception("在输入验证码时超时")
+        
+        def input_verification():
+            for idx, digit in enumerate(verify_code, start=0):
+                input_element = self.wait_helper.wait_for_element(
+                    f"xpath=//input[@data-index={idx}]",
+                    description=f"验证码输入框 {idx}"
+                )
+                if input_element:
+                    input_element.input(digit, clear=True)
+                    logger.debug(f"成功在位置 {idx} 输入数字 {digit}")
+                else:
+                    raise Exception(f"未找到位置 {idx} 的输入框")
+            
+            self.wait_helper.random_wait(1, 3)
+            
+            if not self.tab.wait.url_change(self.CURSOR_URL, timeout=3) and self.CURSOR_EMAIL_VERIFICATION_URL in self.tab.url:
+                logger.info("检测到需要验证码验证，开始处理")
+                self.wait_helper.handle_turnstile()
+                self.wait_helper.random_wait(1, 3)
+            
+            if not self.tab.wait.url_change(self.CURSOR_URL, timeout=3):
+                raise Exception("验证码验证失败，页面未跳转")
+            
+            logger.info("验证码验证成功，页面已跳转")
+            
+        self.wait_helper.retry_operation(
+            input_verification,
+            "在处理邮箱验证码时出现错误"
+        )
 
     def github_action_register(self):
         logger.add(
