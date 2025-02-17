@@ -1,11 +1,11 @@
 import os
 import sys
 import threading
-import tkinter as tk
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from tkinter import ttk, messagebox
+import tkinter as tk
+from tkinter import ttk
 from typing import Dict, List, Tuple
 
 from dotenv import load_dotenv
@@ -13,285 +13,15 @@ from loguru import logger
 
 from registerAc import CursorRegistration
 from utils import Utils, Result, error_handler, CursorManager
+from ui import UI, LogWindow, RegisterTab, ManageTab
 
 console_mode = False
-
-
-class UI:
-    FONT = ('Microsoft YaHei UI', 10)
-    BUTTON_PADDING = (8, 4)
-    BUTTON_GRID_PADDING = 4
-    BUTTON_GRID_MARGIN = 3
-    COLORS = {
-        'primary': '#2563EB',
-        'secondary': '#64748B',
-        'success': '#059669',
-        'error': '#DC2626',
-        'warning': '#D97706',
-        'bg': '#F8FAFC',
-        'card_bg': '#FFFFFF',
-        'disabled': '#94A3B8',
-        'hover': '#1D4ED8',
-        'pressed': '#1E40AF',
-        'border': '#E2E8F0',
-        'input_bg': '#FFFFFF',
-        'label_fg': '#334155',
-        'title_fg': '#1E40AF',
-        'subtitle_fg': '#475569'
-    }
-
-    @staticmethod
-    def setup_styles() -> None:
-        style = ttk.Style()
-        base_style = {
-            'font': UI.FONT,
-            'background': UI.COLORS['bg']
-        }
-
-        style.configure('TFrame', background=UI.COLORS['bg'])
-
-        style.configure('TLabelframe',
-                        background=UI.COLORS['card_bg'],
-                        padding=10,
-                        relief='flat',
-                        borderwidth=1
-                        )
-
-        style.configure('TLabelframe.Label',
-                        font=(UI.FONT[0], 11, 'bold'),
-                        foreground=UI.COLORS['title_fg'],
-                        background=UI.COLORS['bg'],
-                        padding=(0, 4)
-                        )
-
-        style.configure('Custom.TButton',
-                        font=(UI.FONT[0], 10, 'bold'),
-                        padding=UI.BUTTON_PADDING,
-                        background=UI.COLORS['primary'],
-                        foreground='black',
-                        borderwidth=0,
-                        relief='flat'
-                        )
-
-        style.map('Custom.TButton',
-                  background=[
-                      ('pressed', UI.COLORS['pressed']),
-                      ('active', UI.COLORS['hover']),
-                      ('disabled', UI.COLORS['disabled'])
-                  ],
-                  foreground=[
-                      ('pressed', 'black'),
-                      ('active', 'black'),
-                      ('disabled', '#94A3B8')
-                  ]
-                  )
-
-        style.configure('TEntry',
-                        padding=8,
-                        relief='flat',
-                        borderwidth=1,
-                        selectbackground=UI.COLORS['primary'],
-                        selectforeground='white',
-                        fieldbackground=UI.COLORS['input_bg']
-                        )
-
-        style.configure('TLabel',
-                        font=(UI.FONT[0], 10),
-                        background=UI.COLORS['bg'],
-                        foreground=UI.COLORS['label_fg'],
-                        padding=(4, 2)
-                        )
-
-        style.configure('Footer.TLabel',
-                        font=(UI.FONT[0], 9),
-                        foreground=UI.COLORS['subtitle_fg'],
-                        background=UI.COLORS['bg']
-                        )
-
-        style.configure('Title.TLabel',
-                        font=(UI.FONT[0], 14, 'bold'),
-                        foreground=UI.COLORS['title_fg'],
-                        background=UI.COLORS['bg']
-                        )
-
-        style.configure('TRadiobutton',
-                        font=UI.FONT,
-                        background=UI.COLORS['bg'],
-                        foreground=UI.COLORS['label_fg']
-                        )
-
-        style.map('TRadiobutton',
-                  background=[('active', UI.COLORS['bg'])],
-                  foreground=[('active', UI.COLORS['primary'])]
-                  )
-
-        style.configure('TCheckbutton',
-                        font=UI.FONT,
-                        background=UI.COLORS['bg'],
-                        foreground=UI.COLORS['label_fg']
-                        )
-
-        style.map('TCheckbutton',
-                  background=[('active', UI.COLORS['bg'])],
-                  foreground=[('active', UI.COLORS['primary'])]
-                  )
-
-    @staticmethod
-    def create_labeled_entry(parent, label_text: str, row: int, **kwargs) -> ttk.Entry:
-        frame = ttk.Frame(parent, style='TFrame')
-        frame.grid(row=row, column=0, columnspan=2, sticky='ew', padx=6, pady=3)
-
-        label = ttk.Label(frame, text=f"{label_text}:", style='TLabel')
-        label.pack(side=tk.LEFT, padx=(3, 8))
-
-        entry = ttk.Entry(frame, style='TEntry', **kwargs)
-        entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 3))
-
-        return entry
-
-    @staticmethod
-    def create_labeled_frame(parent, title: str, padding: str = "10", **kwargs) -> ttk.LabelFrame:
-        frame = ttk.LabelFrame(
-            parent,
-            text=title,
-            padding=padding,
-            style='TLabelframe',
-            **kwargs
-        )
-        frame.pack(fill=tk.X, padx=10, pady=4)
-        frame.columnconfigure(1, weight=1)
-        return frame
-
-    @staticmethod
-    def center_window(window, width: int, height: int) -> None:
-        x = (window.winfo_screenwidth() - width) // 2
-        y = (window.winfo_screenheight() - height) // 2
-        window.geometry(f"{width}x{height}+{x}+{y}")
-
-    @staticmethod
-    def show_message(window: tk.Tk, title: str, message: str, msg_type: str) -> None:
-        window.bell()
-        getattr(messagebox, msg_type)(title, message)
-        log_level = 'error' if msg_type == 'showerror' else 'warning' if msg_type == 'showwarning' else 'info'
-        getattr(logger, log_level)(message)
-
-    @staticmethod
-    def show_error(window: tk.Tk, title: str, error: Exception) -> None:
-        UI.show_message(window, "错误", f"{title}: {str(error)}", 'showerror')
-
-    @staticmethod
-    def show_success(window: tk.Tk, message: str) -> None:
-        UI.show_message(window, "成功", message, 'showinfo')
-
-    @staticmethod
-    def show_warning(window: tk.Tk, message: str) -> None:
-        UI.show_message(window, "警告", message, 'showwarning')
-
-
-class LogWindow(ttk.Frame):
-    def __init__(self, parent, **kwargs):
-        super().__init__(parent, style='TFrame', **kwargs)
-        self.show_debug = tk.BooleanVar(value=True)
-        self.setup_ui()
-
-    def setup_ui(self):
-        title_frame = ttk.Frame(self, style='TFrame')
-        title_frame.pack(fill=tk.X, padx=5, pady=(0, 5))
-        
-        ttk.Label(
-            title_frame,
-            text="日志信息",
-            style='Title.TLabel'
-        ).pack(side=tk.LEFT)
-
-        debug_checkbox = ttk.Checkbutton(
-            title_frame,
-            text="调试模式",
-            variable=self.show_debug,
-            style='TCheckbutton',
-            command=self.refresh_logs
-        )
-        debug_checkbox.pack(side=tk.RIGHT, padx=(20, 10))
-
-        clear_button = ttk.Button(
-            title_frame,
-            text="清除日志",
-            command=self.clear_logs,
-            style='Custom.TButton',
-            width=10
-        )
-        clear_button.pack(side=tk.RIGHT)
-
-        text_container = ttk.Frame(self, style='TFrame')
-        text_container.pack(fill=tk.BOTH, expand=True)
-
-        self.text = tk.Text(
-            text_container,
-            wrap=tk.WORD,
-            width=50,
-            font=UI.FONT,
-            bg=UI.COLORS['card_bg'],
-            fg=UI.COLORS['label_fg'],
-            relief='flat',
-            padx=8,
-            pady=8
-        )
-        scrollbar = ttk.Scrollbar(text_container, orient="vertical", command=self.text.yview)
-        self.text.configure(yscrollcommand=scrollbar.set)
-        
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        self.text.configure(state='disabled')
-        self.log_buffer = []
-
-    def clear_logs(self):
-        self.text.configure(state='normal')
-        self.text.delete(1.0, tk.END)
-        self.text.configure(state='disabled')
-        self.log_buffer = []
-        self.add_log("日志已清除", "INFO")
-
-    def refresh_logs(self):
-        self.text.configure(state='normal')
-        self.text.delete(1.0, tk.END)
-        for message, level, timestamp in self.log_buffer:
-            if level != "DEBUG" or self.show_debug.get():
-                self._insert_log(message, level, timestamp)
-        self.text.configure(state='disabled')
-        self.text.see(tk.END)
-
-    def add_log(self, message: str, level: str = "INFO"):
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        self.log_buffer.append((message, level, timestamp))
-        
-        if level != "DEBUG" or self.show_debug.get():
-            self.text.configure(state='normal')
-            self._insert_log(message, level, timestamp)
-            self.text.see(tk.END)
-            self.text.configure(state='disabled')
-
-    def _insert_log(self, message: str, level: str, timestamp: str):
-        tag_colors = {
-            "DEBUG": UI.COLORS['secondary'],
-            "INFO": UI.COLORS['primary'],
-            "SUCCESS": UI.COLORS['success'],
-            "WARNING": UI.COLORS['warning'],
-            "ERROR": UI.COLORS['error']
-        }
-        
-        self.text.insert(tk.END, f"[{timestamp}] ", "timestamp")
-        self.text.insert(tk.END, f"[{level}] ", level)
-        self.text.insert(tk.END, f"{message}\n", "message")
-        
-        self.text.tag_config("timestamp", foreground=UI.COLORS['subtitle_fg'])
-        self.text.tag_config(level, foreground=tag_colors.get(level, UI.COLORS['primary']))
 
 
 @dataclass
 class WindowConfig:
     width: int = 900
-    height: int = 520
+    height: int = 560
     title: str = "Cursor注册小助手"
     backup_dir: str = "env_backups"
     env_vars: List[Tuple[str, str]] = field(default_factory=lambda: [
@@ -341,76 +71,30 @@ class CursorApp:
         )
         title_label.pack(pady=(0, 6))
 
-        account_frame = UI.create_labeled_frame(content_frame, "账号信息")
-        for row, (var_name, label_text) in enumerate(self.config.env_vars):
-            entry = UI.create_labeled_entry(account_frame, label_text, row)
-            if os.getenv(var_name):
-                entry.insert(0, os.getenv(var_name))
-            self.entries[var_name] = entry
+        notebook = ttk.Notebook(content_frame)
+        notebook.pack(fill=tk.BOTH, expand=True, pady=(0, 2))
 
-        cookie_frame = UI.create_labeled_frame(content_frame, "Cookie设置")
-        self.entries['cookie'] = UI.create_labeled_entry(cookie_frame, "Cookie", 0)
-        if os.getenv('COOKIES_STR'):
-            self.entries['cookie'].insert(0, os.getenv('COOKIES_STR'))
-        else:
-            self.entries['cookie'].insert(0, "WorkosCursorSessionToken")
+        button_commands = {
+            'generate_account': self.generate_account,
+            'auto_register': self.auto_register,
+            'reset_ID': self.reset_ID,
+            'update_auth': self.update_auth,
+            'show_trial_info': self.show_trial_info,
+            'backup_account': self.backup_account
+        }
 
-        radio_frame = ttk.Frame(content_frame, style='TFrame')
-        radio_frame.pack(fill=tk.X, pady=(8, 0))
-
-        mode_label = ttk.Label(radio_frame, text="注册模式:", style='TLabel')
-        mode_label.pack(side=tk.LEFT, padx=(3, 8))
-
-        semi_radio = ttk.Radiobutton(
-            radio_frame,
-            text="人工过验证",
-            variable=self.selected_mode,
-            value="semi",
-            style='TRadiobutton'
+        register_tab = RegisterTab(
+            notebook,
+            env_vars=self.config.env_vars,
+            buttons=self.config.buttons,
+            entries=self.entries,
+            selected_mode=self.selected_mode,
+            button_commands=button_commands
         )
-        semi_radio.pack(side=tk.LEFT, padx=10)
+        notebook.add(register_tab, text="账号注册")
 
-        auto_radio = ttk.Radiobutton(
-            radio_frame,
-            text="自动过验证",
-            variable=self.selected_mode,
-            value="auto",
-            style='TRadiobutton'
-        )
-        auto_radio.pack(side=tk.LEFT, padx=10)
-
-        admin_radio = ttk.Radiobutton(
-            radio_frame,
-            text="全自动注册",
-            variable=self.selected_mode,
-            value="admin",
-            style='TRadiobutton'
-        )
-        admin_radio.pack(side=tk.LEFT, padx=10)
-
-        button_frame = ttk.Frame(content_frame, style='TFrame')
-        button_frame.pack(fill=tk.X, pady=(8, 0))
-
-        for i, (text, command) in enumerate(self.config.buttons):
-            row = i // 2
-            col = i % 2
-            btn = ttk.Button(
-                button_frame,
-                text=text,
-                command=getattr(self, command),
-                style='Custom.TButton',
-                width=8
-            )
-            btn.grid(
-                row=row,
-                column=col,
-                padx=3,
-                pady=2,
-                sticky='nsew'
-            )
-
-        for i in range(2):
-            button_frame.grid_columnconfigure(i, weight=1)
+        manage_tab = ManageTab(notebook)
+        notebook.add(manage_tab, text="账号管理")
 
         footer = ttk.Label(
             content_frame,
@@ -550,11 +234,6 @@ class CursorApp:
             if not result['continue']:
                 raise Exception("用户终止了注册流程")
 
-        def update_ui_success(token):
-            self.entries['cookie'].delete(0, tk.END)
-            self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
-            UI.show_success(self.root, "自动注册成功，Token已填入")
-
         def update_ui_warning(message):
             UI.show_warning(self.root, message)
 
@@ -582,7 +261,15 @@ class CursorApp:
 
                 if token := register_method(create_dialog):
                     if not is_terminated:
-                        self.root.after(0, lambda: update_ui_success(token))
+                        self.root.after(0, lambda: [
+                            self.entries['EMAIL'].delete(0, tk.END),
+                            self.entries['EMAIL'].insert(0, self.registrar.email),
+                            self.entries['PASSWORD'].delete(0, tk.END),
+                            self.entries['PASSWORD'].insert(0, self.registrar.password),
+                            self.entries['cookie'].delete(0, tk.END),
+                            self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}"),
+                            UI.show_success(self.root, "自动注册成功，账号信息已填入")
+                        ])
                 elif not is_terminated:
                     self.root.after(0, lambda: update_ui_warning("注册流程未完成"))
 

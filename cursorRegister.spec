@@ -15,6 +15,7 @@ a = Analysis(
         'drissionpage',
         'utils',
         'registerAc',
+        'ui',
         'email',
         'ca_certificates',
         'openssl'

@@ -243,6 +243,13 @@ class CursorRegistration:
         self.password = Utils.generate_secure_password()
         self.admin = True
         token = self._safe_action(self.auto_register, wait_callback)
+        if token:
+            env_updates = {
+                "COOKIES_STR": f"WorkosCursorSessionToken={token}",
+                "EMAIL": self.email,
+                "PASSWORD": self.password
+            }
+            Utils.update_env_vars(env_updates)
         return token
 
     def _cursor_turnstile(self):
