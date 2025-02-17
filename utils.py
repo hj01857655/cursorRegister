@@ -452,73 +452,6 @@ class CursorManager:
             logger.error(f"process_cookies 执行失败: {e}")
             return Result.fail(str(e))
 
-    def get_latest_email_messages(self, target_email: str, max_retries: int = 3, timeout: int = 30) -> Result[dict]:
-        logger.debug(f"开始获取邮箱 {target_email} 的最新邮件，最大重试次数: {max_retries}, 超时时间: {timeout}秒")
-        
-        def handle_retry(attempt: int, error_msg: str) -> bool:
-            if attempt < max_retries - 1:
-                wait_time = 2 ** attempt
-                logger.debug(f"{error_msg}，等待 {wait_time} 秒后重试")
-                time.sleep(wait_time)
-                return True
-            return False
-
-        for attempt in range(max_retries):
-            try:
-                logger.debug(f"第 {attempt + 1} 次尝试获取邮件")
-                
-                email_list_result = self.get_email_list()
-                if not email_list_result:
-                    if handle_retry(attempt, "获取邮箱列表失败"):
-                        continue
-                    return Result.fail(f"获取邮箱列表失败: {email_list_result.message}")
-
-                target = next((
-                    email for email in email_list_result.data.get('emails', [])
-                    if email.get('address') == target_email
-                ), None)
-                
-                if not target or not target.get('id'):
-                    return Result.fail(f"未找到目标邮箱: {target_email}")
-                
-                logger.debug(f"找到目标邮箱，ID: {target.get('id')}")
-
-                messages_result = self.get_email_messages(target['id'])
-                if not messages_result:
-                    if handle_retry(attempt, "获取邮件列表失败"):
-                        continue
-                    return Result.fail(f"获取邮件列表失败: {messages_result.message}")
-
-                messages = messages_result.data.get('messages', [])
-                if not messages:
-                    return Result.fail("邮箱中没有任何邮件")
-                
-                logger.debug(f"成功获取邮件列表，共有 {len(messages)} 封邮件")
-
-                latest_message = max(messages, key=lambda x: x.get('received_at', 0))
-                if not latest_message.get('id'):
-                    return Result.fail("无法获取最新邮件ID")
-                
-                logger.debug(f"找到最新邮件，ID: {latest_message.get('id')}")
-
-                detail_result = self.get_message_detail(target['id'], latest_message['id'])
-                if not detail_result:
-                    if handle_retry(attempt, "获取邮件详情失败"):
-                        continue
-                    return Result.fail(f"获取邮件详情失败: {detail_result.message}")
-
-                logger.debug("成功获取邮件详情")
-                logger.debug(f"邮件数据: {detail_result.data}")
-                return Result.ok(detail_result.data)
-
-            except Exception as e:
-                if handle_retry(attempt, f"发生异常: {str(e)}"):
-                    continue
-                logger.error(f"获取邮件内容时发生错误: {str(e)}")
-                return Result.fail(str(e))
-
-        return Result.fail("达到最大重试次数，操作失败")
-
 class MoemailManager:
     
     def __init__(self):
@@ -577,3 +510,76 @@ class MoemailManager:
     
     def get_message_detail(self, email_id: str, message_id: str) -> Result[dict]:
         return self._make_request("GET", f"/emails/{email_id}/{message_id}")
+
+    def get_latest_email_messages(self, target_email: str, max_retries: int = 3, timeout: int = 30) -> Result[dict]:
+        logger.debug(f"开始获取邮箱 {target_email} 的最新邮件，最大重试次数: {max_retries}, 超时时间: {timeout}秒")
+
+        for attempt in range(max_retries):
+            try:
+                logger.debug(f"第 {attempt + 1} 次尝试获取邮件")
+
+                email_list_result = self.get_email_list()
+                if not email_list_result:
+                    if attempt < max_retries - 1:
+                        wait_time = 2 ** attempt
+                        logger.debug(f"获取邮箱列表失败，等待 {wait_time} 秒后重试")
+                        time.sleep(wait_time)
+                        continue
+                    return Result.fail(f"获取邮箱列表失败: {email_list_result.message}")
+
+                target = next((
+                    email for email in email_list_result.data.get('emails', [])
+                    if email.get('address') == target_email
+                ), None)
+
+                if not target or not target.get('id'):
+                    return Result.fail(f"未找到目标邮箱: {target_email}")
+
+                logger.debug(f"找到目标邮箱，ID: {target.get('id')}")
+
+                messages_result = self.get_email_messages(target['id'])
+                if not messages_result:
+                    if attempt < max_retries - 1:
+                        wait_time = 2 ** attempt
+                        logger.debug(f"获取邮件列表失败，等待 {wait_time} 秒后重试")
+                        time.sleep(wait_time)
+                        continue
+                    return Result.fail(f"获取邮件列表失败: {messages_result.message}")
+
+                messages = messages_result.data.get('messages', [])
+                if not messages:
+                    return Result.fail("邮箱中没有任何邮件")
+
+                logger.debug(f"成功获取邮件列表，共有 {len(messages)} 封邮件")
+
+                latest_message = max(messages, key=lambda x: x.get('received_at', 0))
+                if not latest_message.get('id'):
+                    return Result.fail("无法获取最新邮件ID")
+
+                logger.debug(f"找到最新邮件，ID: {latest_message.get('id')}")
+
+                detail_result = self.get_message_detail(target['id'], latest_message['id'])
+                if not detail_result:
+                    if attempt < max_retries - 1:
+                        wait_time = 2 ** attempt
+                        logger.debug(f"获取邮件详情失败，等待 {wait_time} 秒后重试")
+                        time.sleep(wait_time)
+                        continue
+                    return Result.fail(f"获取邮件详情失败: {detail_result.message}")
+
+                logger.debug("成功获取邮件详情")
+                logger.debug(f"邮件数据: {detail_result.data}")
+
+                return Result.ok(detail_result.data)
+
+            except Exception as e:
+                if attempt < max_retries - 1:
+                    wait_time = 2 ** attempt
+                    logger.debug(f"发生异常: {str(e)}，等待 {wait_time} 秒后重试")
+                    time.sleep(wait_time)
+                    continue
+                logger.error(f"获取邮件内容时发生错误: {str(e)}")
+                return Result.fail(str(e))
+
+        logger.debug("达到最大重试次数，操作失败")
+        return Result.fail("达到最大重试次数，操作失败")
