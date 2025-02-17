@@ -652,29 +652,46 @@ class CursorApp:
         def fetch_and_display_info():
             nonlocal loading_dialog
             try:
+                logger.debug("开始获取试用信息...")
                 cookie_str = self.entries['cookie'].get().strip() or os.getenv('COOKIES_STR', '').strip()
+                logger.debug(f"获取到的cookie字符串长度: {len(cookie_str) if cookie_str else 0}")
+                
                 if not cookie_str:
                     raise ValueError("未找到Cookie信息，请先更新账号信息")
 
                 if "WorkosCursorSessionToken=" not in cookie_str:
+                    logger.debug("Cookie字符串中未包含WorkosCursorSessionToken前缀，正在添加...")
                     cookie_str = f"WorkosCursorSessionToken={cookie_str}"
+                
+                logger.debug("正在初始化浏览器...")
                 self.registrar = CursorRegistration()
                 self.registrar.headless = True
                 self.registrar.init_browser()
+                logger.debug("浏览器初始化完成")
+                
+                logger.debug("正在获取试用信息...")
                 trial_info = self.registrar.get_trial_info(cookie=cookie_str)
+                logger.debug(f"成功获取试用信息: 额度={trial_info[0]}, 天数={trial_info[1]}")
+                
                 self.registrar.browser.quit()
+                logger.debug("浏览器已关闭")
+                
                 self.root.after(0, lambda: UI.show_success(
                     self.root,
                     f"账户可用额度: {trial_info[0]}\n试用天数: {trial_info[1]}"
                 ))
             except Exception as e:
                 error_message = str(e)
+                logger.error(f"获取试用信息失败: {error_message}")
+                logger.exception("详细错误信息:")
                 self.root.after(0, lambda: UI.show_error(self.root, "获取账号信息失败", error_message))
             finally:
                 if loading_dialog:
+                    logger.debug("关闭加载对话框")
                     self.root.after(0, loading_dialog.destroy)
 
         loading_dialog = UI.create_loading_dialog(self.root, "正在获取账号信息，请稍候...")
+        logger.debug("已创建加载对话框，开始获取信息...")
         threading.Thread(target=fetch_and_display_info, daemon=True).start()
 
 

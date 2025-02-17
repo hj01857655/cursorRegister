@@ -123,15 +123,37 @@ class CursorRegistration:
         self.input_field({'password': self.password})
 
     def get_trial_info(self, cookie=None):
+        logger.debug("开始获取试用信息")
         self.tab.get(self.CURSOR_SETTING_URL)
+        logger.debug(f"已访问设置页面: {self.CURSOR_SETTING_URL}")
+        
         if cookie:
+            logger.debug(f"使用提供的cookie: {cookie}")
             self.tab.set.cookies(cookie)
             self.tab.get(self.CURSOR_SETTING_URL)
+            logger.debug("已使用cookie重新加载页面")
+
+        logger.debug("尝试定位使用额度元素")
         usage_ele = self.tab.ele(
             "css:div.col-span-2 > div > div > div > div > div:nth-child(1) > div.flex.items-center.justify-between.gap-2 > span.font-mono.text-sm\\/\\[0\\.875rem\\]")
+        
+        logger.debug("尝试定位试用天数元素")
         trial_days = self.tab.ele("css:div > span.ml-1\\.5.opacity-50")
+
+        if not usage_ele:
+            logger.error("未能找到使用额度元素")
+        else:
+            logger.debug(f"成功找到使用额度元素，内容为: {usage_ele.text}")
+
+        if not trial_days:
+            logger.error("未能找到试用天数元素")
+        else:
+            logger.debug(f"成功找到试用天数元素，内容为: {trial_days.text}")
+
         if not usage_ele or not trial_days:
             raise ValueError("无法获取试用信息，页面结构可能已更改")
+            
+        logger.debug("成功获取所有试用信息")
         return usage_ele.text, trial_days.text
 
     def get_user_info(self):
