@@ -25,62 +25,12 @@ class GithubActionRegistration(CursorRegistration):
             level="DEBUG"
         )
         self.headless = True
-        self.dev_websites = [
-            "https://github.com",
-            "https://stackoverflow.com",
-            "https://dev.to",
-            "https://medium.com/tag/programming",
-            "https://www.freecodecamp.org",
-            "https://www.codecademy.com",
-            "https://www.geeksforgeeks.org",
-            "https://www.w3schools.com",
-            "https://leetcode.com",
-            "https://www.hackerrank.com",
-            "https://www.codewars.com",
-            "https://www.coursera.org/browse/computer-science",
-            "https://www.udemy.com/courses/development",
-            "https://www.pluralsight.com",
-            "https://replit.com",
-            "https://codesandbox.io",
-            "https://codepen.io",
-            "https://www.digitalocean.com/community/tutorials",
-            "https://www.reddit.com/r/programming",
-            "https://news.ycombinator.com"
-        ]
-
-    def nurture_browser(self, min_visits=10, max_visits=20):
-     
-        logger.info("开始养号过程...")
-        num_visits = random.randint(min_visits, max_visits)
-        visited_sites = random.sample(self.dev_websites, num_visits)
-        
-        for site in visited_sites:
-            try:
-                logger.info(f"访问网站: {site}")
-                self.tab.get(site)
-                
-            
-                wait_time = random.uniform(5, 15)
-                logger.debug(f"在页面停留 {wait_time:.2f} 秒")
-                time.sleep(wait_time)
-                
-                
-                scroll_times = random.randint(2, 5)
-                for _ in range(scroll_times):
-                    scroll_amount = random.randint(300, 1000)
-                    self.tab.run_js(f"window.scrollBy(0, {scroll_amount})")
-                    time.sleep(random.uniform(1, 3))
-                
-                logger.info(f"完成访问: {site}")
-            except Exception as e:
-                logger.error(f"访问 {site} 时出错: {str(e)}")
-                continue
-        
-        logger.info(f"养号完成，共访问了 {len(visited_sites)} 个网站")
 
     def admin_auto_register(self, **kwargs):
-       
         try:
+
+            self.admin = True
+            self._safe_action(self.init_browser)
             email_password_result = utils.CursorManager.generate_cursor_account()
             if not email_password_result.success:
                 raise Exception(f"生成账号信息失败: {email_password_result.message}")
@@ -90,10 +40,6 @@ class GithubActionRegistration(CursorRegistration):
             self.moe = utils.MoemailManager()
             email_info = self.moe.create_email(email=self.email)
             logger.debug(f"已创建邮箱 ： {email_info.data.get('email')}")
-            self.admin = True
-            self._safe_action(self.init_browser)
-            self._safe_action(self.nurture_browser)
-            self.tab.get(self.CURSOR_SIGNUP_URL)
             self._safe_action(self.fill_registration_form)
             time.sleep(random.uniform(1, 4))
             submit = self.tab.ele("@type=submit")
