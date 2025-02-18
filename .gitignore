@@ -1,3 +1,7 @@
 /.env
 /cursorRegister_log
 /.idea
+/build
+/dist
+/output
+/env_backups
