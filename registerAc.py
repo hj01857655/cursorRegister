@@ -346,37 +346,3 @@ class CursorRegistration:
                 logger.error("在输入验证码时超时，已达到最大重试次数")
                 raise Exception("在输入验证码时超时")
 
-    def github_action_register(self):
-        logger.add(
-            sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD}.log",
-            format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
-            rotation="50 MB",
-            retention="30 days",
-            compression="gz",
-            enqueue=True,
-            backtrace=True,
-            diagnose=True,
-            level="DEBUG"
-        )
-        token =self.admin_auto_register()
-        if token:
-            env_updates = {
-                "COOKIES_STR": f"WorkosCursorSessionToken={token}",
-                "EMAIL": self.email,
-                "PASSWORD": self.password
-            }
-            Utils.update_env_vars(env_updates)
-            try:
-                with open('env_variables.csv', 'w', encoding='utf-8', newline='') as f:
-                    f.write("variable,value\n")
-                    for key, value in env_updates.items():
-                        f.write(f"{key},{value}\n")
-                logger.info("环境变量已保存到 env_variables.csv 文件中")
-            except Exception as e:
-                logger.error(f"保存环境变量到文件时出错: {str(e)}")
-
-
-
-if __name__ == "__main__":
-    load_dotenv()
-    CursorRegistration().github_action_register()
