@@ -3,7 +3,6 @@ from dotenv import load_dotenv
 from loguru import logger
 
 import utils
-from utils import MoemailManager
 from registerAc import CursorRegistration
 import random
 import time
@@ -83,23 +82,18 @@ class GithubActionRegistration(CursorRegistration):
        
         try:
             email_password_result = utils.CursorManager.generate_cursor_account()
-            if not isinstance(email_password_result, tuple):
-                raise Exception("生成账号信息失败")
-            self.email, self.password = email_password_result
+            if not email_password_result.success:
+                raise Exception(f"生成账号信息失败: {email_password_result.message}")
+            self.email, self.password = email_password_result.data
             logger.debug(f"已生成随机邮箱: {self.email}")
             logger.debug(f"已生成随机密码: {self.password}")
-            self.moe = MoemailManager()
+            self.moe = utils.MoemailManager()
             email_info = self.moe.create_email(email=self.email)
             logger.debug(f"已创建邮箱 ： {email_info.data.get('email')}")
             self.admin = True
-
-        
             self._safe_action(self.init_browser)
-            
-         
             self._safe_action(self.nurture_browser)
-            
-         
+            self.tab.get(self.CURSOR_SIGNUP_URL)
             self._safe_action(self.fill_registration_form)
             time.sleep(random.uniform(1, 4))
             submit = self.tab.ele("@type=submit")
