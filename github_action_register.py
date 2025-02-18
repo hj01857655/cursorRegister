@@ -3,6 +3,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 import utils
+from utils import MoemailManager
 from registerAc import CursorRegistration
 import random
 import time
@@ -87,8 +88,8 @@ class GithubActionRegistration(CursorRegistration):
             self.email, self.password = email_password_result
             logger.debug(f"已生成随机邮箱: {self.email}")
             logger.debug(f"已生成随机密码: {self.password}")
-            moe = utils.MoemailManager()
-            email_info = moe.create_email(email=self.email)
+            self.moe = MoemailManager()
+            email_info = self.moe.create_email(email=self.email)
             logger.debug(f"已创建邮箱 ： {email_info.data.get('email')}")
             self.admin = True
 
