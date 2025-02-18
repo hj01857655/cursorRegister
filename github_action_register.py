@@ -82,8 +82,19 @@ class GithubActionRegistration(CursorRegistration):
        
         try:
             self.moe = utils.MoemailManager()
+            logger.debug("正在创建邮箱...")
             email_info = self.moe.create_email(email=self.email)
-            logger.debug(f"已创建邮箱 ： {email_info.data.get('email')}")
+            
+            if not email_info or not email_info.success:
+                error_msg = email_info.message if email_info else "创建邮箱失败，未收到有效响应"
+                logger.error(f"创建邮箱失败: {error_msg}")
+                raise Exception(error_msg)
+                
+            if not email_info.data or 'email' not in email_info.data:
+                logger.error("创建邮箱成功但返回数据格式不正确")
+                raise Exception("邮箱创建响应数据格式不正确")
+                
+            logger.debug(f"已创建邮箱: {email_info.data.get('email')}")
             self.admin = True
 
         
