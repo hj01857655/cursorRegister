@@ -242,7 +242,7 @@ class CursorApp:
                             self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}"),
                             UI.show_success(self.root, "自动注册成功，账号信息已填入")
                         ])
-                        self.backup_account()
+                        threading.Thread(target=self.backup_account, daemon=True).start()
                 elif not is_terminated:
                     self.root.after(0, lambda: update_ui_warning("注册流程未完成"))
 
@@ -326,7 +326,7 @@ def setup_logging(log_window=None) -> None:
         rotation="50 MB",
         retention="30 days",
         compression="gz",
-        enqueue=True,
+        enqueue=False,
         backtrace=True,
         diagnose=True,
         level="DEBUG"
@@ -336,7 +336,7 @@ def setup_logging(log_window=None) -> None:
         logger.add(
             sink=sys.stderr,
             colorize=True,
-            enqueue=True,
+            enqueue=False,
             backtrace=True,
             diagnose=True,
             level="DEBUG"
@@ -353,7 +353,7 @@ def setup_logging(log_window=None) -> None:
             sink=gui_sink,
             format="{message}",
             level="DEBUG",
-            enqueue=True
+            enqueue=False
         )
 
 
