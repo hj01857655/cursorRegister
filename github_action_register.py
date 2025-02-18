@@ -78,7 +78,7 @@ class GithubActionRegistration(CursorRegistration):
         
         logger.info(f"养号完成，共访问了 {len(visited_sites)} 个网站")
 
-    def admin_auto_register(self):
+    def admin_auto_register(self, **kwargs):
        
         try:
             email_password_result = utils.CursorManager.generate_cursor_account()
@@ -87,9 +87,8 @@ class GithubActionRegistration(CursorRegistration):
             self.email, self.password = email_password_result
             logger.debug(f"已生成随机邮箱: {self.email}")
             logger.debug(f"已生成随机密码: {self.password}")
-
-            self.moe = utils.MoemailManager()
-            email_info = self.moe.create_email(email=self.email)
+            moe = utils.MoemailManager()
+            email_info = moe.create_email(email=self.email)
             logger.debug(f"已创建邮箱 ： {email_info.data.get('email')}")
             self.admin = True
 
