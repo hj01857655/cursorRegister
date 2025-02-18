@@ -242,6 +242,7 @@ class CursorApp:
                             self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}"),
                             UI.show_success(self.root, "自动注册成功，账号信息已填入")
                         ])
+                        self.backup_account()
                 elif not is_terminated:
                     self.root.after(0, lambda: update_ui_warning("注册流程未完成"))
 
