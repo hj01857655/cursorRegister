@@ -25,8 +25,8 @@ class LogWindow(tk.Toplevel):
         self.title("日志窗口")
         self.withdraw()
         
-        width = 400
-        height = 560
+        width = 460
+        height = 530
         x = parent.winfo_x() + parent.winfo_width()
         y = parent.winfo_y()
         self.geometry(f"{width}x{height}+{x}+{y}")
@@ -51,12 +51,6 @@ class LogWindow(tk.Toplevel):
         title_frame = ttk.Frame(self, style='TFrame')
         title_frame.pack(fill=tk.X, padx=5, pady=(0, 5))
 
-        ttk.Label(
-            title_frame,
-            text="日志信息",
-            style='Title.TLabel'
-        ).pack(side=tk.LEFT)
-
         debug_checkbox = ttk.Checkbutton(
             title_frame,
             text="调试模式",
@@ -64,7 +58,7 @@ class LogWindow(tk.Toplevel):
             style='TCheckbutton',
             command=self.refresh_logs
         )
-        debug_checkbox.pack(side=tk.RIGHT, padx=(20, 10))
+        debug_checkbox.pack(side=tk.LEFT, padx=(10, 20))
 
         clear_button = ttk.Button(
             title_frame,
@@ -73,7 +67,7 @@ class LogWindow(tk.Toplevel):
             style='Custom.TButton',
             width=10
         )
-        clear_button.pack(side=tk.RIGHT)
+        clear_button.pack(side=tk.RIGHT, padx=(0, 10))
 
         text_container = ttk.Frame(self, style='TFrame')
         text_container.pack(fill=tk.BOTH, expand=True)
@@ -185,8 +179,8 @@ class LogWindow(tk.Toplevel):
             self.text_buffer.close()
 
     def show_window(self):
-        width = 400
-        height = 560
+        width = 460
+        height = 530
         parent = self.master
         
         parent.update_idletasks()
