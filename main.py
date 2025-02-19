@@ -21,7 +21,7 @@ console_mode = False
 @dataclass
 class WindowConfig:
     width: int = 460
-    height: int = 560
+    height: int = 530
     title: str = "Cursor注册小助手"
     backup_dir: str = "env_backups"
     env_vars: List[Tuple[str, str]] = field(default_factory=lambda: [

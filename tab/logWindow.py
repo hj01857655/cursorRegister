@@ -25,19 +25,17 @@ class LogWindow(tk.Toplevel):
         self.title("日志窗口")
         self.withdraw()
         
-
         width = 400
         height = 560
         x = parent.winfo_x() + parent.winfo_width()
         y = parent.winfo_y()
         self.geometry(f"{width}x{height}+{x}+{y}")
         
-
         self.configure(bg=UI.COLORS['bg'])
         if hasattr(parent, 'attributes') and '-alpha' in parent.attributes():
             self.attributes('-alpha', 0.98)
         
-        self.protocol("WM_DELETE_WINDOW", self.withdraw_window)  # 点击关闭按钮时隐藏而不是销毁
+        self.protocol("WM_DELETE_WINDOW", self.withdraw_window)  
         
         self.show_debug = tk.BooleanVar(value=True)
         self.log_buffer = deque(maxlen=self.MAX_BUFFER_SIZE)
@@ -46,9 +44,17 @@ class LogWindow(tk.Toplevel):
         self.update_scheduled = False
         self.text_buffer = io.StringIO()
         
+    
+        self.bind('<Unmap>', self.on_window_state_change)
+        self.bind('<Map>', self.on_window_state_change)
+        
         self.setup_ui()
         self.setup_tags()
     
+    def on_window_state_change(self, event=None):
+        if not self.winfo_viewable() and hasattr(self.master, 'log_window_var'):
+            self.master.log_window_var.set(False)
+        
     def withdraw_window(self):
         self.withdraw()
         if hasattr(self.master, 'log_window_var'):

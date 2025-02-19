@@ -8,7 +8,7 @@ version ="版本: 0.1.5"
 class AboutTab(ttk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, style='TFrame', **kwargs)
-        self.configure(height=420)
+        self.configure(height=400)
         self.pack_propagate(False)  
         self.setup_ui()
 
@@ -25,15 +25,6 @@ class AboutTab(ttk.Frame):
 
         title_frame = ttk.Frame(main_container)
         title_frame.pack(fill=tk.X, pady=(0, 5))
-
-        title = ttk.Label(
-            title_frame,
-            text="Cursor注册小助手",
-            style='Title.TLabel',
-            font=('Microsoft YaHei UI', 24, 'bold'),
-            foreground='#1a73e8'  
-        )
-        title.pack(pady=(0, 3))
 
         version_info = ttk.Label(
             title_frame,
