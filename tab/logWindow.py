@@ -7,7 +7,7 @@ from .ui import UI
 import io
 
 
-class LogWindow(ttk.Frame):
+class LogWindow(tk.Toplevel):
     MAX_BUFFER_SIZE = 1000
     UI_UPDATE_BATCH = 50
     MAX_TEXT_LENGTH = 50000
@@ -21,15 +21,62 @@ class LogWindow(ttk.Frame):
     }
     
     def __init__(self, parent, **kwargs):
-        super().__init__(parent, style='TFrame', **kwargs)
+        super().__init__(parent)
+        self.title("日志窗口")
+        self.withdraw()
+        
+
+        width = 400
+        height = 560
+        x = parent.winfo_x() + parent.winfo_width()
+        y = parent.winfo_y()
+        self.geometry(f"{width}x{height}+{x}+{y}")
+        
+
+        self.configure(bg=UI.COLORS['bg'])
+        if hasattr(parent, 'attributes') and '-alpha' in parent.attributes():
+            self.attributes('-alpha', 0.98)
+        
+        self.protocol("WM_DELETE_WINDOW", self.withdraw_window)  # 点击关闭按钮时隐藏而不是销毁
+        
         self.show_debug = tk.BooleanVar(value=True)
         self.log_buffer = deque(maxlen=self.MAX_BUFFER_SIZE)
         self.buffer_lock = Lock()
         self.pending_logs = []
         self.update_scheduled = False
         self.text_buffer = io.StringIO()
+        
         self.setup_ui()
         self.setup_tags()
+    
+    def withdraw_window(self):
+        self.withdraw()
+        if hasattr(self.master, 'log_window_var'):
+            self.master.log_window_var.set(False)
+    
+    def show_window(self):
+
+        width = 400
+        height = 560
+        parent = self.master
+        
+
+        parent.update_idletasks()
+        x = parent.winfo_x() + parent.winfo_width() + 10
+        y = parent.winfo_y()
+        
+
+        screen_width = parent.winfo_screenwidth()
+        screen_height = parent.winfo_screenheight()
+        
+        if x + width > screen_width:
+            x = screen_width - width
+        if y + height > screen_height:
+            y = screen_height - height
+            
+        self.geometry(f"{width}x{height}+{x}+{y}")
+        self.deiconify()
+        self.lift()
 
     def setup_ui(self):
         title_frame = ttk.Frame(self, style='TFrame')

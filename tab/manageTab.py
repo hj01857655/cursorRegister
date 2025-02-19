@@ -56,9 +56,9 @@ class ManageTab(ttk.Frame):
 
         buttons = [
             ("刷新列表", self.refresh_list),
-            ("获取试用信息", self.show_trial_info),
-            ("刷新cookie", self.update_auth),
-            ("重置机器ID", self.reset_machine_id),
+            ("获取额度", self.show_trial_info),
+            ("更换账号", self.update_auth),
+            ("重置ID", self.reset_machine_id),
             ("删除账号", self.delete_account)
         ]
 
