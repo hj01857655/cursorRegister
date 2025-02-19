@@ -68,6 +68,9 @@
 <img src="assets/preview3.png" alt="软件预览图3" width="800" height="600"/>
 </div>
 
+<div align="center">
+<img src="assets/preview4.png" alt="软件预览图4" width="800" height="600"/>
+</div>
 ---
 
 <div align="center">
