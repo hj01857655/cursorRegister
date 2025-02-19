@@ -326,7 +326,7 @@ def setup_logging(log_window=None) -> None:
         rotation="50 MB",
         retention="30 days",
         compression="gz",
-        enqueue=False,
+        enqueue=True,
         backtrace=True,
         diagnose=True,
         level="DEBUG"
@@ -336,7 +336,7 @@ def setup_logging(log_window=None) -> None:
         logger.add(
             sink=sys.stderr,
             colorize=True,
-            enqueue=False,
+            enqueue=True,
             backtrace=True,
             diagnose=True,
             level="DEBUG"
@@ -353,7 +353,7 @@ def setup_logging(log_window=None) -> None:
             sink=gui_sink,
             format="{message}",
             level="DEBUG",
-            enqueue=False
+            enqueue=True
         )
 
 
