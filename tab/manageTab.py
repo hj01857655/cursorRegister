@@ -7,6 +7,7 @@ import tkinter as tk
 from datetime import datetime, timedelta
 from tkinter import ttk, messagebox
 from typing import Dict, List, Tuple, Callable
+from concurrent.futures import ThreadPoolExecutor
 
 import requests
 from loguru import logger
@@ -128,11 +129,6 @@ class ManageTab(ttk.Frame):
         return account_data
 
     def update_csv_file(self, csv_file: str, **fields_to_update) -> None:
-        """
-        更新CSV文件中的字段
-        :param csv_file: CSV文件路径
-        :param fields_to_update: 要更新的字段，格式为 字段名=值
-        """
         if not fields_to_update:
             logger.debug("没有需要更新的字段")
             return
@@ -143,7 +139,6 @@ class ManageTab(ttk.Frame):
                 csv_reader = csv.reader(f)
                 rows = list(csv_reader)
 
-            # 更新字段
             for field, value in fields_to_update.items():
                 field_found = False
                 for row in rows:
@@ -216,43 +211,59 @@ class ManageTab(ttk.Frame):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         }
 
-        # 获取用户信息
-        user_info_url = "https://www.cursor.com/api/auth/me"
-        user_info_response = requests.get(user_info_url, headers=headers)
-        if user_info_response.status_code != 200:
-            raise ValueError(f"用户信息API请求失败: {user_info_response.status_code}")
 
-        user_info = user_info_response.json()
-        email = user_info.get('email', '未知')
-        # 从邮箱中提取域名
-        domain = email.split('@')[-1] if '@' in email else '未知'
+        with ThreadPoolExecutor(max_workers=3) as executor:
 
-        # 获取使用配额
-        user_id = user_info.get('sub')
-        if not user_id:
-            raise ValueError("无法获取用户ID")
+            future_user_info = executor.submit(
+                requests.get,
+                "https://www.cursor.com/api/auth/me",
+                headers=headers
+            )
+            
 
-        usage_url = f"https://www.cursor.com/api/usage?user={user_id}"
-        usage_response = requests.get(usage_url, headers=headers)
-        if usage_response.status_code != 200:
-            raise ValueError(f"使用配额API请求失败: {usage_response.status_code}")
+            user_info_response = future_user_info.result()
+            if user_info_response.status_code != 200:
+                raise ValueError(f"用户信息API请求失败: {user_info_response.status_code}")
 
-        usage_data = usage_response.json()
-        gpt4_data = usage_data.get('gpt-4', {})
-        used_quota = gpt4_data.get('numRequestsTotal', 0)
-        max_quota = gpt4_data.get('maxRequestUsage', 0)
-        quota = f"{used_quota} / {max_quota}" if max_quota else '未知'
+            user_info = user_info_response.json()
+            email = user_info.get('email', '未知')
+            domain = email.split('@')[-1] if '@' in email else '未知'
 
-        # 获取试用天数
-        trial_url = "https://www.cursor.com/api/auth/stripe"
-        trial_response = requests.get(trial_url, headers=headers)
-        if trial_response.status_code != 200:
-            raise ValueError(f"试用天数API请求失败: {trial_response.status_code}")
+            user_id = user_info.get('sub')
+            if not user_id:
+                raise ValueError("无法获取用户ID")
 
-        trial_data = trial_response.json()
-        days = str(trial_data.get('daysRemainingOnTrial', '未知'))
+       
+            future_usage = executor.submit(
+                requests.get,
+                f"https://www.cursor.com/api/usage?user={user_id}",
+                headers=headers
+            )
+            future_trial = executor.submit(
+                requests.get,
+                "https://www.cursor.com/api/auth/stripe",
+                headers=headers
+            )
 
-        return domain, email, quota, days
+  
+            usage_response = future_usage.result()
+            trial_response = future_trial.result()
+
+            if usage_response.status_code != 200:
+                raise ValueError(f"使用配额API请求失败: HTTP {usage_response.status_code}")
+            if trial_response.status_code != 200:
+                raise ValueError(f"试用天数API请求失败: HTTP {trial_response.status_code}")
+
+            usage_data = usage_response.json()
+            gpt4_data = usage_data.get('gpt-4', {})
+            used_quota = gpt4_data.get('numRequestsTotal', 0)
+            max_quota = gpt4_data.get('maxRequestUsage', 0)
+            quota = f"{used_quota} / {max_quota}" if max_quota else '未知'
+
+            trial_data = trial_response.json()
+            days = str(trial_data.get('daysRemainingOnTrial', '未知'))
+
+            return domain, email, quota, days
 
     def update_account_info(self):
         def get_trial_info(csv_file_path: str, account_data: Dict[str, str]) -> None:
