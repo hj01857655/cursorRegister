@@ -2,11 +2,13 @@ import os
 import tkinter as tk
 from tkinter import ttk, messagebox
 from loguru import logger
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Callable
 import glob
 import csv
 import threading
+import requests
+import re
 from registerAc import CursorRegistration
 from utils import CursorManager, error_handler
 from .ui import UI
@@ -200,6 +202,50 @@ class ManageTab(ttk.Frame):
             UI.show_error(self.winfo_toplevel(), f"{action_name}失败", e)
             logger.error(f"{action_name}失败: {str(e)}")
 
+    def get_trial_usage(self, cookie_str: str) -> Tuple[str, str]:
+    
+        if not cookie_str:
+            raise ValueError("Cookie信息不能为空")
+
+        user_id_match = re.search(r'WorkosCursorSessionToken=(user_[^%:]+)', cookie_str)
+        if not user_id_match:
+            raise ValueError("无法从cookie中提取用户ID")
+        
+        user_id = user_id_match.group(1)
+        url = f"https://www.cursor.com/api/usage?user={user_id}"
+        
+        headers = {
+            'Cookie': cookie_str if cookie_str.startswith('WorkosCursorSessionToken=') else f'WorkosCursorSessionToken={cookie_str}',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+        }
+        
+        response = requests.get(url, headers=headers)
+        if response.status_code != 200:
+            raise ValueError(f"API请求失败: {response.status_code}")
+        
+        data = response.json()
+        
+        gpt4_data = data.get('gpt-4', {})
+        used_quota = gpt4_data.get('numRequestsTotal', 0)
+        max_quota = gpt4_data.get('maxRequestUsage', 0)
+        
+        quota = f"{used_quota} / {max_quota}" if max_quota else '未知'
+        
+        start_date_str = data.get('startOfMonth')
+        if start_date_str:
+            try:
+                start_date = datetime.strptime(start_date_str.split('.')[0], '%Y-%m-%dT%H:%M:%S')
+                end_date = start_date + timedelta(days=15)
+                remaining_days = (end_date - datetime.now()).days
+                days = '0' if remaining_days <= 0 else str(remaining_days)
+            except Exception as e:
+                logger.error(f"计算剩余天数时出错: {str(e)}")
+                days = '未知'
+        else:
+            days = '未知'
+            
+        return quota, days
+
     def show_trial_info(self):
         def get_trial_info(csv_file_path: str, account_data: Dict[str, str]) -> None:
             cookie_str = account_data.get('COOKIES_STR', '')
@@ -210,59 +256,18 @@ class ManageTab(ttk.Frame):
                 try:
                     logger.debug("开始获取试用信息...")
                     logger.debug(f"获取到的cookie字符串长度: {len(cookie_str) if cookie_str else 0}")
-
-                    if "WorkosCursorSessionToken=" not in cookie_str:
-                        logger.debug("Cookie字符串中未包含WorkosCursorSessionToken前缀，正在添加...")
-                        cookie_str_with_prefix = f"WorkosCursorSessionToken={cookie_str}"
-                    else:
-                        cookie_str_with_prefix = cookie_str
                     
-                    logger.debug("正在初始化浏览器...")
-                    self.registrar = CursorRegistration()
-                    self.registrar.headless = True
-                    self.registrar.init_browser()
-                    logger.debug("浏览器初始化完成")
-                    
-                    logger.debug("正在获取试用信息...")
-                    trial_info = self.registrar.get_trial_info(cookie=cookie_str_with_prefix)
-                    quota, days = trial_info[0], trial_info[1]
+                    quota, days = self.get_trial_usage(cookie_str)
                     logger.info(f"成功获取试用信息: 额度={quota}, 天数={days}")
                     
                     self.account_tree.set(self.selected_item, '额度', quota)
-                    self.account_tree.set(self.selected_item, '剩余天数', f"{days}")
+                    self.account_tree.set(self.selected_item, '剩余天数', days)
                     
                     try:
-                        rows = []
-                        with open(csv_file_path, 'r', encoding='utf-8') as f:
-                            csv_reader = csv.reader(f)
-                            rows = list(csv_reader)
-
-                        quota_found = days_found = False
-                        for row in rows:
-                            if len(row) >= 2:
-                                if row[0] == 'QUOTA':
-                                    row[1] = str(quota)
-                                    quota_found = True
-                                elif row[0] == 'DAYS':
-                                    row[1] = str(days)
-                                    days_found = True
-
-                        if not quota_found:
-                            rows.append(['QUOTA', str(quota)])
-                        if not days_found:
-                            rows.append(['DAYS', str(days)])
-
-                        with open(csv_file_path, 'w', encoding='utf-8', newline='') as f:
-                            csv_writer = csv.writer(f)
-                            csv_writer.writerows(rows)
-                        
-                        logger.debug(f"已更新CSV文件: {csv_file_path}")
+                        self.update_csv_file(csv_file_path, str(quota), str(days))
                     except Exception as e:
                         logger.error(f"更新CSV文件失败: {str(e)}")
                         raise ValueError(f"更新CSV文件失败: {str(e)}")
-                    
-                    self.registrar.browser.quit()
-                    logger.debug("浏览器已关闭")
                     
                     self.winfo_toplevel().after(0, lambda: UI.show_success(
                         self.winfo_toplevel(),
@@ -277,9 +282,6 @@ class ManageTab(ttk.Frame):
                         "获取账号信息失败", 
                         error_message
                     ))
-                finally:
-                    if hasattr(self, 'registrar') and self.registrar and self.registrar.browser:
-                        self.registrar.browser.quit()
 
             logger.debug("开始获取信息...")
             threading.Thread(target=fetch_and_display_info, daemon=True).start()
