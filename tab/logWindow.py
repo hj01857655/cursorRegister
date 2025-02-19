@@ -35,7 +35,7 @@ class LogWindow(tk.Toplevel):
         if hasattr(parent, 'attributes') and '-alpha' in parent.attributes():
             self.attributes('-alpha', 0.98)
         
-        self.protocol("WM_DELETE_WINDOW", self.withdraw_window)  
+        self.protocol("WM_DELETE_WINDOW", self.withdraw)  
         
         self.show_debug = tk.BooleanVar(value=True)
         self.log_buffer = deque(maxlen=self.MAX_BUFFER_SIZE)
@@ -44,46 +44,9 @@ class LogWindow(tk.Toplevel):
         self.update_scheduled = False
         self.text_buffer = io.StringIO()
         
-    
-        self.bind('<Unmap>', self.on_window_state_change)
-        self.bind('<Map>', self.on_window_state_change)
-        
         self.setup_ui()
         self.setup_tags()
     
-    def on_window_state_change(self, event=None):
-        if not self.winfo_viewable() and hasattr(self.master, 'log_window_var'):
-            self.master.log_window_var.set(False)
-        
-    def withdraw_window(self):
-        self.withdraw()
-        if hasattr(self.master, 'log_window_var'):
-            self.master.log_window_var.set(False)
-    
-    def show_window(self):
-
-        width = 400
-        height = 560
-        parent = self.master
-        
-
-        parent.update_idletasks()
-        x = parent.winfo_x() + parent.winfo_width() + 10
-        y = parent.winfo_y()
-        
-
-        screen_width = parent.winfo_screenwidth()
-        screen_height = parent.winfo_screenheight()
-        
-        if x + width > screen_width:
-            x = screen_width - width
-        if y + height > screen_height:
-            y = screen_height - height
-            
-        self.geometry(f"{width}x{height}+{x}+{y}")
-        self.deiconify()
-        self.lift()
-
     def setup_ui(self):
         title_frame = ttk.Frame(self, style='TFrame')
         title_frame.pack(fill=tk.X, padx=5, pady=(0, 5))
@@ -220,5 +183,26 @@ class LogWindow(tk.Toplevel):
     def __del__(self):
         if hasattr(self, 'text_buffer'):
             self.text_buffer.close()
+
+    def show_window(self):
+        width = 400
+        height = 560
+        parent = self.master
+        
+        parent.update_idletasks()
+        x = parent.winfo_x() + parent.winfo_width() + 10
+        y = parent.winfo_y()
+        
+        screen_width = parent.winfo_screenwidth()
+        screen_height = parent.winfo_screenheight()
+        
+        if x + width > screen_width:
+            x = screen_width - width
+        if y + height > screen_height:
+            y = screen_height - height
+            
+        self.geometry(f"{width}x{height}+{x}+{y}")
+        self.deiconify()
+        self.lift()
 
 

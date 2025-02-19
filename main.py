@@ -96,22 +96,20 @@ class CursorApp:
         )
         footer.pack(side=tk.LEFT)
 
-
-        self.log_window_var = tk.BooleanVar(value=False)
-        log_checkbox = ttk.Checkbutton(
+        log_button = ttk.Button(
             footer_frame,
-            text="显示日志",
-            variable=self.log_window_var,
-            style='TCheckbutton',
-            command=self.toggle_log_window
+            text="日志",
+            style='Custom.TButton',
+            command=self.toggle_log_window,
+            width=10,
+            padding=(0, -2)
         )
-        log_checkbox.pack(side=tk.RIGHT)
-
+        log_button.pack(side=tk.RIGHT, padx=(0, 2))
 
         self.log_window = LogWindow(self.root)
 
     def toggle_log_window(self):
-        if self.log_window_var.get():
+        if not self.log_window.winfo_viewable():
             self.log_window.show_window()
         else:
             self.log_window.withdraw()
