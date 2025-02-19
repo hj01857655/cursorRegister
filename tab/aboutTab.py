@@ -3,7 +3,7 @@ from tkinter import ttk
 from .ui import UI
 import webbrowser
 
-version ="版本: 0.1.5"
+version ="版本: 0.1.6"
 
 class AboutTab(ttk.Frame):
     def __init__(self, parent, **kwargs):
