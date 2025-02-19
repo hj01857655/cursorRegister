@@ -12,6 +12,7 @@
 <img src="https://img.shields.io/github/v/release/ktovoz/cursorRegister?style=flat&logo=github&color=blue" alt="GitHub release"/>
 <img src="https://img.shields.io/badge/license-CC%20BY--NC--ND%204.0-lightgrey.svg?style=flat&logo=creative-commons&color=green" alt="License"/>
 <img src="https://img.shields.io/github/stars/ktovoz/cursorRegister?style=flat&logo=github&color=yellow" alt="GitHub stars"/>
+<img src="https://img.shields.io/github/actions/workflow/status/ktovoz/cursorRegister/register_account.yaml?style=flat&logo=github-actions&label=GitHub%20Actions" alt="GitHub Actions"/>
 <br/>
 <img src="https://img.shields.io/badge/Windows-0078D6?style=flat&logo=windows&logoColor=white" alt="Windows Support"/>
 <img src="https://img.shields.io/badge/Python-3.7+-blue.svg?style=flat&logo=python&logoColor=white" alt="Python"/>
