@@ -211,59 +211,53 @@ class ManageTab(ttk.Frame):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         }
 
+        timeout = 10  
+        session = requests.Session()
+        session.headers.update(headers)
 
-        with ThreadPoolExecutor(max_workers=3) as executor:
+        def make_request(url: str) -> dict:
+            try:
+                response = session.get(url, timeout=timeout)
+                response.raise_for_status()
+                return response.json()
+            except requests.RequestException as e:
+                logger.error(f"请求 {url} 失败: {str(e)}")
+                raise ValueError(f"API请求失败: {str(e)}")
 
-            future_user_info = executor.submit(
-                requests.get,
-                "https://www.cursor.com/api/auth/me",
-                headers=headers
-            )
-            
+        try:
+            with ThreadPoolExecutor(max_workers=3) as executor:
 
-            user_info_response = future_user_info.result()
-            if user_info_response.status_code != 200:
-                raise ValueError(f"用户信息API请求失败: {user_info_response.status_code}")
+                future_user_info = executor.submit(make_request, "https://www.cursor.com/api/auth/me")
+                future_trial = executor.submit(make_request, "https://www.cursor.com/api/auth/stripe")
 
-            user_info = user_info_response.json()
-            email = user_info.get('email', '未知')
-            domain = email.split('@')[-1] if '@' in email else '未知'
+    
+                user_info = future_user_info.result()
+                email = user_info.get('email', '未知')
+                domain = email.split('@')[-1] if '@' in email else '未知'
+                user_id = user_info.get('sub')
+                
+                if not user_id:
+                    raise ValueError("无法获取用户ID")
 
-            user_id = user_info.get('sub')
-            if not user_id:
-                raise ValueError("无法获取用户ID")
 
-       
-            future_usage = executor.submit(
-                requests.get,
-                f"https://www.cursor.com/api/usage?user={user_id}",
-                headers=headers
-            )
-            future_trial = executor.submit(
-                requests.get,
-                "https://www.cursor.com/api/auth/stripe",
-                headers=headers
-            )
+                future_usage = executor.submit(make_request, f"https://www.cursor.com/api/usage?user={user_id}")
+                trial_data = future_trial.result()
+                days = str(trial_data.get('daysRemainingOnTrial', '未知'))
 
-  
-            usage_response = future_usage.result()
-            trial_response = future_trial.result()
+     
+                usage_data = future_usage.result()
+                gpt4_data = usage_data.get('gpt-4', {})
+                used_quota = gpt4_data.get('numRequestsTotal', 0)
+                max_quota = gpt4_data.get('maxRequestUsage', 0)
+                quota = f"{used_quota} / {max_quota}" if max_quota else '未知'
 
-            if usage_response.status_code != 200:
-                raise ValueError(f"使用配额API请求失败: HTTP {usage_response.status_code}")
-            if trial_response.status_code != 200:
-                raise ValueError(f"试用天数API请求失败: HTTP {trial_response.status_code}")
+                return domain, email, quota, days
 
-            usage_data = usage_response.json()
-            gpt4_data = usage_data.get('gpt-4', {})
-            used_quota = gpt4_data.get('numRequestsTotal', 0)
-            max_quota = gpt4_data.get('maxRequestUsage', 0)
-            quota = f"{used_quota} / {max_quota}" if max_quota else '未知'
-
-            trial_data = trial_response.json()
-            days = str(trial_data.get('daysRemainingOnTrial', '未知'))
-
-            return domain, email, quota, days
+        except Exception as e:
+            logger.error(f"获取账号信息失败: {str(e)}")
+            raise ValueError(f"获取账号信息失败: {str(e)}")
+        finally:
+            session.close()
 
     def update_account_info(self):
         def get_trial_info(csv_file_path: str, account_data: Dict[str, str]) -> None:
