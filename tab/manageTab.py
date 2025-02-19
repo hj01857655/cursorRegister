@@ -56,7 +56,7 @@ class ManageTab(ttk.Frame):
 
         buttons = [
             ("刷新列表", self.refresh_list),
-            ("获取额度", self.show_trial_info),
+            ("更新信息", self.update_account_info),
             ("更换账号", self.update_auth),
             ("重置ID", self.reset_machine_id),
             ("删除账号", self.delete_account)
@@ -127,33 +127,38 @@ class ManageTab(ttk.Frame):
             logger.error(f"解析文件 {csv_file} 失败: {str(e)}")
         return account_data
 
-    def update_csv_file(self, csv_file: str, quota: str, days: str) -> None:
+    def update_csv_file(self, csv_file: str, **fields_to_update) -> None:
+        """
+        更新CSV文件中的字段
+        :param csv_file: CSV文件路径
+        :param fields_to_update: 要更新的字段，格式为 字段名=值
+        """
+        if not fields_to_update:
+            logger.debug("没有需要更新的字段")
+            return
+
         try:
             rows = []
             with open(csv_file, 'r', encoding='utf-8') as f:
                 csv_reader = csv.reader(f)
                 rows = list(csv_reader)
 
-            quota_found = days_found = False
-            for row in rows:
-                if len(row) >= 2:
-                    if row[0] == 'QUOTA':
-                        row[1] = quota
-                        quota_found = True
-                    elif row[0] == 'DAYS':
-                        row[1] = days
-                        days_found = True
-
-            if not quota_found:
-                rows.append(['QUOTA', quota])
-            if not days_found:
-                rows.append(['DAYS', days])
+            # 更新字段
+            for field, value in fields_to_update.items():
+                field_found = False
+                for row in rows:
+                    if len(row) >= 2 and row[0] == field:
+                        row[1] = str(value)
+                        field_found = True
+                        break
+                if not field_found:
+                    rows.append([field, str(value)])
 
             with open(csv_file, 'w', encoding='utf-8', newline='') as f:
                 csv_writer = csv.writer(f)
                 csv_writer.writerows(rows)
 
-            logger.debug(f"已更新CSV文件: {csv_file}")
+            logger.debug(f"已更新CSV文件: {csv_file}, 更新字段: {', '.join(fields_to_update.keys())}")
         except Exception as e:
             logger.error(f"更新CSV文件失败: {str(e)}")
             raise
@@ -201,17 +206,9 @@ class ManageTab(ttk.Frame):
             UI.show_error(self.winfo_toplevel(), f"{action_name}失败", e)
             logger.error(f"{action_name}失败: {str(e)}")
 
-    def get_trial_usage(self, cookie_str: str) -> Tuple[str, str]:
-
+    def get_trial_usage(self, cookie_str: str) -> Tuple[str, str, str, str]:
         if not cookie_str:
             raise ValueError("Cookie信息不能为空")
-
-        user_id_match = re.search(r'WorkosCursorSessionToken=(user_[^%:]+)', cookie_str)
-        if not user_id_match:
-            raise ValueError("无法从cookie中提取用户ID")
-
-        user_id = user_id_match.group(1)
-        url = f"https://www.cursor.com/api/usage?user={user_id}"
 
         headers = {
             'Cookie': cookie_str if cookie_str.startswith(
@@ -219,34 +216,45 @@ class ManageTab(ttk.Frame):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         }
 
-        response = requests.get(url, headers=headers)
-        if response.status_code != 200:
-            raise ValueError(f"API请求失败: {response.status_code}")
+        # 获取用户信息
+        user_info_url = "https://www.cursor.com/api/auth/me"
+        user_info_response = requests.get(user_info_url, headers=headers)
+        if user_info_response.status_code != 200:
+            raise ValueError(f"用户信息API请求失败: {user_info_response.status_code}")
 
-        data = response.json()
+        user_info = user_info_response.json()
+        email = user_info.get('email', '未知')
+        # 从邮箱中提取域名
+        domain = email.split('@')[-1] if '@' in email else '未知'
 
-        gpt4_data = data.get('gpt-4', {})
+        # 获取使用配额
+        user_id = user_info.get('sub')
+        if not user_id:
+            raise ValueError("无法获取用户ID")
+
+        usage_url = f"https://www.cursor.com/api/usage?user={user_id}"
+        usage_response = requests.get(usage_url, headers=headers)
+        if usage_response.status_code != 200:
+            raise ValueError(f"使用配额API请求失败: {usage_response.status_code}")
+
+        usage_data = usage_response.json()
+        gpt4_data = usage_data.get('gpt-4', {})
         used_quota = gpt4_data.get('numRequestsTotal', 0)
         max_quota = gpt4_data.get('maxRequestUsage', 0)
-
         quota = f"{used_quota} / {max_quota}" if max_quota else '未知'
 
-        start_date_str = data.get('startOfMonth')
-        if start_date_str:
-            try:
-                start_date = datetime.strptime(start_date_str.split('.')[0], '%Y-%m-%dT%H:%M:%S')
-                end_date = start_date + timedelta(days=15)
-                remaining_days = (end_date - datetime.now()).days
-                days = '0' if remaining_days <= 0 else str(remaining_days)
-            except Exception as e:
-                logger.error(f"计算剩余天数时出错: {str(e)}")
-                days = '未知'
-        else:
-            days = '未知'
+        # 获取试用天数
+        trial_url = "https://www.cursor.com/api/auth/stripe"
+        trial_response = requests.get(trial_url, headers=headers)
+        if trial_response.status_code != 200:
+            raise ValueError(f"试用天数API请求失败: {trial_response.status_code}")
 
-        return quota, days
+        trial_data = trial_response.json()
+        days = str(trial_data.get('daysRemainingOnTrial', '未知'))
 
-    def show_trial_info(self):
+        return domain, email, quota, days
+
+    def update_account_info(self):
         def get_trial_info(csv_file_path: str, account_data: Dict[str, str]) -> None:
             cookie_str = account_data.get('COOKIES_STR', '')
             if not cookie_str:
@@ -254,28 +262,37 @@ class ManageTab(ttk.Frame):
 
             def fetch_and_display_info():
                 try:
-                    logger.debug("开始获取试用信息...")
+                    logger.debug("开始获取账号信息...")
                     logger.debug(f"获取到的cookie字符串长度: {len(cookie_str) if cookie_str else 0}")
 
-                    quota, days = self.get_trial_usage(cookie_str)
-                    logger.info(f"成功获取试用信息: 额度={quota}, 天数={days}")
+                    domain, email, quota, days = self.get_trial_usage(cookie_str)
+                    logger.info(f"成功获取账号信息: 域名={domain}, 邮箱={email}, 额度={quota}, 天数={days}")
 
+                    self.account_tree.set(self.selected_item, '域名', domain)
+                    self.account_tree.set(self.selected_item, '邮箱', email)
                     self.account_tree.set(self.selected_item, '额度', quota)
                     self.account_tree.set(self.selected_item, '剩余天数', days)
 
                     try:
-                        self.update_csv_file(csv_file_path, str(quota), str(days))
+                        self.update_csv_file(csv_file_path,
+                                           DOMAIN=domain,
+                                           EMAIL=email,
+                                           QUOTA=quota,
+                                           DAYS=days)
                     except Exception as e:
                         logger.error(f"更新CSV文件失败: {str(e)}")
                         raise ValueError(f"更新CSV文件失败: {str(e)}")
 
                     self.winfo_toplevel().after(0, lambda: UI.show_success(
                         self.winfo_toplevel(),
-                        f"账户可用额度: {quota}\n剩余天数: {days}"
+                        f"域名: {domain}\n"
+                        f"邮箱: {email}\n"
+                        f"可用额度: {quota}\n"
+                        f"剩余天数: {days}"
                     ))
                 except Exception as e:
                     error_message = str(e)
-                    logger.error(f"获取试用信息失败: {error_message}")
+                    logger.error(f"获取账号信息失败: {error_message}")
                     logger.exception("详细错误信息:")
                     self.winfo_toplevel().after(0, lambda: UI.show_error(
                         self.winfo_toplevel(),
@@ -283,10 +300,10 @@ class ManageTab(ttk.Frame):
                         error_message
                     ))
 
-            logger.debug("开始获取信息...")
+            logger.debug("开始更新账号信息...")
             threading.Thread(target=fetch_and_display_info, daemon=True).start()
 
-        self.handle_account_action("获取试用信息", get_trial_info)
+        self.handle_account_action("获取账号信息", get_trial_info)
 
     def update_auth(self) -> None:
         def update_account_auth(csv_file_path: str, account_data: Dict[str, str]) -> None:
