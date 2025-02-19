@@ -82,7 +82,6 @@ class LogWindow(ttk.Frame):
         self.text.configure(state='disabled')
 
     def setup_tags(self):
-        """设置不同日志级别的颜色标签"""
         for level, color in self.LOG_COLORS.items():
             self.text.tag_configure(level, foreground=color)
 
