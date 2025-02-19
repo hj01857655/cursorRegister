@@ -27,15 +27,14 @@ class RegisterTab(ttk.Frame):
                 entry.insert(0, os.getenv(var_name))
             self.entries[var_name] = entry
 
-        cookie_frame = UI.create_labeled_frame(self, "Cookie设置")
-        self.entries['cookie'] = UI.create_labeled_entry(cookie_frame, "Cookie", 0)
+        self.entries['cookie'] = UI.create_labeled_entry(account_frame, "Cookie", len(self.env_vars))
         if os.getenv('COOKIES_STR'):
             self.entries['cookie'].insert(0, os.getenv('COOKIES_STR'))
         else:
             self.entries['cookie'].insert(0, "WorkosCursorSessionToken")
 
-        radio_frame = ttk.Frame(self, style='TFrame')
-        radio_frame.pack(fill=tk.X, pady=(8, 0))
+        radio_frame = ttk.Frame(account_frame, style='TFrame')
+        radio_frame.grid(row=len(self.env_vars) + 1, column=0, columnspan=2, sticky='w', pady=(8, 0))
 
         mode_label = ttk.Label(radio_frame, text="注册模式:", style='TLabel')
         mode_label.pack(side=tk.LEFT, padx=(3, 8))
