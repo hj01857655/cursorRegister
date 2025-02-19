@@ -38,7 +38,7 @@ class LogWindow(tk.Toplevel):
 
         self.protocol("WM_DELETE_WINDOW", self.withdraw)
 
-        self.show_debug = tk.BooleanVar(value=True)
+        self.show_debug = tk.BooleanVar(value=False)
         self.log_buffer = deque(maxlen=self.MAX_BUFFER_SIZE)
         self.buffer_lock = Lock()
         self.pending_logs = []
