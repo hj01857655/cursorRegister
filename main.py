@@ -1,3 +1,8 @@
+WINDOW_WIDTH = 460
+WINDOW_HEIGHT = 460
+WINDOW_TITLE = "Cursor注册小助手"
+BACKUP_DIR = "env_backups"
+
 import os
 import sys
 import tkinter as tk
@@ -16,10 +21,10 @@ console_mode = False
 
 @dataclass
 class WindowConfig:
-    width: int = 460
-    height: int = 530
-    title: str = "Cursor注册小助手"
-    backup_dir: str = "env_backups"
+    width: int = WINDOW_WIDTH
+    height: int = WINDOW_HEIGHT
+    title: str = WINDOW_TITLE
+    backup_dir: str = BACKUP_DIR
     env_vars: List[Tuple[str, str]] = field(default_factory=lambda: [
         ('DOMAIN', '域名'), ('EMAIL', '邮箱'), ('PASSWORD', '密码')
     ])
@@ -83,11 +88,11 @@ class CursorApp:
         notebook.add(about_tab, text="关于")
 
         footer_frame = ttk.Frame(content_frame, style='TFrame')
-        footer_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=2)
+        footer_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=6)
 
         footer = ttk.Label(
             footer_frame,
-            text="powered by kto 仅供学习使用",
+            text="POWERED BY KTO 仅供学习使用",
             style='Footer.TLabel'
         )
         footer.pack(side=tk.LEFT)
@@ -98,7 +103,7 @@ class CursorApp:
             style='Custom.TButton',
             command=self.toggle_log_window,
             width=10,
-            padding=(0, -2)
+            padding=(0, 2, 0, 2)
         )
         log_button.pack(side=tk.RIGHT, padx=(0, 2))
 

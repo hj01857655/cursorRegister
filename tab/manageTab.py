@@ -1,3 +1,13 @@
+TREE_VIEW_HEIGHT = 7
+COLUMN_WIDTH = 100
+BUTTON_WIDTH = 15
+PADDING = {
+    'SMALL': 2,
+    'MEDIUM': 5,
+    'LARGE': 8,
+    'XLARGE': 10
+}
+
 import csv
 import glob
 import os
@@ -26,11 +36,11 @@ class ManageTab(ttk.Frame):
         accounts_frame = UI.create_labeled_frame(self, "已保存账号")
 
         columns = ('域名', '邮箱', '额度', '剩余天数')
-        tree = ttk.Treeview(accounts_frame, columns=columns, show='headings', height=10)
+        tree = ttk.Treeview(accounts_frame, columns=columns, show='headings', height=TREE_VIEW_HEIGHT)
 
         for col in columns:
             tree.heading(col, text=col)
-            tree.column(col, width=100)
+            tree.column(col, width=COLUMN_WIDTH)
 
         tree.bind('<<TreeviewSelect>>', self.on_select)
 
@@ -40,52 +50,32 @@ class ManageTab(ttk.Frame):
         tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-        button_frame = ttk.Frame(self, style='TFrame')
-        button_frame.pack(pady=(8, 0), padx=2)
 
-        container_frame = ttk.Frame(button_frame, style='TFrame')
-        container_frame.pack(expand=True)
+        outer_button_frame = ttk.Frame(self, style='TFrame')
+        outer_button_frame.pack(pady=(PADDING['LARGE'], 0), expand=True)
 
-        first_button_frame = ttk.Frame(container_frame, style='TFrame')
-        first_button_frame.pack(fill=tk.X, expand=True, pady=(0, 5))
+        button_frame = ttk.Frame(outer_button_frame, style='TFrame')
+        button_frame.pack(anchor=tk.W)
 
-        second_button_frame = ttk.Frame(container_frame, style='TFrame')
-        second_button_frame.pack(fill=tk.X, expand=True, pady=(5, 5))
 
-        third_button_frame = ttk.Frame(container_frame, style='TFrame')
-        third_button_frame.pack(fill=tk.X, expand=True, pady=(5, 10))
+        first_row_frame = ttk.Frame(button_frame, style='TFrame')
+        first_row_frame.pack(pady=(0, PADDING['MEDIUM']), anchor=tk.W)
+        
+        ttk.Button(first_row_frame, text="刷新列表", command=self.refresh_list, 
+                  style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
+        ttk.Button(first_row_frame, text="更新信息", command=self.update_account_info, 
+                  style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
+        ttk.Button(first_row_frame, text="更换账号", command=self.update_auth, 
+                  style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
 
-        buttons = [
-            ("刷新列表", self.refresh_list),
-            ("更新信息", self.update_account_info),
-            ("更换账号", self.update_auth),
-            ("重置ID", self.reset_machine_id),
-            ("删除账号", self.delete_account)
-        ]
 
-        # placeholder_buttons = [
-        #     ("占位按钮1", None),
-        #     ("占位按钮2", None),
-        #     ("占位按钮3", None),
-        #     ("占位按钮4", None)
-        # ]
-        # buttons.extend(placeholder_buttons)
-
-        frames = [first_button_frame, second_button_frame, third_button_frame]
-        for i, (text, command) in enumerate(buttons):
-            frame_index = i // 3
-            if frame_index >= len(frames):
-                break
-
-            btn = ttk.Button(
-                frames[frame_index],
-                text=text,
-                command=command,
-                style='Custom.TButton',
-                width=15,
-                state='normal' if command else 'disabled'
-            )
-            btn.pack(side=tk.LEFT, padx=3, expand=True)
+        second_row_frame = ttk.Frame(button_frame, style='TFrame')
+        second_row_frame.pack(pady=(0, PADDING['XLARGE']), anchor=tk.W)
+        
+        ttk.Button(second_row_frame, text="重置ID", command=self.reset_machine_id, 
+                  style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
+        ttk.Button(second_row_frame, text="删除账号", command=self.delete_account, 
+                  style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
 
         self.account_tree = tree
         self.selected_item = None
@@ -211,7 +201,7 @@ class ManageTab(ttk.Frame):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         }
 
-        timeout = 10  
+        timeout = 10
         session = requests.Session()
         session.headers.update(headers)
 

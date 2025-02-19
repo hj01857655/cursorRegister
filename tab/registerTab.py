@@ -1,3 +1,9 @@
+DIALOG_WIDTH = 250
+DIALOG_HEIGHT = 180
+DIALOG_CENTER_WIDTH = 300
+DIALOG_CENTER_HEIGHT = 180
+BUTTON_WIDTH = 10
+
 import os
 import threading
 import tkinter as tk
@@ -63,17 +69,21 @@ class RegisterTab(ttk.Frame):
             ).pack(side=tk.LEFT, padx=10)
 
         button_frame = ttk.Frame(self, style='TFrame')
-        button_frame.pack(fill=tk.X, pady=(8, 0))
+        button_frame.pack(pady=(8, 0))
+
+
+        inner_button_frame = ttk.Frame(button_frame, style='TFrame')
+        inner_button_frame.pack(expand=True)
 
         for i, (text, command) in enumerate(self.buttons):
             btn = ttk.Button(
-                button_frame,
+                inner_button_frame,
                 text=text,
                 command=getattr(self, command),
                 style='Custom.TButton',
                 width=10
             )
-            btn.pack(fill=tk.X, padx=2, pady=3)
+            btn.pack(side=tk.LEFT, padx=10)
 
     def _save_env_vars(self, updates: Dict[str, str] = None) -> None:
         if not updates:
@@ -116,8 +126,8 @@ class RegisterTab(ttk.Frame):
         def create_dialog(message: str) -> bool:
             dialog = tk.Toplevel(self)
             dialog.title("等待确认")
-            dialog.geometry("250x180")
-            UI.center_window(dialog, 300, 180)
+            dialog.geometry(f"{DIALOG_WIDTH}x{DIALOG_HEIGHT}")
+            UI.center_window(dialog, DIALOG_CENTER_WIDTH, DIALOG_CENTER_HEIGHT)
             dialog.transient(self)
             dialog.grab_set()
             ttk.Label(

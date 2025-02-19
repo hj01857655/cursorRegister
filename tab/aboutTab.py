@@ -1,14 +1,17 @@
+ABOUT_TAB_HEIGHT = 300
+VERSION = "版本: 0.1.6"
+
 import tkinter as tk
 import webbrowser
 from tkinter import ttk
 
-version = "版本: 0.1.6"
+version = VERSION
 
 
 class AboutTab(ttk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, style='TFrame', **kwargs)
-        self.configure(height=400)
+        self.configure(height=ABOUT_TAB_HEIGHT)
         self.pack_propagate(False)
         self.setup_ui()
 
@@ -17,14 +20,14 @@ class AboutTab(ttk.Frame):
 
     def create_separator(self, container):
         separator = ttk.Separator(container, orient='horizontal')
-        separator.pack(fill=tk.X, pady=10, padx=40)
+        separator.pack(fill=tk.X, pady=2, padx=40)
 
     def setup_ui(self):
         main_container = ttk.Frame(self, style='TFrame')
-        main_container.pack(expand=True, fill=tk.BOTH, padx=40, pady=15)
+        main_container.pack(expand=True, fill=tk.BOTH, padx=40, pady=5)
 
         title_frame = ttk.Frame(main_container)
-        title_frame.pack(fill=tk.X, pady=(0, 5))
+        title_frame.pack(fill=tk.X)
 
         version_info = ttk.Label(
             title_frame,
@@ -47,7 +50,7 @@ class AboutTab(ttk.Frame):
             font=('Microsoft YaHei UI', 10),
             foreground='#202124'
         )
-        author_info.pack(pady=(0, 10))
+        author_info.pack(pady=(0, 1))
 
         description = ttk.Label(
             info_frame,
@@ -58,7 +61,7 @@ class AboutTab(ttk.Frame):
             font=('Microsoft YaHei UI', 10),
             foreground='#202124'
         )
-        description.pack(pady=(0, 3))
+        description.pack(pady=(0, 1))
 
         description2 = ttk.Label(
             info_frame,
@@ -69,7 +72,7 @@ class AboutTab(ttk.Frame):
             font=('Microsoft YaHei UI', 10),
             foreground='#202124'
         )
-        description2.pack(pady=(0, 10))
+        description2.pack(pady=(0, 1))
 
         github_info = ttk.Label(
             info_frame,
@@ -79,7 +82,7 @@ class AboutTab(ttk.Frame):
             foreground='#1a73e8',
             font=('Microsoft YaHei UI', 10, 'underline')
         )
-        github_info.pack(pady=(0, 3))
+        github_info.pack(pady=(0, 1))
         github_info.bind("<Button-1>", self.open_github)
 
         self.create_separator(main_container)
@@ -94,7 +97,7 @@ class AboutTab(ttk.Frame):
             font=('Microsoft YaHei UI', 10, 'bold'),
             foreground='#5f6368'
         )
-        disclaimer_title.pack(pady=(0, 3))
+        disclaimer_title.pack(pady=(0, 1))
 
         disclaimer_text = ttk.Label(
             disclaimer_frame,
@@ -105,7 +108,7 @@ class AboutTab(ttk.Frame):
             font=('Microsoft YaHei UI', 10),
             foreground='#5f6368'
         )
-        disclaimer_text.pack(pady=(0, 3))
+        disclaimer_text.pack(pady=(0, 1))
 
         disclaimer_text2_frame = ttk.Frame(disclaimer_frame)
         disclaimer_text2_frame.pack(fill=tk.X)
@@ -119,7 +122,7 @@ class AboutTab(ttk.Frame):
             font=('Microsoft YaHei UI', 10),
             foreground='#5f6368'
         )
-        disclaimer_text2.pack(pady=(0, 5))
+        disclaimer_text2.pack(pady=(0, 1))
 
         license_info = ttk.Label(
             disclaimer_frame,
@@ -129,7 +132,7 @@ class AboutTab(ttk.Frame):
             foreground='#5f6368',
             justify='center'
         )
-        license_info.pack(pady=(0, 3))
+        license_info.pack(pady=(0, 1))
 
         copyright_info = ttk.Label(
             main_container,
@@ -138,4 +141,4 @@ class AboutTab(ttk.Frame):
             font=('Microsoft YaHei UI', 9),
             foreground='#80868b'
         )
-        copyright_info.pack(side=tk.BOTTOM, pady=10)
+        copyright_info.pack(side=tk.BOTTOM, pady=2)

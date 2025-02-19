@@ -1,3 +1,7 @@
+MAX_BUFFER_SIZE = 1000
+UI_UPDATE_BATCH = 50
+MAX_TEXT_LENGTH = 50000
+
 import io
 import tkinter as tk
 from collections import deque
@@ -9,10 +13,6 @@ from .ui import UI
 
 
 class LogWindow(tk.Toplevel):
-    MAX_BUFFER_SIZE = 1000
-    UI_UPDATE_BATCH = 50
-    MAX_TEXT_LENGTH = 50000
-
     LOG_COLORS = {
         'DEBUG': UI.COLORS['secondary'],
         'INFO': UI.COLORS['primary'],
@@ -25,10 +25,9 @@ class LogWindow(tk.Toplevel):
         super().__init__(parent)
         self.title("日志窗口")
         self.withdraw()
-
-        width = 460
-        height = 530
-        x = parent.winfo_x() + parent.winfo_width()
+        width = parent.winfo_width()
+        height = parent.winfo_height()
+        x = parent.winfo_x() + width
         y = parent.winfo_y()
         self.geometry(f"{width}x{height}+{x}+{y}")
 
@@ -39,7 +38,7 @@ class LogWindow(tk.Toplevel):
         self.protocol("WM_DELETE_WINDOW", self.withdraw)
 
         self.show_debug = tk.BooleanVar(value=False)
-        self.log_buffer = deque(maxlen=self.MAX_BUFFER_SIZE)
+        self.log_buffer = deque(maxlen=MAX_BUFFER_SIZE)
         self.buffer_lock = Lock()
         self.pending_logs = []
         self.update_scheduled = False
@@ -127,7 +126,7 @@ class LogWindow(tk.Toplevel):
     def schedule_update(self):
         if not self.update_scheduled:
             self.update_scheduled = True
-            self.winfo_toplevel().after(self.UI_UPDATE_BATCH, self.batch_update)
+            self.winfo_toplevel().after(UI_UPDATE_BATCH, self.batch_update)
 
     def batch_update(self):
         self.update_scheduled = False
@@ -144,9 +143,9 @@ class LogWindow(tk.Toplevel):
         show_debug = self.show_debug.get()
 
         current_length = float(self.text.index(tk.END))
-        if current_length > self.MAX_TEXT_LENGTH:
+        if current_length > MAX_TEXT_LENGTH:
             self.text.configure(state='normal')
-            self.text.delete(1.0, f"{current_length - self.MAX_TEXT_LENGTH}.0")
+            self.text.delete(1.0, f"{current_length - MAX_TEXT_LENGTH}.0")
             self.text.configure(state='disabled')
 
         self.text.configure(state='normal')
@@ -180,11 +179,12 @@ class LogWindow(tk.Toplevel):
             self.text_buffer.close()
 
     def show_window(self):
-        width = 460
-        height = 530
         parent = self.master
-
         parent.update_idletasks()
+        
+  
+        width = parent.winfo_width()
+        height = parent.winfo_height()
         x = parent.winfo_x() + parent.winfo_width() + 10
         y = parent.winfo_y()
 
