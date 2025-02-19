@@ -90,7 +90,7 @@ class UI:
                   )
 
         style.configure('TEntry',
-                        padding=8,
+                        padding=5,
                         relief='flat',
                         borderwidth=1,
                         selectbackground=UI.COLORS['primary'],
@@ -142,7 +142,7 @@ class UI:
     @staticmethod
     def create_labeled_entry(parent, label_text: str, row: int, **kwargs) -> ttk.Entry:
         frame = ttk.Frame(parent, style='TFrame')
-        frame.grid(row=row, column=0, columnspan=2, sticky='ew', padx=6, pady=3)
+        frame.grid(row=row, column=0, columnspan=2, sticky='ew', padx=6, pady=6)
 
         label = ttk.Label(frame, text=f"{label_text}:", style='TLabel')
         label.pack(side=tk.LEFT, padx=(3, 8))
