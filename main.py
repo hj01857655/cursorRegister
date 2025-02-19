@@ -280,6 +280,10 @@ class CursorApp:
     @error_handler
     def backup_account(self) -> None:
         try:
+            if cookie_value := self.entries['cookie'].get().strip():
+                if not Utils.update_env_vars({'COOKIES_STR': cookie_value}):
+                    raise RuntimeError("更新COOKIES_STR环境变量失败")
+                load_dotenv(override=True)
         
             env_vars = {
                 "DOMAIN": os.getenv("DOMAIN", ""),
