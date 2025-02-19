@@ -8,10 +8,8 @@ import sqlite3
 import string
 import subprocess
 import sys
-import uuid
-import re
 import time
-import requests
+import uuid
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
@@ -28,6 +26,7 @@ from typing import (
     Optional
 )
 
+import requests
 from loguru import logger
 
 T = TypeVar('T')
@@ -53,10 +52,10 @@ class Result(Generic[T]):
 def file_operation_context(file_path: Path, require_write: bool = True) -> ContextManager[Path]:
     if not file_path.exists():
         raise FileNotFoundError(f"文件不存在: {file_path}")
-    
+
     if require_write and not os.access(str(file_path), os.W_OK):
         Utils.manage_file_permissions(file_path, False)
-    
+
     try:
         yield file_path
     finally:
@@ -189,9 +188,10 @@ class Utils:
             with file_operation_context(source, require_write=False) as src:
                 Utils.ensure_path(backup_dir)
                 backup_path = backup_dir / f"{prefix}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-                
+
                 try:
-                    backup_files = sorted(backup_dir.glob(f"{prefix}_*"), key=lambda x: x.stat().st_ctime)[:-max_backups + 1]
+                    backup_files = sorted(backup_dir.glob(f"{prefix}_*"), key=lambda x: x.stat().st_ctime)[
+                                   :-max_backups + 1]
                     for f in backup_files:
                         try:
                             f.unlink()
@@ -449,62 +449,64 @@ class CursorManager:
             logger.error(f"process_cookies 执行失败: {e}")
             return Result.fail(str(e))
 
+
 class MoemailManager:
-    
+
     def __init__(self):
         self.api_key = os.getenv("API_KEY")
         if not self.api_key:
             raise ValueError("未设置API_KEY环境变量")
-        
+
         self.headers = {
             'Content-Type': 'application/json',
             'X-API-Key': self.api_key
         }
         self.base_url = os.getenv("MOE_MAIL_URL")
+
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
         try:
             base = self.base_url.rstrip('/')
             clean_endpoint = endpoint.lstrip('/')
             url = f"{base}/api/{clean_endpoint}"
             response = requests.request(method, url, headers=self.headers, **kwargs)
-            
+
             if response.status_code == 200:
                 response_data = response.json()
                 logger.debug(f"API响应数据: {response_data}")
                 return Result.ok(response_data)
             return Result.fail(f"请求失败: {response.text}")
-            
+
         except Exception as e:
             return Result.fail(f"请求出错: {str(e)}")
-    
+
     def create_email(self, email: str, expiry_time: int = 3600000) -> Result[dict]:
         try:
             name, domain = email.split('@')
-            
+
             data = {
                 "name": name,
                 "expiryTime": expiry_time,
                 "domain": domain
             }
-            
+
             result = self._make_request("POST", "/emails/generate", json=data)
             if not result.success:
                 logger.error(f"创建邮箱失败: {result.message}")
                 return result
             return Result.ok(result.data)
-            
+
         except Exception as e:
             logger.error(f"创建邮箱时出错: {str(e)}")
             return Result.fail(str(e))
-    
+
     def get_email_list(self, cursor: Optional[str] = None) -> Result[dict]:
         params = {"cursor": cursor} if cursor else {}
         return self._make_request("GET", "/emails", params=params)
-    
+
     def get_email_messages(self, email_id: str, cursor: Optional[str] = None) -> Result[dict]:
         params = {"cursor": cursor} if cursor else {}
         return self._make_request("GET", f"/emails/{email_id}", params=params)
-    
+
     def get_message_detail(self, email_id: str, message_id: str) -> Result[dict]:
         return self._make_request("GET", f"/emails/{email_id}/{message_id}")
 
@@ -533,18 +535,18 @@ class MoemailManager:
             messages = messages_result.data.get('messages', [])
             start_time = time.time()
             retry_interval = 2
-            
+
             while not messages:
                 if time.time() - start_time > timeout:
                     return Result.fail("等待邮件超时，1分钟内未收到任何邮件")
-                    
+
                 logger.debug(f"邮箱暂无邮件，{retry_interval}秒后重试...")
                 time.sleep(retry_interval)
-                
+
                 messages_result = self.get_email_messages(target['id'])
                 if not messages_result:
                     return Result.fail(f"获取邮件列表失败: {messages_result.message}")
-                    
+
                 messages = messages_result.data.get('messages', [])
                 logger.debug(f"第{int((time.time() - start_time) / retry_interval)}次尝试获取邮件...")
 

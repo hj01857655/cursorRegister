@@ -1,21 +1,22 @@
 import os
-import tkinter as tk
-from tkinter import ttk, messagebox
-from loguru import logger
-from datetime import datetime
-from typing import Dict, List, Tuple, Callable
-from pathlib import Path
 import threading
-from dotenv import load_dotenv
+import tkinter as tk
+from datetime import datetime
+from pathlib import Path
+from tkinter import ttk
+from typing import Dict, List, Tuple, Callable
 
-from .ui import UI
-from utils import Utils, Result, error_handler, CursorManager
+from dotenv import load_dotenv
+from loguru import logger
+
 from registerAc import CursorRegistration
+from utils import Utils, Result, error_handler, CursorManager
+from .ui import UI
 
 
 class RegisterTab(ttk.Frame):
-    def __init__(self, parent, env_vars: List[Tuple[str, str]], buttons: List[Tuple[str, str]], 
-                 entries: Dict[str, ttk.Entry], selected_mode: tk.StringVar, 
+    def __init__(self, parent, env_vars: List[Tuple[str, str]], buttons: List[Tuple[str, str]],
+                 entries: Dict[str, ttk.Entry], selected_mode: tk.StringVar,
                  button_commands: Dict[str, Callable], **kwargs):
         super().__init__(parent, style='TFrame', **kwargs)
         self.env_vars = env_vars
@@ -235,7 +236,7 @@ class RegisterTab(ttk.Frame):
                 if not Utils.update_env_vars({'COOKIES_STR': cookie_value}):
                     raise RuntimeError("更新COOKIES_STR环境变量失败")
                 load_dotenv(override=True)
-        
+
             env_vars = {
                 "DOMAIN": os.getenv("DOMAIN", ""),
                 "EMAIL": os.getenv("EMAIL", ""),
@@ -257,7 +258,7 @@ class RegisterTab(ttk.Frame):
             with open(backup_path, 'w', encoding='utf-8', newline='') as f:
                 f.write("variable,value\n")
                 for key, value in env_vars.items():
-                    if value:  
+                    if value:
                         f.write(f"{key},{value}\n")
 
             logger.info(f"账号信息已备份到: {backup_path}")
@@ -266,5 +267,3 @@ class RegisterTab(ttk.Frame):
         except Exception as e:
             logger.error(f"账号备份失败: {str(e)}")
             UI.show_error(self, "账号备份失败", e)
-
-

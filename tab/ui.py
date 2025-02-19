@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from loguru import logger
 
+from loguru import logger
 
 
 class UI:
@@ -37,21 +37,21 @@ class UI:
 
         style.configure('TFrame', background=UI.COLORS['bg'])
 
-        style.configure('TNotebook', 
-                       background=UI.COLORS['bg'],
-                       borderwidth=0)
-        
+        style.configure('TNotebook',
+                        background=UI.COLORS['bg'],
+                        borderwidth=0)
+
         style.configure('TNotebook.Tab',
-                       padding=(15, 5),
-                       font=(UI.FONT[0], 10),
-                       background=UI.COLORS['bg'],
-                       foreground=UI.COLORS['label_fg'])
-        
+                        padding=(15, 5),
+                        font=(UI.FONT[0], 10),
+                        background=UI.COLORS['bg'],
+                        foreground=UI.COLORS['label_fg'])
+
         style.map('TNotebook.Tab',
-                 background=[('selected', UI.COLORS['primary']),
-                            ('active', UI.COLORS['hover'])],
-                 foreground=[('selected', 'black'),
-                            ('active', 'black')])
+                  background=[('selected', UI.COLORS['primary']),
+                              ('active', UI.COLORS['hover'])],
+                  foreground=[('selected', 'black'),
+                              ('active', 'black')])
 
         style.configure('TLabelframe',
                         background=UI.COLORS['card_bg'],
@@ -189,4 +189,3 @@ class UI:
     @staticmethod
     def show_warning(window: tk.Tk, message: str) -> None:
         UI.show_message(window, "警告", message, 'showwarning')
-

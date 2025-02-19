@@ -1,15 +1,15 @@
 import tkinter as tk
-from tkinter import ttk
-from .ui import UI
 import webbrowser
+from tkinter import ttk
 
-version ="版本: 0.1.6"
+version = "版本: 0.1.6"
+
 
 class AboutTab(ttk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, style='TFrame', **kwargs)
         self.configure(height=400)
-        self.pack_propagate(False)  
+        self.pack_propagate(False)
         self.setup_ui()
 
     def open_github(self, event):
@@ -31,7 +31,7 @@ class AboutTab(ttk.Frame):
             text=version,
             style='TLabel',
             font=('Microsoft YaHei UI', 10),
-            foreground='#5f6368'  
+            foreground='#5f6368'
         )
         version_info.pack()
 
@@ -45,7 +45,7 @@ class AboutTab(ttk.Frame):
             text="作者: kto",
             style='TLabel',
             font=('Microsoft YaHei UI', 10),
-            foreground='#202124'  
+            foreground='#202124'
         )
         author_info.pack(pady=(0, 10))
 
@@ -136,6 +136,6 @@ class AboutTab(ttk.Frame):
             text="© 2025 仅供学习交流",
             style='Footer.TLabel',
             font=('Microsoft YaHei UI', 9),
-            foreground='#80868b'  
+            foreground='#80868b'
         )
-        copyright_info.pack(side=tk.BOTTOM, pady=10) 
+        copyright_info.pack(side=tk.BOTTOM, pady=10)

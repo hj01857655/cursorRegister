@@ -1,15 +1,16 @@
-import os
-import tkinter as tk
-from tkinter import ttk, messagebox
-from loguru import logger
-from datetime import datetime, timedelta
-from typing import Dict, List, Tuple, Callable
-import glob
 import csv
-import threading
-import requests
+import glob
+import os
 import re
-from registerAc import CursorRegistration
+import threading
+import tkinter as tk
+from datetime import datetime, timedelta
+from tkinter import ttk, messagebox
+from typing import Dict, List, Tuple, Callable
+
+import requests
+from loguru import logger
+
 from utils import CursorManager, error_handler
 from .ui import UI
 
@@ -22,19 +23,19 @@ class ManageTab(ttk.Frame):
 
     def setup_ui(self):
         accounts_frame = UI.create_labeled_frame(self, "已保存账号")
-        
+
         columns = ('域名', '邮箱', '额度', '剩余天数')
         tree = ttk.Treeview(accounts_frame, columns=columns, show='headings', height=10)
-        
+
         for col in columns:
             tree.heading(col, text=col)
             tree.column(col, width=100)
-        
+
         tree.bind('<<TreeviewSelect>>', self.on_select)
-        
+
         scrollbar = ttk.Scrollbar(accounts_frame, orient="vertical", command=tree.yview)
         tree.configure(yscrollcommand=scrollbar.set)
-        
+
         tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
@@ -44,10 +45,9 @@ class ManageTab(ttk.Frame):
         container_frame = ttk.Frame(button_frame, style='TFrame')
         container_frame.pack(expand=True)
 
- 
         first_button_frame = ttk.Frame(container_frame, style='TFrame')
         first_button_frame.pack(fill=tk.X, expand=True, pady=(0, 5))
-        
+
         second_button_frame = ttk.Frame(container_frame, style='TFrame')
         second_button_frame.pack(fill=tk.X, expand=True, pady=(5, 5))
 
@@ -62,7 +62,6 @@ class ManageTab(ttk.Frame):
             ("删除账号", self.delete_account)
         ]
 
-
         # placeholder_buttons = [
         #     ("占位按钮1", None),
         #     ("占位按钮2", None),
@@ -73,10 +72,10 @@ class ManageTab(ttk.Frame):
 
         frames = [first_button_frame, second_button_frame, third_button_frame]
         for i, (text, command) in enumerate(buttons):
-            frame_index = i // 3  
+            frame_index = i // 3
             if frame_index >= len(frames):
                 break
-            
+
             btn = ttk.Button(
                 frames[frame_index],
                 text=text,
@@ -106,9 +105,9 @@ class ManageTab(ttk.Frame):
 
     def parse_csv_file(self, csv_file: str) -> Dict[str, str]:
         account_data = {
-            'DOMAIN': '', 
-            'EMAIL': '', 
-            'COOKIES_STR': '', 
+            'DOMAIN': '',
+            'EMAIL': '',
+            'COOKIES_STR': '',
             'QUOTA': '未知',
             'DAYS': '未知',
             'PASSWORD': '',
@@ -162,7 +161,7 @@ class ManageTab(ttk.Frame):
     def refresh_list(self):
         for item in self.account_tree.get_children():
             self.account_tree.delete(item)
-        
+
         try:
             csv_files = self.get_csv_files()
             for csv_file in csv_files:
@@ -173,7 +172,7 @@ class ManageTab(ttk.Frame):
                     account_data['QUOTA'],
                     account_data['DAYS']
                 ))
-            
+
             logger.info("账号列表已刷新")
         except Exception as e:
             UI.show_error(self.winfo_toplevel(), "刷新列表失败", e)
@@ -188,10 +187,10 @@ class ManageTab(ttk.Frame):
 
         csv_file_path = self.selected_item
         account_data = self.parse_csv_file(csv_file_path)
-        
+
         if not account_data['DOMAIN'] or not account_data['EMAIL']:
             raise ValueError("账号信息不完整")
-            
+
         return csv_file_path, account_data
 
     def handle_account_action(self, action_name: str, action: Callable[[str, Dict[str, str]], None]) -> None:
@@ -203,34 +202,35 @@ class ManageTab(ttk.Frame):
             logger.error(f"{action_name}失败: {str(e)}")
 
     def get_trial_usage(self, cookie_str: str) -> Tuple[str, str]:
-    
+
         if not cookie_str:
             raise ValueError("Cookie信息不能为空")
 
         user_id_match = re.search(r'WorkosCursorSessionToken=(user_[^%:]+)', cookie_str)
         if not user_id_match:
             raise ValueError("无法从cookie中提取用户ID")
-        
+
         user_id = user_id_match.group(1)
         url = f"https://www.cursor.com/api/usage?user={user_id}"
-        
+
         headers = {
-            'Cookie': cookie_str if cookie_str.startswith('WorkosCursorSessionToken=') else f'WorkosCursorSessionToken={cookie_str}',
+            'Cookie': cookie_str if cookie_str.startswith(
+                'WorkosCursorSessionToken=') else f'WorkosCursorSessionToken={cookie_str}',
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
         }
-        
+
         response = requests.get(url, headers=headers)
         if response.status_code != 200:
             raise ValueError(f"API请求失败: {response.status_code}")
-        
+
         data = response.json()
-        
+
         gpt4_data = data.get('gpt-4', {})
         used_quota = gpt4_data.get('numRequestsTotal', 0)
         max_quota = gpt4_data.get('maxRequestUsage', 0)
-        
+
         quota = f"{used_quota} / {max_quota}" if max_quota else '未知'
-        
+
         start_date_str = data.get('startOfMonth')
         if start_date_str:
             try:
@@ -243,7 +243,7 @@ class ManageTab(ttk.Frame):
                 days = '未知'
         else:
             days = '未知'
-            
+
         return quota, days
 
     def show_trial_info(self):
@@ -256,19 +256,19 @@ class ManageTab(ttk.Frame):
                 try:
                     logger.debug("开始获取试用信息...")
                     logger.debug(f"获取到的cookie字符串长度: {len(cookie_str) if cookie_str else 0}")
-                    
+
                     quota, days = self.get_trial_usage(cookie_str)
                     logger.info(f"成功获取试用信息: 额度={quota}, 天数={days}")
-                    
+
                     self.account_tree.set(self.selected_item, '额度', quota)
                     self.account_tree.set(self.selected_item, '剩余天数', days)
-                    
+
                     try:
                         self.update_csv_file(csv_file_path, str(quota), str(days))
                     except Exception as e:
                         logger.error(f"更新CSV文件失败: {str(e)}")
                         raise ValueError(f"更新CSV文件失败: {str(e)}")
-                    
+
                     self.winfo_toplevel().after(0, lambda: UI.show_success(
                         self.winfo_toplevel(),
                         f"账户可用额度: {quota}\n剩余天数: {days}"
@@ -278,8 +278,8 @@ class ManageTab(ttk.Frame):
                     logger.error(f"获取试用信息失败: {error_message}")
                     logger.exception("详细错误信息:")
                     self.winfo_toplevel().after(0, lambda: UI.show_error(
-                        self.winfo_toplevel(), 
-                        "获取账号信息失败", 
+                        self.winfo_toplevel(),
+                        "获取账号信息失败",
                         error_message
                     ))
 
@@ -316,7 +316,7 @@ class ManageTab(ttk.Frame):
                 f"额度：{account_data['QUOTA']}\n"
                 f"剩余天数：{account_data['DAYS']}"
             )
-            
+
             if not messagebox.askyesno("确认删除", confirm_message, icon='warning'):
                 return
 
@@ -324,8 +324,8 @@ class ManageTab(ttk.Frame):
                 os.remove(csv_file_path)
                 self.account_tree.delete(self.selected_item)
                 logger.info(f"已删除账号: {account_data['DOMAIN']} - {account_data['EMAIL']}")
-                UI.show_success(self.winfo_toplevel(), 
-                              f"已删除账号: {account_data['DOMAIN']} - {account_data['EMAIL']}")
+                UI.show_success(self.winfo_toplevel(),
+                                f"已删除账号: {account_data['DOMAIN']} - {account_data['EMAIL']}")
             except Exception as e:
                 raise Exception(f"删除文件失败: {str(e)}")
 
@@ -339,4 +339,4 @@ class ManageTab(ttk.Frame):
                 raise Exception(result.message)
             UI.show_success(self.winfo_toplevel(), result.message)
         except Exception as e:
-            UI.show_error(self.winfo_toplevel(), "重置机器ID失败", e) 
+            UI.show_error(self.winfo_toplevel(), "重置机器ID失败", e)

@@ -2,14 +2,12 @@ import os
 import random
 import re
 import time
-from pathlib import Path
 
-import requests
-from utils import MoemailManager
 from DrissionPage import ChromiumOptions, Chromium
 from dotenv import load_dotenv
 from loguru import logger
 
+from utils import MoemailManager
 from utils import Utils
 
 
@@ -38,6 +36,7 @@ class CursorRegistration:
         self.retry_times = 5
         self.browser = self.tab = self.moe = None
         self.admin = False
+
     def _safe_action(self, action, *args, **kwargs):
         try:
             return action(*args, **kwargs)
@@ -78,7 +77,7 @@ class CursorRegistration:
         logger.debug("开始获取试用信息")
         self.tab.get(self.CURSOR_SETTING_URL)
         logger.debug(f"已访问设置页面: {self.CURSOR_SETTING_URL}")
-        
+
         if cookie:
             logger.debug(f"使用提供的cookie: {cookie}")
             self.tab.set.cookies(cookie)
@@ -88,7 +87,7 @@ class CursorRegistration:
         logger.debug("尝试定位使用额度元素")
         usage_ele = self.tab.ele(
             "css:div.col-span-2 > div > div > div > div > div:nth-child(1) > div.flex.items-center.justify-between.gap-2 > span.font-mono.text-sm\\/\\[0\\.875rem\\]")
-        
+
         logger.debug("尝试定位试用天数元素")
         trial_days = self.tab.ele("css:div > span.ml-1\\.5.opacity-50")
 
@@ -104,7 +103,7 @@ class CursorRegistration:
 
         if not usage_ele or not trial_days:
             raise ValueError("无法获取试用信息，页面结构可能已更改")
-            
+
         logger.debug("成功获取所有试用信息")
         return usage_ele.text, trial_days.text
 
@@ -331,7 +330,8 @@ class CursorRegistration:
                     else:
                         logger.error(f"未找到位置 {idx} 的输入框")
                 time.sleep(random.uniform(1, 3))
-                if not self.tab.wait.url_change(self.CURSOR_URL, timeout=3) and self.CURSOR_EMAIL_VERIFICATION_URL in self.tab.url:
+                if not self.tab.wait.url_change(self.CURSOR_URL,
+                                                timeout=3) and self.CURSOR_EMAIL_VERIFICATION_URL in self.tab.url:
                     logger.debug("检测到需要验证码验证，开始处理")
                     self._cursor_turnstile()
                     time.sleep(random.uniform(1, 3))
@@ -345,4 +345,3 @@ class CursorRegistration:
             if retry == self.retry_times - 1:
                 logger.error("在输入验证码时超时，已达到最大重试次数")
                 raise Exception("在输入验证码时超时")
-

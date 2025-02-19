@@ -5,7 +5,7 @@
 [🌍 English Version](./README_EN.md) | [🇨🇳 中文版](./README.md)
 
 > 🚀 一个帮助你轻松使用 Cursor 的小工具，支持多种注册方式，操作简单便捷。
-> 
+>
 > 💫 让注册过程变得简单而优雅
 
 <p align="center">
@@ -104,8 +104,10 @@
 <summary><b>🖥️ Cursor 编辑器</b></summary>
 
 ### Windows 版本 (v0.44.11)
+
 - 🔗 [官方下载](https://downloader.cursor.sh/builds/250103fqxdt5u9z/windows/nsis/x64)
-- 🔄 [备用下载](https://download.todesktop.com/230313mzl4w4u92/Cursor%20Setup%200.44.11%20-%20Build%20250103fqxdt5u9z-x64.exe)
+-
+🔄 [备用下载](https://download.todesktop.com/230313mzl4w4u92/Cursor%20Setup%200.44.11%20-%20Build%20250103fqxdt5u9z-x64.exe)
 
 </details>
 
@@ -113,18 +115,18 @@
 <summary><b>🛠️ 注册助手</b></summary>
 
 - 📦 [从 Release 页面下载](https://github.com/ktovoz/cursorRegister/releases)
+
 > 💡 请下载最新版本以获得最佳体验
 
 </details>
 
 <div align="center">
 
-
 ## 🗺️ 开发路线图
 
 </div>
 
-### 🎯 当前目标 
+### 🎯 当前目标
 
 - 🚀 优化自动注册流程的成功率
 - 🤖 使用github action 进行自动注册
@@ -139,7 +141,7 @@
 - 💰 查询试用额度
 - 🎯 辅助注册
 - 🔄 重置机器ID
-- 🎨 简洁的操作界面 
+- 🎨 简洁的操作界面
 - 📦 支持一键打包发布
 - 💾 账号备份功能
 - 🔄 批量账号管理
@@ -203,8 +205,8 @@
 
 1. 准备一个域名
 2. Cloudflare 配置：
-   - DNS 记录设置
-   - 邮箱转发规则
+    - DNS 记录设置
+    - 邮箱转发规则
 
 </td>
 <td>
@@ -223,32 +225,32 @@
 
 </div>
 
-
 ### 🌈 支持的注册方式
 
-
 ### 1️⃣ 全自动注册
+
 推荐新手使用
 
 <details>
 <summary><b>📝 详细步骤</b></summary>
 
 1. 获取必要信息：
-   - 从 [moemail](https://github.com/beilunyang/moemail) 获取 API KEY
-   - 获取可用 DOMAIN
+    - 从 [moemail](https://github.com/beilunyang/moemail) 获取 API KEY
+    - 获取可用 DOMAIN
 2. 配置 .env 文件：
    ```
    API_KEY=你的API密钥
    DOMAIN=你的域名
    ```
 3. 开始注册：
-   - 勾选"全自动注册"
-   - 点击"自动注册"
-   - 等待完成
+    - 勾选"全自动注册"
+    - 点击"自动注册"
+    - 等待完成
 
 </details>
 
 ### 2️⃣ 手动注册
+
 支持多种邮箱方案
 
 <details>
@@ -257,40 +259,41 @@
 1. 选择邮箱方案：
 
    **方案A：临时邮箱**
-   - 访问临时邮箱服务网站
-   - 获取一个临时邮箱地址
-   - ⚡ 优点：快速便捷
-   - ⚠️ 缺点：可能被屏蔽
+    - 访问临时邮箱服务网站
+    - 获取一个临时邮箱地址
+    - ⚡ 优点：快速便捷
+    - ⚠️ 缺点：可能被屏蔽
 
    **方案B：自有域名**
-   - 准备一个域名
-   - 配置 DNS 记录
-   - 设置邮箱转发规则
-   - 🔒 优点：稳定可靠
-   - ⚙️ 缺点：需要配置
+    - 准备一个域名
+    - 配置 DNS 记录
+    - 设置邮箱转发规则
+    - 🔒 优点：稳定可靠
+    - ⚙️ 缺点：需要配置
 
 2. 开始注册流程：
-   - 打开注册助手
-   - 填写域名
-   - 生成随机邮箱和密码
-   - 选择验证方式
-   - 点击"自动注册"
+    - 打开注册助手
+    - 填写域名
+    - 生成随机邮箱和密码
+    - 选择验证方式
+    - 点击"自动注册"
 
 3. 选择验证方式：
-   - 🤖 自动验证：软件自动通过人机验证
-   - 👨‍💻 人工验证：手动通过人机验证
+    - 🤖 自动验证：软件自动通过人机验证
+    - 👨‍💻 人工验证：手动通过人机验证
    > 💡 提示：两种方式都需要自己输入邮箱验证码
 
 4. 完成验证：
-   - 等待接收验证码
-   - 根据选择的验证方式完成验证
-   - 等待注册完成
+    - 等待接收验证码
+    - 根据选择的验证方式完成验证
+    - 等待注册完成
 
 5. 保存账号信息
 
 </details>
 
 ### 3️⃣ GitHub Action
+
 ⚠️ 研发中
 
 <details>
@@ -299,18 +302,18 @@
 1. Fork 本项目到你的 GitHub 账号
 2. 从 [moemail](https://github.com/beilunyang/moemail) 项目获取 API KEY
 3. 配置 GitHub Secrets：
-   - 进入项目设置 -> Secrets and variables -> Actions
-   - 添加名为 `API_KEY` 的 secret，值为获取到的 API KEY
-   - 添加名为 `MOE_MAIL_URL` 的 secret，值为 moemail 服务的 URL
+    - 进入项目设置 -> Secrets and variables -> Actions
+    - 添加名为 `API_KEY` 的 secret，值为获取到的 API KEY
+    - 添加名为 `MOE_MAIL_URL` 的 secret，值为 moemail 服务的 URL
 4. 触发注册流程：
-   - 进入 Actions 标签页
-   - 选择 `注册账号` workflow
-   - 点击 "Run workflow"
-   - 在弹出的对话框中输入 `DOMAIN` 值
+    - 进入 Actions 标签页
+    - 选择 `注册账号` workflow
+    - 点击 "Run workflow"
+    - 在弹出的对话框中输入 `DOMAIN` 值
 5. 使用生成的账号：
-   - 从 Artifacts 下载账号信息
-   - 打开注册助手程序填入信息
-   - 点击"刷新cookie"完成配置
+    - 从 Artifacts 下载账号信息
+    - 打开注册助手程序填入信息
+    - 点击"刷新cookie"完成配置
 
 > ⚠️ 注意事项：
 > - 建议自行部署 moemail 服务以确保稳定性
@@ -325,16 +328,19 @@
 <summary><b>📝 如何选择？</b></summary>
 
 #### 🔰 新手推荐
+
 - 选择全自动注册
 - 方便快捷，一键完成
 - ⚠️ 需要配置部署moemail邮箱
 
 #### 🎯 稳定需求
+
 - 选择手动注册
 - 最为稳定可靠
 - 无需额外配置
 
 #### 🔄 批量需求
+
 - 等待 GitHub Action 功能
 - 可以实现自动化批量注册
 
@@ -376,10 +382,10 @@
 <details>
 <summary><b>💡 临时邮箱 vs 自有域名？</b></summary>
 
-| 方式 | 优点 | 缺点 |
-|:------:|:------:|:------:|
-| 📨 临时邮箱 | ⚡ 快速便捷 | ⚠️ 可能被屏蔽 |
-| 🌐 自有域名 | 🔒 稳定可靠 | ⚙️ 需要配置 |
+|   方式    |   优点    |    缺点    |
+|:-------:|:-------:|:--------:|
+| 📨 临时邮箱 | ⚡ 快速便捷  | ⚠️ 可能被屏蔽 |
+| 🌐 自有域名 | 🔒 稳定可靠 | ⚙️ 需要配置  |
 
 </details>
 
@@ -436,7 +442,8 @@
 
 </div>
 
-访问 [Cursor 注册助手食用指南](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97) 获取完整教程。
+访问 [Cursor 注册助手食用指南](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97)
+获取完整教程。
 
 <div align="center">
 
@@ -500,12 +507,15 @@
 </div>
 
 ### 📋 许可说明
+
 本项目采用 [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/) 许可证
 
 #### ✅ 您可以：
+
 - 📤 分享 — 在任何媒介以任何形式复制、发行本作品
 
 #### ❌ 但是不能：
+
 - 💰 商业使用
 - ✏️ 修改原作品
 - 🔄 二次分发

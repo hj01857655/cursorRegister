@@ -5,7 +5,7 @@
 [🌍 English Version](./README_EN.md) | [🇨🇳 中文版](./README.md)
 
 > 🚀 A tool to help you easily use Cursor with multiple registration methods and simple, convenient operations.
-> 
+>
 > 💫 Making registration simple and elegant
 
 <p align="center">
@@ -81,8 +81,10 @@
 <summary><b>🖥️ Cursor Editor</b></summary>
 
 ### Windows Version (v0.44.11)
+
 - 🔗 [Official Download](https://downloader.cursor.sh/builds/250103fqxdt5u9z/windows/nsis/x64)
-- 🔄 [Alternative Download](https://download.todesktop.com/230313mzl4w4u92/Cursor%20Setup%200.44.11%20-%20Build%20250103fqxdt5u9z-x64.exe)
+-
+🔄 [Alternative Download](https://download.todesktop.com/230313mzl4w4u92/Cursor%20Setup%200.44.11%20-%20Build%20250103fqxdt5u9z-x64.exe)
 
 </details>
 
@@ -90,6 +92,7 @@
 <summary><b>🛠️ Registration Assistant</b></summary>
 
 - 📦 [Download from Release Page](https://github.com/ktovoz/cursorRegister/releases)
+
 > 💡 Please download the latest version for the best experience
 
 </details>
@@ -100,7 +103,7 @@
 
 </div>
 
-### 🎯 Current Goals 
+### 🎯 Current Goals
 
 - 🚀 Optimize automatic registration success rate
 - 🤖 Use GitHub Actions for automatic registration
@@ -115,7 +118,7 @@
 - 💰 Trial quota query
 - 🎯 Registration assistance
 - 🔄 Machine ID reset
-- 🎨 Clean interface 
+- 🎨 Clean interface
 - 📦 One-click packaging and release
 - 💾 Account backup functionality
 
@@ -174,8 +177,8 @@
 
 1. Prepare a domain
 2. Cloudflare Configuration:
-   - DNS records setup
-   - Email forwarding rules
+    - DNS records setup
+    - Email forwarding rules
 
 </td>
 <td>
@@ -197,27 +200,29 @@
 ### 🌈 Supported Registration Methods
 
 ### 1️⃣ Fully Automatic Registration
+
 Recommended for beginners
 
 <details>
 <summary><b>📝 Detailed Steps</b></summary>
 
 1. Get required information:
-   - Get API KEY from [moemail](https://github.com/beilunyang/moemail)
-   - Get available DOMAIN
+    - Get API KEY from [moemail](https://github.com/beilunyang/moemail)
+    - Get available DOMAIN
 2. Configure .env file:
    ```
    API_KEY=your_api_key
    DOMAIN=your_domain
    ```
 3. Start registration:
-   - Check "Fully Automatic Registration"
-   - Click "Auto Register"
-   - Wait for completion
+    - Check "Fully Automatic Registration"
+    - Click "Auto Register"
+    - Wait for completion
 
 </details>
 
 ### 2️⃣ Manual Registration
+
 Supports multiple email solutions
 
 <details>
@@ -226,40 +231,41 @@ Supports multiple email solutions
 1. Choose email solution:
 
    **Option A: Temporary Email**
-   - Visit temporary email service website
-   - Get a temporary email address
-   - ⚡ Pros: Quick and easy
-   - ⚠️ Cons: May be blocked
+    - Visit temporary email service website
+    - Get a temporary email address
+    - ⚡ Pros: Quick and easy
+    - ⚠️ Cons: May be blocked
 
    **Option B: Own Domain**
-   - Prepare a domain
-   - Configure DNS records
-   - Set up email forwarding rules
-   - 🔒 Pros: Stable and reliable
-   - ⚙️ Cons: Requires configuration
+    - Prepare a domain
+    - Configure DNS records
+    - Set up email forwarding rules
+    - 🔒 Pros: Stable and reliable
+    - ⚙️ Cons: Requires configuration
 
 2. Start registration process:
-   - Open registration assistant
-   - Fill in domain
-   - Generate random email and password
-   - Choose verification method
-   - Click "Auto Register"
+    - Open registration assistant
+    - Fill in domain
+    - Generate random email and password
+    - Choose verification method
+    - Click "Auto Register"
 
 3. Choose verification method:
-   - 🤖 Automatic verification: Software automatically passes CAPTCHA
-   - 👨‍💻 Manual verification: Manually pass CAPTCHA
+    - 🤖 Automatic verification: Software automatically passes CAPTCHA
+    - 👨‍💻 Manual verification: Manually pass CAPTCHA
    > 💡 Note: Both methods require manual email verification code input
 
 4. Complete verification:
-   - Wait for verification code
-   - Complete verification based on chosen method
-   - Wait for registration completion
+    - Wait for verification code
+    - Complete verification based on chosen method
+    - Wait for registration completion
 
 5. Save account information
 
 </details>
 
 ### 3️⃣ GitHub Action
+
 ⚠️ Under development
 
 <details>
@@ -268,18 +274,18 @@ Supports multiple email solutions
 1. Fork this project to your GitHub account
 2. Get API KEY from [moemail](https://github.com/beilunyang/moemail)
 3. Configure GitHub Secrets:
-   - Go to project settings -> Secrets and variables -> Actions
-   - Add `API_KEY` secret with your API KEY
-   - Add `MOE_MAIL_URL` secret with moemail service URL
+    - Go to project settings -> Secrets and variables -> Actions
+    - Add `API_KEY` secret with your API KEY
+    - Add `MOE_MAIL_URL` secret with moemail service URL
 4. Trigger registration:
-   - Go to Actions tab
-   - Select `Register Account` workflow
-   - Click "Run workflow"
-   - Enter `DOMAIN` value in popup
+    - Go to Actions tab
+    - Select `Register Account` workflow
+    - Click "Run workflow"
+    - Enter `DOMAIN` value in popup
 5. Use generated account:
-   - Download account info from Artifacts
-   - Fill info into registration assistant
-   - Click "Refresh cookie" to complete
+    - Download account info from Artifacts
+    - Fill info into registration assistant
+    - Click "Refresh cookie" to complete
 
 > ⚠️ Notes:
 > - Recommended to deploy your own moemail service
@@ -294,16 +300,19 @@ Supports multiple email solutions
 <summary><b>📝 How to Choose?</b></summary>
 
 #### 🔰 For Beginners
+
 - Choose fully automatic registration
 - Convenient and quick, one-click completion
 - ⚠️ Requires moemail deployment configuration
 
 #### 🎯 For Stability
+
 - Choose manual registration
 - Most stable and reliable
 - No additional configuration needed
 
 #### 🔄 For Batch Requirements
+
 - Wait for GitHub Action feature
 - Can achieve automated batch registration
 
@@ -341,10 +350,10 @@ We warmly welcome and appreciate all forms of contributions! Here are some ways 
 <details>
 <summary><b>💡 Temporary Email vs Own Domain?</b></summary>
 
-| Method | Pros | Cons |
-|:------:|:------:|:------:|
-| 📨 Temporary Email | ⚡ Quick & Easy | ⚠️ May be blocked |
-| 🌐 Own Domain | 🔒 Stable & Reliable | ⚙️ Requires setup |
+|       Method       |         Pros         |       Cons        |
+|:------------------:|:--------------------:|:-----------------:|
+| 📨 Temporary Email |    ⚡ Quick & Easy    | ⚠️ May be blocked |
+|   🌐 Own Domain    | 🔒 Stable & Reliable | ⚙️ Requires setup |
 
 </details>
 
@@ -401,7 +410,8 @@ We warmly welcome and appreciate all forms of contributions! Here are some ways 
 
 </div>
 
-Visit [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97) for complete tutorial.
+Visit [Cursor Registration Assistant Usage Guide](https://www.ktovoz.com/blog/%E6%95%99%E5%AD%A6/Cursor%E6%B3%A8%E5%86%8C%E5%8A%A9%E6%89%8B%E9%A3%9F%E7%94%A8%E6%8C%87%E5%8D%97)
+for complete tutorial.
 
 <div align="center">
 
@@ -465,12 +475,15 @@ Thanks to the following open source projects and their authors for providing ins
 </div>
 
 ### 📋 License
+
 This project is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/licenses/by-nc-nd/4.0/)
 
 #### ✅ You can:
+
 - 📤 Share — copy and redistribute the material in any medium or format
 
 #### ❌ But you cannot:
+
 - 💰 Use commercially
 - ✏️ Modify the original work
 - 🔄 Redistribute

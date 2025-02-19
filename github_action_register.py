@@ -1,13 +1,12 @@
+import random
+import time
 from pathlib import Path
+
 from dotenv import load_dotenv
 from loguru import logger
 
 import utils
 from registerAc import CursorRegistration
-import random
-import time
-import os
-
 
 
 class GithubActionRegistration(CursorRegistration):
@@ -79,6 +78,7 @@ class GithubActionRegistration(CursorRegistration):
             if self.browser:
                 self.browser.quit()
 
+
 if __name__ == "__main__":
     load_dotenv()
     registration = GithubActionRegistration()
@@ -97,4 +97,4 @@ if __name__ == "__main__":
                     f.write(f"{key},{value}\n")
             logger.info("环境变量已保存到 env_variables.csv 文件中")
         except Exception as e:
-            logger.error(f"保存环境变量到文件时出错: {str(e)}") 
+            logger.error(f"保存环境变量到文件时出错: {str(e)}")

@@ -1,18 +1,14 @@
 import os
 import sys
-import threading
-from dataclasses import dataclass, field
-from datetime import datetime
-from pathlib import Path
 import tkinter as tk
+from dataclasses import dataclass, field
+from pathlib import Path
 from tkinter import ttk
 from typing import Dict, List, Tuple
 
 from dotenv import load_dotenv
 from loguru import logger
 
-from registerAc import CursorRegistration
-from utils import Utils, Result, error_handler, CursorManager
 from tab import LogWindow, ManageTab, RegisterTab, AboutTab, UI
 
 console_mode = False
@@ -117,7 +113,7 @@ class CursorApp:
 
 def setup_logging(log_window=None) -> None:
     logger.remove()
-    
+
     logger.add(
         sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD}.log",
         format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
@@ -139,7 +135,7 @@ def setup_logging(log_window=None) -> None:
             diagnose=True,
             level="DEBUG"
         )
-    
+
     if log_window:
         def gui_sink(message):
             record = message.record
@@ -161,7 +157,7 @@ def main() -> None:
         env_path = os.path.join(base_path, '.env')
         if os.path.exists(env_path):
             load_dotenv(dotenv_path=env_path)
-        
+
         root = tk.Tk()
         app = CursorApp(root)
         setup_logging(app.log_window)
