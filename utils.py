@@ -175,14 +175,6 @@ class Utils:
             return Result.fail(f"更新环境变量失败: {e}")
 
     @staticmethod
-    def get_env_var(key: str, raise_error: bool = True) -> str:
-        if value := os.getenv(key):
-            return value
-        if raise_error:
-            raise ValueError(f"环境变量 '{key}' 未设置")
-        return ""
-
-    @staticmethod
     def backup_file(source: Path, backup_dir: Path, prefix: str, max_backups: int = 10) -> Result[None]:
         try:
             with file_operation_context(source, require_write=False) as src:
@@ -256,43 +248,6 @@ class Utils:
             return int(ret) > 32
         except:
             return False
-
-    @staticmethod
-    def update_sqlite_db(db_path: Path, updates: Dict[str, str], table: str = "itemTable") -> Result[None]:
-        try:
-            with sqlite3.connect(db_path) as conn:
-                cursor = conn.cursor()
-                for key, value in updates.items():
-                    cursor.execute(
-                        f"INSERT INTO {table} (key, value) VALUES (?, ?) "
-                        "ON CONFLICT(key) DO UPDATE SET value = ?",
-                        (key, value, value)
-                    )
-                    logger.debug(f"已更新 {key.split('/')[-1]}")
-                return Result.ok()
-        except Exception as e:
-            return Result.fail(f"数据库更新失败: {e}")
-
-    @staticmethod
-    def query_sqlite_db(db_path: Path, keys: Union[str, list[str]] = None, table: str = "itemTable") -> Result[
-        Dict[str, str]]:
-        try:
-            with sqlite3.connect(db_path) as conn:
-                cursor = conn.cursor()
-                if isinstance(keys, str):
-                    keys = [keys]
-
-                if keys:
-                    placeholders = ','.join(['?' for _ in keys])
-                    cursor.execute(f"SELECT key, value FROM {table} WHERE key IN ({placeholders})", keys)
-                else:
-                    cursor.execute(f"SELECT key, value FROM {table}")
-
-                results = dict(cursor.fetchall())
-                logger.debug(f"已查询 {len(results)} 条记录")
-                return Result.ok(results)
-        except Exception as e:
-            return Result.fail(f"数据库查询失败: {e}")
 
     @staticmethod
     def generate_random_string(length: int, chars: str = string.ascii_lowercase + string.digits) -> str:
