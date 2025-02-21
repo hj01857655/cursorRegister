@@ -18,11 +18,13 @@ from datetime import datetime, timedelta
 from tkinter import ttk, messagebox
 from typing import Dict, List, Tuple, Callable
 from concurrent.futures import ThreadPoolExecutor
+import base64
+import json
 
 import requests
 from loguru import logger
 
-from utils import CursorManager, error_handler
+from utils import CursorManager, error_handler,Utils
 from .ui import UI
 
 
@@ -195,59 +197,80 @@ class ManageTab(ttk.Frame):
         if not cookie_str:
             raise ValueError("Cookie信息不能为空")
 
-        headers = {
-            'Cookie': cookie_str if cookie_str.startswith(
-                'WorkosCursorSessionToken=') else f'WorkosCursorSessionToken={cookie_str}',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
-        }
-
-        timeout = 10
-        session = requests.Session()
-        session.headers.update(headers)
-
-        def make_request(url: str) -> dict:
-            try:
-                response = session.get(url, timeout=timeout)
-                response.raise_for_status()
-                return response.json()
-            except requests.RequestException as e:
-                logger.error(f"请求 {url} 失败: {str(e)}")
-                raise ValueError(f"API请求失败: {str(e)}")
-
         try:
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            user_id = self.extract_user_id_from_jwt(cookie_str)
+            
+            if not cookie_str.startswith('WorkosCursorSessionToken='):
+                cookie_str = f'WorkosCursorSessionToken={cookie_str}'
 
-                future_user_info = executor.submit(make_request, "https://www.cursor.com/api/auth/me")
-                future_trial = executor.submit(make_request, "https://www.cursor.com/api/auth/stripe")
+            headers = {
+                'Cookie': cookie_str,
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36'
+            }
 
-    
-                user_info = future_user_info.result()
-                email = user_info.get('email', '未知')
-                domain = email.split('@')[-1] if '@' in email else '未知'
-                user_id = user_info.get('sub')
-                
-                if not user_id:
-                    raise ValueError("无法获取用户ID")
+            timeout = 10
+            session = requests.Session()
+            session.headers.update(headers)
 
+            def make_request(url: str) -> dict:
+                try:
+                    response = session.get(url, timeout=timeout)
+                    response.raise_for_status()
+                    return response.json()
+                except requests.RequestException as e:
+                    logger.error(f"请求 {url} 失败: {str(e)}")
+                    raise ValueError(f"API请求失败: {str(e)}")
 
-                future_usage = executor.submit(make_request, f"https://www.cursor.com/api/usage?user={user_id}")
-                trial_data = future_trial.result()
-                days = str(trial_data.get('daysRemainingOnTrial', '未知'))
+            try:
+                with ThreadPoolExecutor(max_workers=3) as executor:
+                    future_user_info = executor.submit(make_request, "https://www.cursor.com/api/auth/me")
+                    future_trial = executor.submit(make_request, "https://www.cursor.com/api/auth/stripe")
+                    future_usage = executor.submit(make_request, f"https://www.cursor.com/api/usage?user={user_id}")
 
-     
-                usage_data = future_usage.result()
-                gpt4_data = usage_data.get('gpt-4', {})
-                used_quota = gpt4_data.get('numRequestsTotal', 0)
-                max_quota = gpt4_data.get('maxRequestUsage', 0)
-                quota = f"{used_quota} / {max_quota}" if max_quota else '未知'
+                    user_info = future_user_info.result()
+                    email = user_info.get('email', '未知')
+                    domain = email.split('@')[-1] if '@' in email else '未知'
 
-                return domain, email, quota, days
+                    trial_data = future_trial.result()
+                    days = str(trial_data.get('daysRemainingOnTrial', '未知'))
 
+                    usage_data = future_usage.result()
+                    gpt4_data = usage_data.get('gpt-4', {})
+                    used_quota = gpt4_data.get('numRequestsTotal', 0)
+                    max_quota = gpt4_data.get('maxRequestUsage', 0)
+                    quota = f"{used_quota} / {max_quota}" if max_quota else '未知'
+
+                    return domain, email, quota, days
+
+            except Exception as e:
+                logger.error(f"获取账号信息失败: {str(e)}")
+                raise ValueError(f"获取账号信息失败: {str(e)}")
+            finally:
+                session.close()
         except Exception as e:
-            logger.error(f"获取账号信息失败: {str(e)}")
-            raise ValueError(f"获取账号信息失败: {str(e)}")
-        finally:
-            session.close()
+            logger.error(f"处理 JWT 失败: {str(e)}")
+            raise ValueError(f"处理 JWT 失败: {str(e)}")
+
+    def extract_user_id_from_jwt(self, cookies: str) -> str:
+        try:
+            jwt_token = Utils.extract_token(cookies, "WorkosCursorSessionToken")
+            parts = jwt_token.split('.')
+            if len(parts) != 3:
+                raise ValueError("无效的 JWT 格式")
+            
+            payload = parts[1]
+            payload += '=' * (-len(payload) % 4)
+            decoded = base64.b64decode(payload)
+            payload_data = json.loads(decoded)
+            
+            user_id = payload_data.get('sub')
+            if not user_id:
+                raise ValueError("JWT 中未找到用户 ID")
+                
+            return user_id
+        except Exception as e:
+            logger.error(f"从 JWT 提取用户 ID 失败: {str(e)}")
+            raise ValueError(f"JWT 解析失败: {str(e)}")
 
     def update_account_info(self):
         def get_trial_info(csv_file_path: str, account_data: Dict[str, str]) -> None:
@@ -260,7 +283,10 @@ class ManageTab(ttk.Frame):
                     logger.debug("开始获取账号信息...")
                     logger.debug(f"获取到的cookie字符串长度: {len(cookie_str) if cookie_str else 0}")
 
-                    domain, email, quota, days = self.get_trial_usage(cookie_str)
+                    user_id = self.extract_user_id_from_jwt(cookie_str)
+                    reconstructed_cookie = f"WorkosCursorSessionToken={user_id}%3A%3A{cookie_str.split('%3A%3A')[-1]}" if '%3A%3A' in cookie_str else cookie_str
+
+                    domain, email, quota, days = self.get_trial_usage(reconstructed_cookie)
                     logger.info(f"成功获取账号信息: 域名={domain}, 邮箱={email}, 额度={quota}, 天数={days}")
 
                     self.account_tree.set(self.selected_item, '域名', domain)
@@ -273,7 +299,8 @@ class ManageTab(ttk.Frame):
                                            DOMAIN=domain,
                                            EMAIL=email,
                                            QUOTA=quota,
-                                           DAYS=days)
+                                           DAYS=days,
+                                           COOKIES_STR=reconstructed_cookie)
                     except Exception as e:
                         logger.error(f"更新CSV文件失败: {str(e)}")
                         raise ValueError(f"更新CSV文件失败: {str(e)}")
