@@ -406,17 +406,37 @@ class CursorManager:
 
 
 class MoemailManager:
+    @staticmethod
+    def _check_env_vars() -> Result[Tuple[str, str]]:
+        try:
+            api_key = os.getenv("API_KEY")
+            moe_mail_url = os.getenv("MOE_MAIL_URL")
+            
+            missing_vars = []
+            if not api_key:
+                missing_vars.append("API_KEY")
+            if not moe_mail_url:
+                missing_vars.append("MOE_MAIL_URL")
+            
+            if missing_vars:
+                return Result.fail(f"缺少必需的环境变量: {', '.join(missing_vars)}")
+            
+            return Result.ok((api_key, moe_mail_url))
+        except Exception as e:
+            return Result.fail(f"检查环境变量时出错: {str(e)}")
 
     def __init__(self):
-        self.api_key = os.getenv("API_KEY")
-        if not self.api_key:
-            raise ValueError("未设置API_KEY环境变量")
-
+        env_check = self._check_env_vars()
+        if not env_check.success:
+            logger.error(env_check.message)
+            raise ValueError(env_check.message)
+        
+        self.api_key, base_url = env_check.data
         self.headers = {
             'Content-Type': 'application/json',
             'X-API-Key': self.api_key
         }
-        self.base_url = os.getenv("MOE_MAIL_URL")
+        self.base_url = base_url
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
         try:

@@ -189,3 +189,50 @@ class UI:
     @staticmethod
     def show_warning(window: tk.Tk, message: str) -> None:
         UI.show_message(window, "警告", message, 'showwarning')
+
+    @staticmethod
+    def show_loading(window: tk.Tk, title: str, message: str) -> tk.Toplevel:
+        loading_dialog = tk.Toplevel(window)
+        loading_dialog.title(title)
+        loading_dialog.transient(window)
+        loading_dialog.grab_set()
+    
+        dialog_width = 300
+        dialog_height = 100
+        UI.center_window(loading_dialog, dialog_width, dialog_height)
+        
+    
+        loading_dialog.configure(bg=UI.COLORS['bg'])
+        loading_dialog.resizable(False, False)
+        
+      
+        message_label = ttk.Label(
+            loading_dialog,
+            text=message,
+            style='TLabel',
+            wraplength=250,
+            justify='center'
+        )
+        message_label.pack(pady=20)
+        
+     
+        progress = ttk.Progressbar(
+            loading_dialog,
+            mode='indeterminate',
+            style='TProgressbar'
+        )
+        progress.pack(fill=tk.X, padx=20, pady=(0, 20))
+        progress.start(10)
+        
+
+        window.loading_dialog = loading_dialog
+        return loading_dialog
+
+    @staticmethod
+    def close_loading(window: tk.Tk) -> None:
+        if hasattr(window, 'loading_dialog'):
+            try:
+                window.loading_dialog.destroy()
+                delattr(window, 'loading_dialog')
+            except Exception:
+                pass

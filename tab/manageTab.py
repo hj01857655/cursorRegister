@@ -280,6 +280,12 @@ class ManageTab(ttk.Frame):
 
             def fetch_and_display_info():
                 try:
+                    self.winfo_toplevel().after(0, lambda: UI.show_loading(
+                        self.winfo_toplevel(),
+                        "更新账号信息",
+                        "正在获取账号信息，请稍候..."
+                    ))
+
                     logger.debug("开始获取账号信息...")
                     logger.debug(f"获取到的cookie字符串长度: {len(cookie_str) if cookie_str else 0}")
 
@@ -305,6 +311,7 @@ class ManageTab(ttk.Frame):
                         logger.error(f"更新CSV文件失败: {str(e)}")
                         raise ValueError(f"更新CSV文件失败: {str(e)}")
 
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     self.winfo_toplevel().after(0, lambda: UI.show_success(
                         self.winfo_toplevel(),
                         f"域名: {domain}\n"
@@ -316,6 +323,7 @@ class ManageTab(ttk.Frame):
                     error_message = str(e)
                     logger.error(f"获取账号信息失败: {error_message}")
                     logger.exception("详细错误信息:")
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     self.winfo_toplevel().after(0, lambda: UI.show_error(
                         self.winfo_toplevel(),
                         "获取账号信息失败",
@@ -337,12 +345,32 @@ class ManageTab(ttk.Frame):
             if "WorkosCursorSessionToken=" not in cookie_str:
                 cookie_str = f"WorkosCursorSessionToken={cookie_str}"
 
-            result = CursorManager().process_cookies(cookie_str, email)
-            if not result.success:
-                raise ValueError(result.message)
+            def process_auth():
+                try:
+                    self.winfo_toplevel().after(0, lambda: UI.show_loading(
+                        self.winfo_toplevel(),
+                        "更换账号",
+                        "正在刷新Cookie，请稍候..."
+                    ))
 
-            UI.show_success(self.winfo_toplevel(), f"账号 {email} 的Cookie已刷新")
-            logger.info(f"已刷新账号 {email} 的Cookie")
+                    result = CursorManager().process_cookies(cookie_str, email)
+                    
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                    
+                    if not result.success:
+                        raise ValueError(result.message)
+
+                    UI.show_success(self.winfo_toplevel(), f"账号 {email} 的Cookie已刷新")
+                    logger.info(f"已刷新账号 {email} 的Cookie")
+                except Exception as e:
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                    self.winfo_toplevel().after(0, lambda: UI.show_error(
+                        self.winfo_toplevel(),
+                        "更换账号失败",
+                        str(e)
+                    ))
+
+            threading.Thread(target=process_auth, daemon=True).start()
 
         self.handle_account_action("刷新Cookie", update_account_auth)
 
@@ -359,23 +387,71 @@ class ManageTab(ttk.Frame):
             if not messagebox.askyesno("确认删除", confirm_message, icon='warning'):
                 return
 
-            try:
-                os.remove(csv_file_path)
-                self.account_tree.delete(self.selected_item)
-                logger.info(f"已删除账号: {account_data['DOMAIN']} - {account_data['EMAIL']}")
-                UI.show_success(self.winfo_toplevel(),
-                                f"已删除账号: {account_data['DOMAIN']} - {account_data['EMAIL']}")
-            except Exception as e:
-                raise Exception(f"删除文件失败: {str(e)}")
+            def process_delete():
+                try:
+                    self.winfo_toplevel().after(0, lambda: UI.show_loading(
+                        self.winfo_toplevel(),
+                        "删除账号",
+                        "正在删除账号信息，请稍候..."
+                    ))
+
+                    os.remove(csv_file_path)
+                    self.account_tree.delete(self.selected_item)
+                    
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                    logger.info(f"已删除账号: {account_data['DOMAIN']} - {account_data['EMAIL']}")
+                    UI.show_success(self.winfo_toplevel(),
+                                    f"已删除账号: {account_data['DOMAIN']} - {account_data['EMAIL']}")
+                except Exception as e:
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                    self.winfo_toplevel().after(0, lambda: UI.show_error(
+                        self.winfo_toplevel(),
+                        "删除账号失败",
+                        str(e)
+                    ))
+
+            threading.Thread(target=process_delete, daemon=True).start()
 
         self.handle_account_action("删除账号", delete_account_file)
 
     @error_handler
     def reset_machine_id(self) -> None:
-        try:
-            result = CursorManager.reset()
-            if not result:
-                raise Exception(result.message)
-            UI.show_success(self.winfo_toplevel(), result.message)
-        except Exception as e:
-            UI.show_error(self.winfo_toplevel(), "重置机器ID失败", e)
+        def reset_thread():
+            try:
+          
+                self.after(0, lambda: UI.show_loading(
+                    self.winfo_toplevel(),
+                    "正在重置机器ID",
+                    "正在执行重置操作，请稍候..."
+                ))
+                
+               
+                result = CursorManager.reset()
+                
+               
+                self.after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                
+                if not result.success:
+                    self.after(0, lambda: UI.show_error(
+                        self.winfo_toplevel(),
+                        "重置机器ID失败",
+                        result.message
+                    ))
+                    return
+                    
+                self.after(0, lambda: UI.show_success(
+                    self.winfo_toplevel(),
+                    result.message
+                ))
+                
+            except Exception as e:
+               
+                self.after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                self.after(0, lambda: UI.show_error(
+                    self.winfo_toplevel(),
+                    "重置机器ID失败",
+                    str(e)
+                ))
+        
+      
+        threading.Thread(target=reset_thread, daemon=True).start()

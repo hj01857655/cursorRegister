@@ -1,5 +1,5 @@
 ABOUT_TAB_HEIGHT = 300
-VERSION = "版本: 0.1.6"
+VERSION = "版本: 0.1.7"
 
 import tkinter as tk
 import webbrowser

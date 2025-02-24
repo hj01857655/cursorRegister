@@ -98,28 +98,53 @@ class RegisterTab(ttk.Frame):
 
     @error_handler
     def generate_account(self) -> None:
-        logger.debug(f"当前环境变量 DOMAIN: {os.getenv('DOMAIN', '未设置')}")
-        logger.debug(f"当前环境变量 EMAIL: {os.getenv('EMAIL', '未设置')}")
-        logger.debug(f"当前环境变量 PASSWORD: {os.getenv('PASSWORD', '未设置')}")
-        if domain := self.entries['DOMAIN'].get().strip():
-            if not Utils.update_env_vars({'DOMAIN': domain}):
-                raise RuntimeError("保存域名失败")
-            load_dotenv(override=True)
+        def generate_thread():
+            try:
+                self.winfo_toplevel().after(0, lambda: UI.show_loading(
+                    self.winfo_toplevel(),
+                    "生成账号",
+                    "正在生成账号信息，请稍候..."
+                ))
 
-        if not (result := CursorManager.generate_cursor_account()):
-            raise RuntimeError(result.message)
+                logger.debug(f"当前环境变量 DOMAIN: {os.getenv('DOMAIN', '未设置')}")
+                logger.debug(f"当前环境变量 EMAIL: {os.getenv('EMAIL', '未设置')}")
+                logger.debug(f"当前环境变量 PASSWORD: {os.getenv('PASSWORD', '未设置')}")
+                
+                if domain := self.entries['DOMAIN'].get().strip():
+                    if not Utils.update_env_vars({'DOMAIN': domain}):
+                        raise RuntimeError("保存域名失败")
+                    load_dotenv(override=True)
 
-        email, password = result.data if isinstance(result, Result) else result
-        for key, value in {'EMAIL': email, 'PASSWORD': password}.items():
-            self.entries[key].delete(0, tk.END)
-            self.entries[key].insert(0, value)
+                if not (result := CursorManager.generate_cursor_account()):
+                    raise RuntimeError(result.message)
+
+                email, password = result.data if isinstance(result, Result) else result
+                
+                self.winfo_toplevel().after(0, lambda: [
+                    self.entries[key].delete(0, tk.END) or 
+                    self.entries[key].insert(0, value) 
+                    for key, value in {'EMAIL': email, 'PASSWORD': password}.items()
+                ])
+
+                self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                self.winfo_toplevel().after(0, lambda: UI.show_success(
+                    self.winfo_toplevel(),
+                    "账号生成成功"
+                ))
+
+            except Exception as e:
+                self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                self.winfo_toplevel().after(0, lambda: UI.show_error(
+                    self.winfo_toplevel(),
+                    "生成账号失败",
+                    str(e)
+                ))
+
+        threading.Thread(target=generate_thread, daemon=True).start()
 
     @error_handler
     def auto_register(self) -> None:
         mode = self.selected_mode.get()
-        self._register_account(mode=mode)
-
-    def _register_account(self, mode: str) -> None:
         self._save_env_vars()
         load_dotenv(override=True)
 
@@ -168,18 +193,14 @@ class RegisterTab(ttk.Frame):
             if not result['continue']:
                 raise Exception("用户终止了注册流程")
 
-        def update_ui_warning(message):
-            UI.show_warning(self, message)
-
-        def _terminate_registration():
-            if self.registrar and self.registrar.browser:
-                self.registrar.browser.quit()
-            self.after(0, lambda: update_ui_warning("注册流程已被终止"))
-
         def register_thread():
-            is_terminated = False
-
             try:
+                self.winfo_toplevel().after(0, lambda: UI.show_loading(
+                    self.winfo_toplevel(),
+                    "自动注册",
+                    "正在执行注册流程，请稍候..."
+                ))
+
                 self.registrar = CursorRegistration()
                 logger.debug("正在启动注册流程...")
 
@@ -190,32 +211,46 @@ class RegisterTab(ttk.Frame):
                 }.get(mode)):
                     raise ValueError(f"未知的注册模式: {mode}")
 
-                if is_terminated:
-                    return
-
                 if token := register_method(create_dialog):
-                    if not is_terminated:
-                        self.after(0, lambda: [
-                            self.entries['EMAIL'].delete(0, tk.END),
-                            self.entries['EMAIL'].insert(0, os.getenv('EMAIL', '未获取到')),
-                            self.entries['PASSWORD'].delete(0, tk.END),
-                            self.entries['PASSWORD'].insert(0, os.getenv('PASSWORD', '未获取到')),
-                            self.entries['cookie'].delete(0, tk.END),
-                            self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}"),
-                            UI.show_success(self, "自动注册成功，账号信息已填入")
-                        ])
-                        threading.Thread(target=self.backup_account, daemon=True).start()
-                elif not is_terminated:
-                    self.after(0, lambda: update_ui_warning("注册流程未完成"))
+                    self.winfo_toplevel().after(0, lambda: [
+                        self.entries['EMAIL'].delete(0, tk.END),
+                        self.entries['EMAIL'].insert(0, os.getenv('EMAIL', '未获取到')),
+                        self.entries['PASSWORD'].delete(0, tk.END),
+                        self.entries['PASSWORD'].insert(0, os.getenv('PASSWORD', '未获取到')),
+                        self.entries['cookie'].delete(0, tk.END),
+                        self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
+                    ])
+                    
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                    self.winfo_toplevel().after(0, lambda: UI.show_success(
+                        self.winfo_toplevel(),
+                        "自动注册成功，账号信息已填入"
+                    ))
+                    
+                    threading.Thread(target=self.backup_account, daemon=True).start()
+                else:
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                    self.winfo_toplevel().after(0, lambda: UI.show_warning(
+                        self.winfo_toplevel(),
+                        "注册流程未完成"
+                    ))
 
             except Exception as e:
                 error_msg = str(e)
                 if error_msg == "用户终止了注册流程":
-                    self._terminate_registration()
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                    self.winfo_toplevel().after(0, lambda: UI.show_warning(
+                        self.winfo_toplevel(),
+                        "注册流程已被终止"
+                    ))
                 else:
                     logger.error(f"注册过程发生错误: {error_msg}")
-                    if not is_terminated:
-                        self.after(0, lambda: update_ui_warning(f"注册失败: {error_msg}"))
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                    self.winfo_toplevel().after(0, lambda: UI.show_error(
+                        self.winfo_toplevel(),
+                        "注册失败",
+                        error_msg
+                    ))
             finally:
                 if self.registrar and self.registrar.browser:
                     self.registrar.browser.quit()
@@ -224,12 +259,10 @@ class RegisterTab(ttk.Frame):
             for widget in self.winfo_children():
                 if isinstance(widget, ttk.Frame):
                     for child in widget.winfo_children():
-                        if isinstance(child, ttk.Button) and child['text'] == button_text:
+                        if isinstance(child, ttk.Button) and child['text'] == "自动注册":
                             self.after(0, lambda: child.configure(state=state))
 
-        button_text = "自动注册"
         find_and_update_button('disabled')
-
         thread = threading.Thread(target=register_thread, daemon=True)
         thread.start()
 
@@ -241,39 +274,57 @@ class RegisterTab(ttk.Frame):
 
     @error_handler
     def backup_account(self) -> None:
-        try:
-            if cookie_value := self.entries['cookie'].get().strip():
-                if not Utils.update_env_vars({'COOKIES_STR': cookie_value}):
-                    raise RuntimeError("更新COOKIES_STR环境变量失败")
-                load_dotenv(override=True)
+        def backup_thread():
+            try:
+                self.winfo_toplevel().after(0, lambda: UI.show_loading(
+                    self.winfo_toplevel(),
+                    "备份账号",
+                    "正在备份账号信息，请稍候..."
+                ))
 
-            env_vars = {
-                "DOMAIN": os.getenv("DOMAIN", ""),
-                "EMAIL": os.getenv("EMAIL", ""),
-                "PASSWORD": os.getenv("PASSWORD", ""),
-                "COOKIES_STR": os.getenv("COOKIES_STR", ""),
-                "API_KEY": os.getenv("API_KEY", ""),
-                "MOE_MAIL_URL": os.getenv("MOE_MAIL_URL", "")
-            }
+                if cookie_value := self.entries['cookie'].get().strip():
+                    if not Utils.update_env_vars({'COOKIES_STR': cookie_value}):
+                        raise RuntimeError("更新COOKIES_STR环境变量失败")
+                    load_dotenv(override=True)
 
-            if not any(env_vars.values()):
-                raise ValueError("未找到任何账号信息，请先注册或更新账号")
+                env_vars = {
+                    "DOMAIN": os.getenv("DOMAIN", ""),
+                    "EMAIL": os.getenv("EMAIL", ""),
+                    "PASSWORD": os.getenv("PASSWORD", ""),
+                    "COOKIES_STR": os.getenv("COOKIES_STR", ""),
+                    "API_KEY": os.getenv("API_KEY", ""),
+                    "MOE_MAIL_URL": os.getenv("MOE_MAIL_URL", "")
+                }
 
-            backup_dir = Path("env_backups")
-            backup_dir.mkdir(exist_ok=True)
+                if not any(env_vars.values()):
+                    raise ValueError("未找到任何账号信息，请先注册或更新账号")
 
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_path = backup_dir / f"cursor_account_{timestamp}.csv"
+                backup_dir = Path("env_backups")
+                backup_dir.mkdir(exist_ok=True)
 
-            with open(backup_path, 'w', encoding='utf-8', newline='') as f:
-                f.write("variable,value\n")
-                for key, value in env_vars.items():
-                    if value:
-                        f.write(f"{key},{value}\n")
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                backup_path = backup_dir / f"cursor_account_{timestamp}.csv"
 
-            logger.info(f"账号信息已备份到: {backup_path}")
-            UI.show_success(self, f"账号备份成功\n保存位置: {backup_path}")
+                with open(backup_path, 'w', encoding='utf-8', newline='') as f:
+                    f.write("variable,value\n")
+                    for key, value in env_vars.items():
+                        if value:
+                            f.write(f"{key},{value}\n")
 
-        except Exception as e:
-            logger.error(f"账号备份失败: {str(e)}")
-            UI.show_error(self, "账号备份失败", e)
+                self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                logger.info(f"账号信息已备份到: {backup_path}")
+                self.winfo_toplevel().after(0, lambda: UI.show_success(
+                    self.winfo_toplevel(),
+                    f"账号备份成功\n保存位置: {backup_path}"
+                ))
+
+            except Exception as e:
+                self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                logger.error(f"账号备份失败: {str(e)}")
+                self.winfo_toplevel().after(0, lambda: UI.show_error(
+                    self.winfo_toplevel(),
+                    "账号备份失败",
+                    str(e)
+                ))
+
+        threading.Thread(target=backup_thread, daemon=True).start()
