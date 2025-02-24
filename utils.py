@@ -440,19 +440,45 @@ class MoemailManager:
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
         try:
+            if not method or not endpoint:
+                logger.error("请求方法或端点为空")
+                return Result.fail("请求参数无效：方法或端点为空")
+
             base = self.base_url.rstrip('/')
             clean_endpoint = endpoint.lstrip('/')
             url = f"{base}/api/{clean_endpoint}"
+            
+            logger.debug(f"发送 {method} 请求到 {url}")
             response = requests.request(method, url, headers=self.headers, **kwargs)
+            
+            if not response:
+                logger.error("API请求返回空响应")
+                return Result.fail("API请求返回空响应")
 
             if response.status_code == 200:
-                response_data = response.json()
-                logger.debug(f"API响应数据: {response_data}")
-                return Result.ok(response_data)
-            return Result.fail(f"请求失败: {response.text}")
+                try:
+                    response_data = response.json()
+                    if not response_data:
+                        logger.warning("API返回空数据")
+                        return Result.fail("API返回空数据")
+                    logger.debug(f"API响应数据: {response_data}")
+                    return Result.ok(response_data)
+                except ValueError as e:
+                    logger.error(f"解析JSON响应失败: {e}")
+                    return Result.fail(f"无效的JSON响应: {response.text}")
+            
+            error_msg = f"请求失败 (状态码: {response.status_code}): {response.text}"
+            logger.error(error_msg)
+            return Result.fail(error_msg)
 
+        except requests.exceptions.RequestException as e:
+            error_msg = f"网络请求错误: {str(e)}"
+            logger.error(error_msg)
+            return Result.fail(error_msg)
         except Exception as e:
-            return Result.fail(f"请求出错: {str(e)}")
+            error_msg = f"请求处理错误: {str(e)}"
+            logger.error(error_msg)
+            return Result.fail(error_msg)
 
     def create_email(self, email: str, expiry_time: int = 3600000) -> Result[dict]:
         try:
