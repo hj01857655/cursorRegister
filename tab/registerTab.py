@@ -35,6 +35,9 @@ class RegisterTab(ttk.Frame):
 
     def setup_ui(self):
         account_frame = UI.create_labeled_frame(self, "账号信息")
+        
+        self.selected_mode.set("auto")
+        
         for row, (var_name, label_text) in enumerate(self.env_vars):
             entry = UI.create_labeled_entry(account_frame, label_text, row)
             if os.getenv(var_name):
@@ -54,7 +57,6 @@ class RegisterTab(ttk.Frame):
         mode_label.pack(side=tk.LEFT, padx=(3, 8))
 
         modes = [
-            ("人工验证", "semi"),
             ("自动验证", "auto"),
             ("全自动", "admin")
         ]
@@ -206,8 +208,8 @@ class RegisterTab(ttk.Frame):
 
                 if not (register_method := {
                     "auto": self.registrar.auto_register,
-                    "semi": self.registrar.semi_auto_register,
-                    "admin": self.registrar.admin_auto_register
+                    "admin": self.registrar.admin_auto_register,
+                    "api": self.registrar.api_auto_register
                 }.get(mode)):
                     raise ValueError(f"未知的注册模式: {mode}")
 
@@ -292,7 +294,6 @@ class RegisterTab(ttk.Frame):
                     "EMAIL": os.getenv("EMAIL", ""),
                     "PASSWORD": os.getenv("PASSWORD", ""),
                     "COOKIES_STR": os.getenv("COOKIES_STR", ""),
-                    "API_KEY": os.getenv("API_KEY", ""),
                     "MOE_MAIL_URL": os.getenv("MOE_MAIL_URL", "")
                 }
 
