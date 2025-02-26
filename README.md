@@ -23,6 +23,19 @@
 
 </div>
 
+<div align="center">
+  <h2>📢 重要通告</h2>
+  <p style="font-size: 18px; font-weight: bold; color: #FF5733;">
+    🎉 作者已成功实现批量注册功能！
+  </p>
+  
+  <div align="center">
+    <img src="assets/20250226154403.png" alt="批量注册功能展示1" width="897" height="430"/>
+    <br/><br/>
+    <img src="assets/20250226154429.png" alt="批量注册功能展示2" width="1260" height="523"/>
+  </div>
+</div>
+
 <p align="center">
   <b>
   <a href="#-快速开始">快速开始</a> •
@@ -430,7 +443,7 @@
 - 📱 扫描左侧二维码加入微信群
 - 💬 与其他用户交流使用心得
 - ❓ 解决使用过程中的问题
-- 📢 获取最新版本和更新信息
+- �� 获取最新版本和更新信息
 
 #### 扫描左侧二维码，立即加入微信群！
 
