@@ -32,7 +32,7 @@
   <div align="center">
     <img src="assets/20250226154403.png" alt="批量注册功能展示1" width="897" height="430"/>
     <br/><br/>
-    <img src="assets/20250226154429.png" alt="批量注册功能展示2" width="1260" height="523"/>
+    <img src="assets/shili.png" alt="批量注册功能展示2" width="1260" height="523"/>
   </div>
 </div>
 
