@@ -16,7 +16,7 @@ from loguru import logger
 
 from tab import LogWindow, ManageTab, RegisterTab, AboutTab, UI
 
-console_mode = False
+console_mode = True
 
 
 @dataclass
@@ -40,7 +40,7 @@ class CursorApp:
         self.root = root
         self.config = WindowConfig()
         self.entries: Dict[str, ttk.Entry] = {}
-        self.selected_mode = tk.StringVar(value="semi")
+        self.selected_mode = tk.StringVar(value="admin")
 
         self.root.title(self.config.title)
         UI.center_window(self.root, self.config.width, self.config.height)

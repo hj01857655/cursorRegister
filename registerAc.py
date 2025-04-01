@@ -36,14 +36,14 @@ class CursorRegistration:
         self.retry_times = 5
         self.browser = self.tab = self.moe = None
         self.admin = False
-
+    # 安全操作
     def _safe_action(self, action, *args, **kwargs):
         try:
             return action(*args, **kwargs)
         except Exception as e:
             logger.error(f"{action.__name__}失败: {str(e)}")
             raise
-
+    # 初始化浏览器
     def init_browser(self):
         co = ChromiumOptions()
         co.new_env()
@@ -55,24 +55,24 @@ class CursorRegistration:
         self.tab = self.browser.latest_tab
         self.tab.get(self.CURSOR_SIGNUP_URL)
         logger.debug("浏览器初始化成功")
-
+    # 输入注册信息
     def input_field(self, fields_dict):
         for name, value in fields_dict.items():
             self.tab.ele(f'@name={name}').input(value)
             time.sleep(random.uniform(1, 4))
             logger.debug(f"成功输入 {name}")
             logger.debug(f"{value}")
-
+    # 输入注册信息
     def fill_registration_form(self):
         self.input_field({
             'first_name': self.first_name,
             'last_name': self.last_name,
             'email': self.email
         })
-
+    # 输入密码
     def fill_password(self):
         self.input_field({'password': self.password})
-
+    # 获取试用信息
     def get_trial_info(self, cookie=None):
         logger.debug("开始获取试用信息")
         self.tab.get(self.CURSOR_SETTING_URL)
@@ -106,7 +106,7 @@ class CursorRegistration:
 
         logger.debug("成功获取所有试用信息")
         return usage_ele.text, trial_days.text
-
+    # 获取cursor token
     def get_cursor_token(self):
         for attempt in range(3):
             try:
@@ -118,7 +118,7 @@ class CursorRegistration:
             except Exception as e:
                 logger.error(f"获取cookie失败: {str(e)}")
         return None
-
+    # 处理页面跳转
     def _handle_page_transition(self, current_url, target_url, action_description, max_retries=5):
         for retry in range(max_retries):
             try:
@@ -145,7 +145,7 @@ class CursorRegistration:
                 if retry == max_retries - 1:
                     raise Exception(f"在{action_description}时超时")
         return False
-
+    # 半自动注册
     def semi_auto_register(self, wait_callback=None):
         try:
             self._safe_action(self.init_browser)
@@ -174,7 +174,7 @@ class CursorRegistration:
         finally:
             if self.browser:
                 self.browser.quit()
-
+    # 半自动注册
     def auto_register(self, wait_callback=None):
         try:
             self._safe_action(self.init_browser)
@@ -227,7 +227,7 @@ class CursorRegistration:
         finally:
             if self.browser:
                 self.browser.quit()
-
+    # 管理员自动注册
     def admin_auto_register(self, wait_callback=None):
         self.moe = MoemailManager()
         email_info = self.moe.create_email(email=self.email)
@@ -242,7 +242,7 @@ class CursorRegistration:
             }
             Utils.update_env_vars(env_updates)
         return token
-
+    # 点击验证码
     def _cursor_turnstile(self):
         max_retries = 5
         for retry in range(max_retries):
@@ -271,7 +271,7 @@ class CursorRegistration:
 
         logger.error("验证码处理失败")
         return False
-
+    # 获取最新邮件数据
     def get_email_data(self):
         for retry in range(self.retry_times):
             try:
@@ -286,7 +286,7 @@ class CursorRegistration:
                     logger.error(f"已达到最大重试次数 {self.retry_times}，获取邮件失败")
                     raise Exception("获取邮件内容失败")
             time.sleep(2)
-
+    # 解析邮件内容获取验证码
     def parse_cursor_verification_code(self, email_data):
         verify_code = None
         logger.debug("开始解析邮件内容获取验证码")
@@ -316,7 +316,7 @@ class CursorRegistration:
         except Exception as e:
             logger.error(f"解析验证码时出错: {str(e)}")
             raise
-
+    # 输入验证码
     def input_email_verification(self, verify_code):
         logger.debug(f"开始输入验证码: {verify_code}")
         for retry in range(self.retry_times):
@@ -345,3 +345,5 @@ class CursorRegistration:
             if retry == self.retry_times - 1:
                 logger.error("在输入验证码时超时，已达到最大重试次数")
                 raise Exception("在输入验证码时超时")
+if __name__ == "__main__":
+    registration = CursorRegistration()

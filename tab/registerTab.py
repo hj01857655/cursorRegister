@@ -54,9 +54,9 @@ class RegisterTab(ttk.Frame):
         mode_label.pack(side=tk.LEFT, padx=(3, 8))
 
         modes = [
+            ("全自动", "admin"),
             ("人工验证", "semi"),
             ("自动验证", "auto"),
-            ("全自动", "admin")
         ]
 
         for text, value in modes:
