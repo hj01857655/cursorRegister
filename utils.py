@@ -421,6 +421,10 @@ class MoemailManager:
             if missing_vars:
                 return Result.fail(f"缺少必需的环境变量: {', '.join(missing_vars)}")
             
+            # 确保URL包含协议头
+            if not moe_mail_url.startswith(('http://', 'https://')):
+                moe_mail_url = f'https://{moe_mail_url}'
+            
             return Result.ok((api_key, moe_mail_url))
         except Exception as e:
             return Result.fail(f"检查环境变量时出错: {str(e)}")
@@ -445,6 +449,9 @@ class MoemailManager:
                 return Result.fail("请求参数无效：方法或端点为空")
 
             base = self.base_url.rstrip('/')
+            # 确保base_url包含协议头
+            if not base.startswith(('http://', 'https://')):
+                base = f'https://{base}'
             clean_endpoint = endpoint.lstrip('/')
             url = f"{base}/api/{clean_endpoint}"
             
@@ -564,7 +571,7 @@ class MoemailManager:
                 return Result.fail(f"获取邮件详情失败: {detail_result.message}")
 
             logger.debug("成功获取邮件详情")
-            logger.debug(f"邮件数据: {detail_result.data}")
+            # logger.debug(f"邮件数据: {detail_result.data}")
 
             return Result.ok(detail_result.data)
 
