@@ -20,19 +20,37 @@ from typing import Dict, List, Tuple, Callable
 from concurrent.futures import ThreadPoolExecutor
 import base64
 import json
+import sqlite3
 
 import requests
 from loguru import logger
 
 from utils import CursorManager, error_handler,Utils
 from .ui import UI
+from database import create_cursor_database
 
 
 class ManageTab(ttk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, style='TFrame', **kwargs)
         self.registrar = None
+        # 确保数据库存在
+        create_cursor_database()
         self.setup_ui()
+        self.update_timer = None  # 初始化定时器变量
+        
+        # 绑定标签页切换事件
+        if isinstance(parent, ttk.Notebook):
+            parent.bind('<<NotebookTabChanged>>', self.on_tab_changed)
+
+    def on_tab_changed(self, event):
+        """处理标签页切换事件"""
+        notebook = event.widget
+        current_tab = notebook.select()
+        if notebook.index(current_tab) == notebook.index(self):
+            # 当切换到账号管理标签页时
+            self.refresh_list()  # 刷新账号列表
+            # 不自动更新账号信息，让用户手动点击"更新信息"按钮
 
     def setup_ui(self):
         accounts_frame = UI.create_labeled_frame(self, "已保存账号")
@@ -52,50 +70,151 @@ class ManageTab(ttk.Frame):
         tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
         scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
-
         outer_button_frame = ttk.Frame(self, style='TFrame')
         outer_button_frame.pack(pady=(PADDING['LARGE'], 0), expand=True)
 
         button_frame = ttk.Frame(outer_button_frame, style='TFrame')
         button_frame.pack(anchor=tk.W)
 
-
         first_row_frame = ttk.Frame(button_frame, style='TFrame')
         first_row_frame.pack(pady=(0, PADDING['MEDIUM']), anchor=tk.W)
         
-        ttk.Button(first_row_frame, text="刷新列表", command=self.refresh_list, 
+        ttk.Button(first_row_frame, text="切换账号", command=self.update_auth, 
                   style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
-        ttk.Button(first_row_frame, text="更新信息", command=self.update_account_info, 
+        ttk.Button(first_row_frame, text="重置ID", command=self.reset_machine_id, 
                   style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
-        ttk.Button(first_row_frame, text="更换账号", command=self.update_auth, 
-                  style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
-
-
-        second_row_frame = ttk.Frame(button_frame, style='TFrame')
-        second_row_frame.pack(pady=(0, PADDING['XLARGE']), anchor=tk.W)
-        
-        ttk.Button(second_row_frame, text="重置ID", command=self.reset_machine_id, 
-                  style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
-        ttk.Button(second_row_frame, text="删除账号", command=self.delete_account, 
+        ttk.Button(first_row_frame, text="删除账号", command=self.delete_account, 
                   style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
 
         self.account_tree = tree
         self.selected_item = None
 
+    def start_auto_update(self):
+        """启动自动更新定时器"""
+        self.update_all_accounts()  # 立即更新所有账号
+        self.schedule_next_update()  # 安排下一次更新
+
+    def schedule_next_update(self):
+        """安排下一次自动更新"""
+        if self.update_timer:
+            self.after_cancel(self.update_timer)
+        self.update_timer = self.after(30 * 60 * 1000, self.update_all_accounts)  # 30分钟后更新
+    #更新所有账号信息
+    def update_all_accounts(self):
+        """更新所有账号信息"""
+        try:
+            items = self.account_tree.get_children()
+            if not items:
+                return
+
+            # 使用线程池控制并发数量
+            with ThreadPoolExecutor(max_workers=3) as executor:
+                futures = []
+                for item in items:
+                    try:
+                        csv_file_path = item
+                        account_data = self.parse_csv_file(csv_file_path)
+                        future = executor.submit(self.update_single_account, csv_file_path, account_data)
+                        futures.append(future)
+                    except Exception as e:
+                        logger.error(f"提交更新任务失败 {item}: {str(e)}")
+
+                # 等待所有任务完成
+                for future in futures:
+                    try:
+                        future.result()  # 获取结果，如果有异常会在这里抛出
+                    except Exception as e:
+                        logger.error(f"执行更新任务失败: {str(e)}")
+
+            self.schedule_next_update()  # 安排下一次更新
+        except Exception as e:
+            logger.error(f"批量更新账号失败: {str(e)}")
+            raise  # 向上传递异常，让调用者处理
+
+    #更新单个账号信息
+    def update_single_account(self, csv_file_path: str, account_data: Dict[str, str]) -> None:
+        """更新单个账号信息"""
+        cookie_str = account_data.get('COOKIES_STR', '')
+        if not cookie_str:
+            return
+
+        try:
+            user_id = self.extract_user_id_from_jwt(cookie_str)
+            reconstructed_cookie = f"WorkosCursorSessionToken={user_id}%3A%3A{cookie_str.split('%3A%3A')[-1]}" if '%3A%3A' in cookie_str else cookie_str
+
+            domain, email, quota, days = self.get_trial_usage(reconstructed_cookie)
+            
+            # 使用 after 方法确保在主线程中更新 UI
+            self.winfo_toplevel().after(0, lambda: self.account_tree.set(csv_file_path, '域名', domain))
+            self.winfo_toplevel().after(0, lambda: self.account_tree.set(csv_file_path, '邮箱', email))
+            self.winfo_toplevel().after(0, lambda: self.account_tree.set(csv_file_path, '额度', quota))
+            self.winfo_toplevel().after(0, lambda: self.account_tree.set(csv_file_path, '剩余天数', days))
+
+            # 更新CSV文件
+            self.update_csv_file(csv_file_path,
+                               DOMAIN=domain,
+                               EMAIL=email,
+                               QUOTA=quota,
+                               DAYS=days,
+                               COOKIES_STR=reconstructed_cookie)
+
+            # 更新数据库
+            self.update_database(domain, email, account_data.get('PASSWORD', ''), 
+                               reconstructed_cookie, quota, days)
+
+            logger.debug(f"已更新账号信息: {email}")
+        except Exception as e:
+            logger.error(f"更新账号 {csv_file_path} 失败: {str(e)}")
+            raise  # 向上传递异常，让线程池捕获
+
+    def update_database(self, domain: str, email: str, password: str, 
+                       cookie_str: str, quota: str, days: str) -> None:
+        """更新数据库中的账号信息"""
+        try:
+            conn = sqlite3.connect('cursor.db')
+            cursor = conn.cursor()
+
+            # 检查账号是否已存在
+            cursor.execute('SELECT id FROM accounts WHERE email = ?', (email,))
+            existing_account = cursor.fetchone()
+
+            if existing_account:
+                # 更新现有账号
+                cursor.execute('''
+                    UPDATE accounts 
+                    SET domain = ?, password = ?, cookie_str = ?, 
+                        quota = ?, days = ?, updated_at = CURRENT_TIMESTAMP
+                    WHERE email = ?
+                ''', (domain, password, cookie_str, quota, days, email))
+            else:
+                # 插入新账号
+                cursor.execute('''
+                    INSERT INTO accounts (domain, email, password, cookie_str, quota, days)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (domain, email, password, cookie_str, quota, days))
+
+            conn.commit()
+            logger.debug(f"数据库更新成功: {email}")
+        except Exception as e:
+            logger.error(f"数据库更新失败: {str(e)}")
+        finally:
+            conn.close()
+
+    #选择账号
     def on_select(self, event):
         selected_items = self.account_tree.selection()
         if selected_items:
             self.selected_item = selected_items[0]
         else:
             self.selected_item = None
-
+    #获取csv文件列表
     def get_csv_files(self) -> List[str]:
         try:
             return glob.glob('env_backups/cursor_account_*.csv')
         except Exception as e:
             logger.error(f"获取CSV文件列表失败: {str(e)}")
             return []
-
+    #解析csv文件
     def parse_csv_file(self, csv_file: str) -> Dict[str, str]:
         account_data = {
             'DOMAIN': '',
@@ -119,7 +238,7 @@ class ManageTab(ttk.Frame):
         except Exception as e:
             logger.error(f"解析文件 {csv_file} 失败: {str(e)}")
         return account_data
-
+    #更新csv文件
     def update_csv_file(self, csv_file: str, **fields_to_update) -> None:
         if not fields_to_update:
             logger.debug("没有需要更新的字段")
@@ -166,6 +285,34 @@ class ManageTab(ttk.Frame):
                 ))
 
             logger.info("账号列表已刷新")
+            
+            # 显示加载提示
+            self.winfo_toplevel().after(0, lambda: UI.show_loading(
+                self.winfo_toplevel(),
+                "更新账号信息",
+                "正在获取所有账号信息，请稍候..."
+            ))
+            
+            # 在新线程中更新所有账号信息
+            def update_thread():
+                try:
+                    self.update_all_accounts()
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                    self.winfo_toplevel().after(0, lambda: UI.show_success(
+                        self.winfo_toplevel(),
+                        "所有账号信息已更新"
+                    ))
+                except Exception as e:
+                    logger.error(f"更新账号信息失败: {str(e)}")
+                    self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
+                    self.winfo_toplevel().after(0, lambda: UI.show_error(
+                        self.winfo_toplevel(),
+                        "更新账号信息失败",
+                        str(e)
+                    ))
+            
+            threading.Thread(target=update_thread, daemon=True).start()
+            
         except Exception as e:
             UI.show_error(self.winfo_toplevel(), "刷新列表失败", e)
 
@@ -349,7 +496,7 @@ class ManageTab(ttk.Frame):
                 try:
                     self.winfo_toplevel().after(0, lambda: UI.show_loading(
                         self.winfo_toplevel(),
-                        "更换账号",
+                        "切换账号",
                         "正在刷新Cookie，请稍候..."
                     ))
 
@@ -366,7 +513,7 @@ class ManageTab(ttk.Frame):
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     self.winfo_toplevel().after(0, lambda: UI.show_error(
                         self.winfo_toplevel(),
-                        "更换账号失败",
+                        "切换账号失败",
                         str(e)
                     ))
 
@@ -395,7 +542,22 @@ class ManageTab(ttk.Frame):
                         "正在删除账号信息，请稍候..."
                     ))
 
+                    # 删除CSV文件
                     os.remove(csv_file_path)
+                    
+                    # 从数据库中删除
+                    try:
+                        conn = sqlite3.connect('cursor.db')
+                        cursor = conn.cursor()
+                        cursor.execute('DELETE FROM accounts WHERE email = ?', (account_data['EMAIL'],))
+                        conn.commit()
+                        logger.debug(f"从数据库中删除账号: {account_data['EMAIL']}")
+                    except Exception as e:
+                        logger.error(f"从数据库删除账号失败: {str(e)}")
+                    finally:
+                        conn.close()
+
+                    # 从树形视图中删除
                     self.account_tree.delete(self.selected_item)
                     
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))

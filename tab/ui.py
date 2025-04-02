@@ -24,7 +24,15 @@ class UI:
         'input_bg': '#FFFFFF',
         'label_fg': '#334155',
         'title_fg': '#1E40AF',
-        'subtitle_fg': '#475569'
+        'subtitle_fg': '#475569',
+        'button_bg': '#E5E7EB',
+        'button_fg': '#334155',
+        'button_active_bg': '#D1D5DB',
+        'button_pressed_bg': '#A3A3A3',
+        'button_disabled_bg': '#9CA3AF',
+        'button_active_fg': '#334155',
+        'button_pressed_fg': '#FFFFFF',
+        'button_disabled_fg': '#9CA3AF'
     }
 
     @staticmethod
@@ -138,6 +146,21 @@ class UI:
                   background=[('active', UI.COLORS['bg'])],
                   foreground=[('active', UI.COLORS['primary'])]
                   )
+
+        style.configure('Action.TButton',
+                       background=UI.COLORS['button_bg'],
+                       foreground=UI.COLORS['button_fg'],
+                       font=(UI.FONT[0], 10, 'bold'),
+                       padding=(10, 5),
+                       relief='raised',
+                       borderwidth=2)
+        style.map('Action.TButton',
+                 background=[('active', UI.COLORS['button_active_bg']),
+                           ('pressed', UI.COLORS['button_pressed_bg']),
+                           ('disabled', UI.COLORS['button_disabled_bg'])],
+                 foreground=[('active', UI.COLORS['button_active_fg']),
+                           ('pressed', UI.COLORS['button_pressed_fg']),
+                           ('disabled', UI.COLORS['button_disabled_fg'])])
 
     @staticmethod
     def create_labeled_entry(parent, label_text: str, row: int, **kwargs) -> ttk.Entry:

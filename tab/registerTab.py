@@ -68,22 +68,25 @@ class RegisterTab(ttk.Frame):
                 style='TRadiobutton'
             ).pack(side=tk.LEFT, padx=10)
 
+        # 按钮区域
         button_frame = ttk.Frame(self, style='TFrame')
-        button_frame.pack(pady=(8, 0))
+        button_frame.pack(fill=tk.X, pady=(8, 0))
 
+        # 创建按钮容器
+        buttons_container = ttk.Frame(button_frame, style='TFrame')
+        buttons_container.pack(expand=True)
 
-        inner_button_frame = ttk.Frame(button_frame, style='TFrame')
-        inner_button_frame.pack(expand=True)
-
-        for i, (text, command) in enumerate(self.buttons):
+        # 创建按钮
+        for text, command in self.buttons:
             btn = ttk.Button(
-                inner_button_frame,
+                buttons_container,
                 text=text,
-                command=getattr(self, command),
-                style='Custom.TButton',
-                width=10
+                command=lambda cmd=command: getattr(self, cmd)(),
+                style='Action.TButton',
+                width=15,
+                padding=(8, 4)
             )
-            btn.pack(side=tk.LEFT, padx=10)
+            btn.pack(side=tk.LEFT, padx=8, pady=5)
 
     def _save_env_vars(self, updates: Dict[str, str] = None) -> None:
         if not updates:

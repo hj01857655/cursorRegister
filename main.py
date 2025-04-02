@@ -1,6 +1,6 @@
-WINDOW_WIDTH = 460
-WINDOW_HEIGHT = 460
-WINDOW_TITLE = "Cursor注册小助手"
+WINDOW_WIDTH = 900
+WINDOW_HEIGHT = 600
+WINDOW_TITLE = "Cursor 账号管理器"
 BACKUP_DIR = "env_backups"
 
 import os
@@ -10,11 +10,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from tkinter import ttk
 from typing import Dict, List, Tuple
+from datetime import datetime
 
 from dotenv import load_dotenv
 from loguru import logger
 
 from tab import LogWindow, ManageTab, RegisterTab, AboutTab, UI
+from tab.configTab import ConfigTab
 
 console_mode = True
 
@@ -29,9 +31,9 @@ class WindowConfig:
         ('DOMAIN', '域名'), ('EMAIL', '邮箱'), ('PASSWORD', '密码')
     ])
     buttons: List[Tuple[str, str]] = field(default_factory=lambda: [
-        ("生成账号", "generate_account"),
-        ("注册账号", "auto_register"),
-        ("备份账号", "backup_account")
+        ("✨ 生成账号", "generate_account"),
+        ("🚀 自动注册", "auto_register"),
+        ("💾 备份账号", "backup_account")
     ])
 
 
@@ -53,11 +55,13 @@ class CursorApp:
         self.setup_ui()
 
     def setup_ui(self) -> None:
+        # 创建主布局框架
         main_frame = ttk.Frame(self.root, padding="10", style='TFrame')
         main_frame.pack(fill=tk.BOTH, expand=True)
 
+        # 左侧内容区域
         content_frame = ttk.Frame(main_frame, style='TFrame')
-        content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(0, 0))
+        content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(0, 10))
         content_frame.configure(width=450)
         content_frame.pack_propagate(False)
 
@@ -84,6 +88,9 @@ class CursorApp:
         manage_tab = ManageTab(notebook)
         notebook.add(manage_tab, text="账号管理")
 
+        config_tab = ConfigTab(notebook)
+        notebook.add(config_tab, text="环境配置")
+
         about_tab = AboutTab(notebook)
         notebook.add(about_tab, text="关于")
 
@@ -97,23 +104,55 @@ class CursorApp:
         )
         footer.pack(side=tk.LEFT)
 
-        log_button = ttk.Button(
-            footer_frame,
-            text="日志",
-            style='Custom.TButton',
-            command=self.toggle_log_window,
-            width=10,
-            padding=(0, 2, 0, 2)
+        # 右侧日志区域
+        log_frame = ttk.LabelFrame(main_frame, text="运行日志", padding="5", style='Card.TLabelframe')
+        log_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(0, 5))
+
+        # 创建日志文本框
+        self.log_text = tk.Text(log_frame, wrap=tk.WORD, height=20, width=40)
+        self.log_text.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # 创建日志滚动条
+        scrollbar = ttk.Scrollbar(log_frame, orient="vertical", command=self.log_text.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.log_text.configure(yscrollcommand=scrollbar.set)
+
+        # 设置日志文本框样式
+        self.log_text.configure(
+            font=('Consolas', 9),
+            bg='#1E1E1E',
+            fg='#FFFFFF',
+            insertbackground='white',
+            selectbackground='#264F78',
+            selectforeground='white'
         )
-        log_button.pack(side=tk.RIGHT, padx=(0, 2))
 
-        self.log_window = LogWindow(self.root)
+        # 设置只读模式
+        self.log_text.configure(state='disabled')
 
-    def toggle_log_window(self):
-        if not self.log_window.winfo_viewable():
-            self.log_window.show_window()
-        else:
-            self.log_window.withdraw()
+    def add_log(self, message: str, level: str = "INFO") -> None:
+        self.log_text.configure(state='normal')
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        
+        # 根据日志级别设置不同的颜色
+        colors = {
+            "DEBUG": "#808080",
+            "INFO": "#FFFFFF",
+            "WARNING": "#FFA500",
+            "ERROR": "#FF4444",
+            "SUCCESS": "#00FF00"
+        }
+        
+        self.log_text.insert(tk.END, f"[{timestamp}] ", "timestamp")
+        self.log_text.insert(tk.END, f"{message}\n", level)
+        
+        # 设置标签颜色
+        self.log_text.tag_configure("timestamp", foreground="#888888")
+        self.log_text.tag_configure(level, foreground=colors.get(level, "#FFFFFF"))
+        
+        # 自动滚动到底部
+        self.log_text.see(tk.END)
+        self.log_text.configure(state='disabled')
 
 
 def setup_logging(log_window=None) -> None:
@@ -165,7 +204,7 @@ def main() -> None:
 
         root = tk.Tk()
         app = CursorApp(root)
-        setup_logging(app.log_window)
+        setup_logging(app)
         root.mainloop()
     except Exception as e:
         logger.error(f"程序启动失败: {e}")
