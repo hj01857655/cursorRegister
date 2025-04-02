@@ -1,6 +1,91 @@
 import sqlite3
 from pathlib import Path
 from loguru import logger
+from typing import Dict, List, Optional, Union
+from contextlib import contextmanager
+
+class DatabaseManager:
+    def __init__(self, db_path: str = "cursor.db"):
+        self.db_path = Path(db_path)
+    
+    @contextmanager
+    def get_connection(self):
+        """获取数据库连接上下文"""
+        conn = sqlite3.connect(self.db_path)
+        try:
+            yield conn
+        finally:
+            conn.close()
+    
+    def execute(self, query: str, params: tuple = None) -> Optional[List[Dict]]:
+        """执行SQL查询并返回结果"""
+        with self.get_connection() as conn:
+            cursor = conn.cursor()
+            if params:
+                cursor.execute(query, params)
+            else:
+                cursor.execute(query)
+            
+            if query.strip().upper().startswith("SELECT"):
+                columns = [col[0] for col in cursor.description]
+                return [dict(zip(columns, row)) for row in cursor.fetchall()]
+            else:
+                conn.commit()
+                return None
+    
+    def insert_account(self, account_data: Dict[str, str]) -> bool:
+        """插入账号数据"""
+        try:
+            query = """
+            INSERT INTO accounts (domain, email, password, cookie_str, quota, days)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """
+            params = (
+                account_data.get('domain'),
+                account_data.get('email'),
+                account_data.get('password'),
+                account_data.get('cookie_str'),
+                account_data.get('quota'),
+                account_data.get('days')
+            )
+            self.execute(query, params)
+            logger.success(f"账号添加成功: {account_data.get('email')}")
+            return True
+        except Exception as e:
+            logger.error(f"添加账号失败: {str(e)}")
+            return False
+    
+    def delete_account(self, email: str) -> bool:
+        """根据邮箱删除账号"""
+        try:
+            self.execute("DELETE FROM accounts WHERE email = ?", (email,))
+            logger.success(f"账号删除成功: {email}")
+            return True
+        except Exception as e:
+            logger.error(f"删除账号失败: {str(e)}")
+            return False
+    
+    def get_account(self, email: str) -> Optional[Dict]:
+        """根据邮箱获取账号信息"""
+        try:
+            result = self.execute("SELECT * FROM accounts WHERE email = ?", (email,))
+            return result[0] if result else None
+        except Exception as e:
+            logger.error(f"查询账号失败: {str(e)}")
+            return None
+    
+    def update_account(self, email: str, updates: Dict[str, str]) -> bool:
+        """更新账号信息"""
+        try:
+            set_clause = ", ".join([f"{k} = ?" for k in updates.keys()])
+            query = f"UPDATE accounts SET {set_clause} WHERE email = ?"
+            params = tuple(list(updates.values()) + [email])
+            self.execute(query, params)
+            logger.success(f"账号更新成功: {email}")
+            return True
+        except Exception as e:
+            logger.error(f"更新账号失败: {str(e)}")
+            return False
 
 def create_cursor_database():
     try:
@@ -75,4 +160,4 @@ def create_cursor_database():
         return False
 
 if __name__ == "__main__":
-    create_cursor_database() 
+    create_cursor_database()
