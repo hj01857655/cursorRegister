@@ -404,6 +404,43 @@ class CursorManager:
             logger.error(f"process_cookies 执行失败: {e}")
             return Result.fail(str(e))
 
+    @error_handler
+    def get_cookies(self) -> Result[Dict[str, str]]:
+        try:
+            auth_keys = {k: f"cursorAuth/{v}" for k, v in {
+                "sign_up": "cachedSignUpType",
+                "email": "cachedEmail",
+                "access": "accessToken",
+                "refresh": "refreshToken"
+            }.items()}
+
+            logger.debug("正在查询认证信息...")
+            logger.debug(f"查询的键值: {list(auth_keys.values())}")
+            
+            result = self.db_manager.query(list(auth_keys.values()))
+            if not result:
+                logger.error(f"查询失败: {result.message}")
+                return Result.fail("查询认证信息失败")
+
+            auth_data = result.data
+            if not auth_data:
+                logger.warning("数据库中未找到认证信息")
+                return Result.fail("未找到认证信息")
+
+            logger.debug("=== 数据库中的原始数据 ===")
+            for key, value in auth_data.items():
+                logger.debug(f"键: {key}")
+                logger.debug(f"值: {value}")
+                logger.debug("-" * 50)
+
+            # 反转auth_keys字典，用于将数据库键映射回原始键名
+            reverse_keys = {v: k for k, v in auth_keys.items()}
+            logger.debug(f"键值映射关系: {reverse_keys}")
+        except Exception as e:
+            logger.error(f"get_cookies 执行失败: {e}")
+            logger.error(f"错误详情: {str(e)}")
+            return Result.fail(str(e))
+
 
 class MoemailManager:
     @staticmethod
@@ -571,3 +608,6 @@ class MoemailManager:
         except Exception as e:
             logger.error(f"获取邮件内容时发生错误: {str(e)}")
             return Result.fail(str(e))
+
+if __name__ == "__main__":
+    CursorManager().get_cookies()
