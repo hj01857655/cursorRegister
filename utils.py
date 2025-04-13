@@ -62,7 +62,7 @@ def file_operation_context(file_path: Path, require_write: bool = True) -> Conte
         if require_write:
             Utils.manage_file_permissions(file_path, True)
 
-
+#数据库管理类
 class DatabaseManager:
     def __init__(self, db_path: Path, table: str = "itemTable"):
         self.db_path = db_path
@@ -111,7 +111,7 @@ class DatabaseManager:
         except Exception as e:
             return Result.fail(f"数据库查询失败: {e}")
 
-
+#环境变量管理类
 class EnvManager:
     @staticmethod
     def update(updates: Dict[str, str]) -> Result[None]:
@@ -138,7 +138,7 @@ class EnvManager:
             raise ValueError(f"环境变量 '{key}' 未设置")
         return ""
 
-
+#工具类
 class Utils:
     @staticmethod
     def get_path(path_type: str) -> Path:
@@ -283,7 +283,7 @@ class Utils:
             logger.error(f"无效的 {token_key}: {str(e)}")
             return None
 
-
+#错误处理装饰器
 def error_handler(func: Callable) -> Callable:
     @wraps(func)
     def wrapper(*args, **kwargs) -> Result:
@@ -296,7 +296,7 @@ def error_handler(func: Callable) -> Callable:
 
     return wrapper
 
-#
+#Cursor管理类
 class CursorManager:
     def __init__(self):
         self.db_manager = DatabaseManager(Utils.get_path('cursor') / 'state.vscdb')
@@ -307,7 +307,18 @@ class CursorManager:
     def generate_cursor_account() -> Tuple[str, str]:
         try:
             random_length = random.randint(5, 20)
-            email = f"{Utils.generate_random_string(random_length)}@{EnvManager.get('DOMAIN')}"
+            
+            # 首先尝试从ConfigManager获取域名配置
+            domain_result = ConfigManager.get_config_value('DOMAIN')
+            if domain_result.success and domain_result.data:
+                domain = domain_result.data
+                logger.debug(f"从ConfigManager获取到域名: {domain}")
+            else:
+                # 如果无法从ConfigManager获取，则尝试从环境变量获取
+                domain = EnvManager.get('DOMAIN')
+                logger.debug(f"从环境变量获取到域名: {domain}")
+            
+            email = f"{Utils.generate_random_string(random_length)}@{domain}"
             password = Utils.generate_secure_password()
 
             logger.debug("生成的Cursor账号信息：")
@@ -608,6 +619,171 @@ class MoemailManager:
         except Exception as e:
             logger.error(f"获取邮件内容时发生错误: {str(e)}")
             return Result.fail(str(e))
+
+#配置管理类
+class ConfigManager:
+    """
+    管理系统配置的工具类
+    实现配置的双向绑定：
+    1. 从.env文件读取配置
+    2. 将UI中的更改写回.env文件
+    """
+    # 核心配置项列表 - 更新为.env文件中所有必要的配置项
+    _CORE_CONFIG_KEYS = [
+        'EMAIL', 
+        'PASSWORD', 
+        'COOKIES_STR', 
+        'DOMAIN', 
+        'API_KEY', 
+        'MOE_MAIL_URL'
+    ]
+    
+    @staticmethod
+    def get_config_keys() -> list[str]:
+        """获取所有核心配置项的键名"""
+        return ConfigManager._CORE_CONFIG_KEYS
+    
+    @staticmethod
+    @error_handler
+    def get_config_value(key: str) -> Result[str]:
+        """获取单个配置项的值
+        
+        先尝试从环境变量获取，如果不存在则从.env文件读取，
+        如果都不存在则返回空字符串
+        """
+        try:
+            # 1. 尝试从环境变量获取
+            value = EnvManager.get(key, raise_error=False)
+            if value:
+                return Result.ok(value)
+                
+            # 2. 尝试从.env文件获取
+            env_path = Utils.get_path('env')
+            if env_path.exists():
+                content = env_path.read_text(encoding='utf-8').splitlines()
+                for line in content:
+                    if '=' in line:
+                        env_key, env_value = line.split('=', 1)
+                        if env_key == key:
+                            # 去除引号
+                            env_value = env_value.strip().strip("'").strip('"')
+                            return Result.ok(env_value)
+            
+            # 3. 如果都没有找到，直接返回空字符串
+            return Result.ok("")
+        except Exception as e:
+            logger.error(f"获取配置项 {key} 失败: {e}")
+            return Result.fail(f"获取配置项失败: {e}")
+
+    @staticmethod
+    @error_handler
+    def load_config() -> Result[Dict[str, str]]:
+        """加载当前系统配置
+        
+        首先尝试从环境变量和.env文件读取配置
+        """
+        config = {}
+        
+        # 获取配置键列表
+        config_keys = ConfigManager.get_config_keys()
+        
+        # 1. 尝试从环境变量读取配置
+        for key in config_keys:
+            try:
+                value = EnvManager.get(key, raise_error=False)
+                if value:  # 只保存非空值
+                    config[key] = value
+                else:
+                    config[key] = ""  # 如果环境变量中不存在，则设为空字符串
+            except Exception as e:
+                logger.warning(f"获取环境变量 {key} 失败: {e}")
+                config[key] = ""  # 出现异常时设为空字符串
+        
+        # 2. 尝试读取.env文件中的所有配置项
+        try:
+            env_path = Utils.get_path('env')
+            if env_path.exists():
+                content = env_path.read_text(encoding='utf-8').splitlines()
+                for line in content:
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        # 去除引号
+                        value = value.strip().strip("'").strip('"')
+                        # 更新配置值，确保.env文件的值优先级最高
+                        config[key] = value
+                        logger.debug(f"从.env文件读取配置项: {key}={value}")
+                        
+                        # 如果发现.env中有新的配置项不在核心配置列表中，动态添加
+                        if key not in ConfigManager._CORE_CONFIG_KEYS:
+                            ConfigManager._CORE_CONFIG_KEYS.append(key)
+                            logger.debug(f"动态添加新的配置项到核心配置列表: {key}")
+        except Exception as e:
+            logger.warning(f"读取.env文件失败: {e}")
+        
+        return Result.ok(config)
+    
+    @staticmethod
+    @error_handler
+    def save_config(config: Dict[str, str]) -> Result[None]:
+        """保存系统配置到.env文件"""
+        # 1. 读取现有的.env文件内容，保留所有配置项
+        try:
+            env_path = Utils.get_path('env')
+            env_config = {}
+            
+            if env_path.exists():
+                content = env_path.read_text(encoding='utf-8').splitlines()
+                for line in content:
+                    if '=' in line:
+                        key, value = line.split('=', 1)
+                        # 保存所有现有配置项
+                        env_config[key] = value.strip()
+            
+            # 2. 添加或更新所有配置项
+            for key, value in config.items():
+                env_config[key] = f'\'{value}\''
+                # 同时更新内存中的环境变量
+                os.environ[key] = value
+                
+                # 如果是新的配置项，添加到核心配置列表
+                if key not in ConfigManager._CORE_CONFIG_KEYS:
+                    ConfigManager._CORE_CONFIG_KEYS.append(key)
+            
+            # 3. 写回.env文件
+            env_content = '\n'.join([f"{key}={value}" for key, value in env_config.items()]) + '\n'
+            env_path.write_text(env_content, encoding='utf-8')
+            logger.debug(f"已更新环境变量: {', '.join(config.keys())}")
+            
+            return Result.ok()
+        except Exception as e:
+            return Result.fail(f"保存配置失败: {e}")
+    
+    @staticmethod
+    @error_handler
+    def reset_to_default() -> Result[Dict[str, str]]:
+        """重置为默认配置"""
+        # 创建空配置 - 所有值都设为空字符串
+        empty_config = {key: "" for key in ConfigManager.get_config_keys()}
+        
+        # 保存空配置到.env文件
+        result = ConfigManager.save_config(empty_config)
+        if not result.success:
+            return Result.fail(f"重置配置失败: {result.message}")
+        
+        return Result.ok(empty_config)
+        
+    @staticmethod
+    @error_handler
+    def apply_config(config: Dict[str, str]) -> Result[None]:
+        """仅应用配置到当前环境，不保存到文件"""
+        try:
+            # 仅更新内存中的环境变量
+            for key, value in config.items():
+                os.environ[key] = value
+            
+            return Result.ok(message="配置已应用到当前会话")
+        except Exception as e:
+            return Result.fail(f"应用配置失败: {e}")
 
 if __name__ == "__main__":
     CursorManager().get_cookies()

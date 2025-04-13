@@ -236,3 +236,39 @@ class UI:
                 delattr(window, 'loading_dialog')
             except Exception:
                 pass
+
+    @staticmethod
+    def create_tooltip(widget, text: str) -> None:
+        """为控件创建悬停提示信息"""
+        tooltip = tk.Toplevel(widget, bg=UI.COLORS['primary'])
+        tooltip.withdraw()
+        tooltip.overrideredirect(True)
+        
+        # 创建提示文本标签
+        label = tk.Label(
+            tooltip, 
+            text=text, 
+            bg=UI.COLORS['primary'],
+            fg='white',
+            padx=8,
+            pady=4,
+            wraplength=300,
+            font=(UI.FONT[0], 9)
+        )
+        label.pack()
+        
+        # 显示和隐藏提示的函数
+        def show_tooltip(event=None):
+            x, y, _, _ = widget.bbox('insert')
+            x += widget.winfo_rootx() + 25
+            y += widget.winfo_rooty() + 25
+            
+            tooltip.geometry(f"+{x}+{y}")
+            tooltip.deiconify()
+            
+        def hide_tooltip(event=None):
+            tooltip.withdraw()
+            
+        # 绑定事件
+        widget.bind('<Enter>', show_tooltip)
+        widget.bind('<Leave>', hide_tooltip)

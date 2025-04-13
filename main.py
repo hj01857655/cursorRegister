@@ -1,5 +1,5 @@
-WINDOW_WIDTH = 460
-WINDOW_HEIGHT = 460
+WINDOW_WIDTH = 900
+WINDOW_HEIGHT = 520
 WINDOW_TITLE = "Cursor注册小助手"
 BACKUP_DIR = "env_backups"
 
@@ -14,7 +14,8 @@ from typing import Dict, List, Tuple
 from dotenv import load_dotenv
 from loguru import logger
 
-from tab import LogWindow, ManageTab, RegisterTab, AboutTab, UI
+from tab import ManageTab, RegisterTab, AboutTab, ConfigTab, UI
+from tab.logWindow import MAX_BUFFER_SIZE, UI_UPDATE_BATCH, MAX_TEXT_LENGTH
 
 console_mode = False
 
@@ -26,7 +27,7 @@ class WindowConfig:
     title: str = WINDOW_TITLE
     backup_dir: str = BACKUP_DIR
     env_vars: List[Tuple[str, str]] = field(default_factory=lambda: [
-        ('DOMAIN', '域名'), ('EMAIL', '邮箱'), ('PASSWORD', '密码')
+        ('EMAIL', '邮箱'), ('PASSWORD', '密码')
     ])
     buttons: List[Tuple[str, str]] = field(default_factory=lambda: [
         ("生成账号", "generate_account"),
@@ -51,24 +52,35 @@ class CursorApp:
 
         UI.setup_styles()
         self.setup_ui()
+        
+        # 在UI完全加载后调整分隔线位置
+        self.root.after(100, self.adjust_sash_position)
+
+    def adjust_sash_position(self):
+        """在窗口完全加载后调整分隔线的位置"""
+        window_width = self.root.winfo_width()
+        if window_width > 0:
+            # 设置分隔线位置在窗口宽度的50%处（对半分）
+            self.paned_window.sashpos(0, int(window_width * 0.5))
 
     def setup_ui(self) -> None:
-        main_frame = ttk.Frame(self.root, padding="10", style='TFrame')
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        self.main_frame = ttk.Frame(self.root, padding="10", style='TFrame')
+        self.main_frame.pack(fill=tk.BOTH, expand=True)
 
-        content_frame = ttk.Frame(main_frame, style='TFrame')
-        content_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(0, 0))
-        content_frame.configure(width=450)
-        content_frame.pack_propagate(False)
+        self.paned_window = ttk.PanedWindow(self.main_frame, orient=tk.HORIZONTAL)
+        self.paned_window.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
+
+        self.content_frame = ttk.Frame(self.paned_window, style='TFrame')
+        self.content_frame.configure(width=500)
 
         title_label = ttk.Label(
-            content_frame,
+            self.content_frame,
             text=self.config.title,
             style='Title.TLabel'
         )
         title_label.pack(pady=(0, 6))
 
-        notebook = ttk.Notebook(content_frame)
+        notebook = ttk.Notebook(self.content_frame)
         notebook.pack(fill=tk.BOTH, expand=True, pady=(0, 2))
 
         register_tab = RegisterTab(
@@ -83,11 +95,14 @@ class CursorApp:
 
         manage_tab = ManageTab(notebook)
         notebook.add(manage_tab, text="账号管理")
+        
+        config_tab = ConfigTab(notebook)
+        notebook.add(config_tab, text="系统配置")
 
         about_tab = AboutTab(notebook)
         notebook.add(about_tab, text="关于")
 
-        footer_frame = ttk.Frame(content_frame, style='TFrame')
+        footer_frame = ttk.Frame(self.content_frame, style='TFrame')
         footer_frame.pack(side=tk.BOTTOM, fill=tk.X, pady=6)
 
         footer = ttk.Label(
@@ -97,26 +112,162 @@ class CursorApp:
         )
         footer.pack(side=tk.LEFT)
 
-        log_button = ttk.Button(
-            footer_frame,
-            text="日志",
-            style='Custom.TButton',
-            command=self.toggle_log_window,
-            width=10,
-            padding=(0, 2, 0, 2)
+        self.paned_window.add(self.content_frame, weight=1)
+        
+        self.setup_log_panel()
+
+    def setup_log_panel(self):
+        self.log_frame = ttk.Frame(self.paned_window, style='TFrame')
+        
+        title_frame = ttk.Frame(self.log_frame, style='TFrame')
+        title_frame.pack(fill=tk.X, padx=5, pady=(0, 5))
+        
+        log_title = ttk.Label(
+            title_frame,
+            text="操作日志",
+            style='Title.TLabel'
         )
-        log_button.pack(side=tk.RIGHT, padx=(0, 2))
+        log_title.pack(side=tk.LEFT, padx=5)
+        
+        # 设置调试模式默认开启
+        self.show_debug = tk.BooleanVar(value=True)
+        debug_checkbox = ttk.Checkbutton(
+            title_frame,
+            text="调试模式",
+            variable=self.show_debug,
+            style='TCheckbutton',
+            command=self.refresh_logs
+        )
+        debug_checkbox.pack(side=tk.LEFT, padx=(10, 20))
 
-        self.log_window = LogWindow(self.root)
+        clear_button = ttk.Button(
+            title_frame,
+            text="清除日志",
+            command=self.clear_logs,
+            style='Custom.TButton',
+            width=8
+        )
+        clear_button.pack(side=tk.RIGHT, padx=(0, 10))
 
-    def toggle_log_window(self):
-        if not self.log_window.winfo_viewable():
-            self.log_window.show_window()
-        else:
-            self.log_window.withdraw()
+        text_container = ttk.Frame(self.log_frame, style='TFrame')
+        text_container.pack(fill=tk.BOTH, expand=True)
+
+        self.log_text = tk.Text(
+            text_container,
+            wrap=tk.WORD,
+            width=35,
+            font=UI.FONT,
+            bg=UI.COLORS['card_bg'],
+            fg=UI.COLORS['label_fg'],
+            relief='flat',
+            padx=8,
+            pady=8
+        )
+        scrollbar = ttk.Scrollbar(text_container, orient="vertical", command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=scrollbar.set)
+
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.log_text.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        self.log_text.configure(state='disabled')
+        self.setup_log_tags()
+        
+        self.log_buffer = []
+        self.pending_logs = []
+        self.update_scheduled = False
+        
+        # 调整日志面板的比例权重，使其与主内容区域相同
+        self.paned_window.add(self.log_frame, weight=1)
+
+    def setup_log_tags(self):
+        log_colors = {
+            'DEBUG': UI.COLORS['secondary'],
+            'INFO': UI.COLORS['primary'],
+            'WARNING': UI.COLORS['warning'],
+            'ERROR': UI.COLORS['error'],
+            'SUCCESS': UI.COLORS['success']
+        }
+        for level, color in log_colors.items():
+            self.log_text.tag_configure(level, foreground=color)
+
+    def refresh_logs(self):
+        logs_to_display = list(self.log_buffer)
+        if not logs_to_display:
+            return
+
+        self.log_text.configure(state='normal')
+        self.log_text.delete(1.0, tk.END)
+        show_debug = self.show_debug.get()
+
+        for log in logs_to_display:
+            if show_debug or log['level'] != 'DEBUG':
+                log_line = f"[{log['timestamp']}] [{log['level']}] {log['message']}\n"
+                self.log_text.insert(tk.END, log_line, log['level'])
+
+        self.log_text.see(tk.END)
+        self.log_text.configure(state='disabled')
+
+    def schedule_update(self):
+        if not self.update_scheduled:
+            self.update_scheduled = True
+            self.root.after(UI_UPDATE_BATCH, self.batch_update)
+
+    def batch_update(self):
+        self.update_scheduled = False
+
+        if not self.pending_logs:
+            return
+        logs_to_update = self.pending_logs[:]
+        self.pending_logs.clear()
+
+        if not logs_to_update:
+            return
+
+        show_debug = self.show_debug.get()
+
+        current_length = float(self.log_text.index(tk.END))
+        if current_length > MAX_TEXT_LENGTH:
+            self.log_text.configure(state='normal')
+            self.log_text.delete(1.0, f"{current_length - MAX_TEXT_LENGTH}.0")
+            self.log_text.configure(state='disabled')
+
+        self.log_text.configure(state='normal')
+        for log in logs_to_update:
+            if show_debug or log['level'] != 'DEBUG':
+                log_line = f"[{log['timestamp']}] [{log['level']}] {log['message']}\n"
+                self.log_text.insert(tk.END, log_line, log['level'])
+
+        if float(self.log_text.yview()[1]) > 0.9:
+            self.log_text.see(tk.END)
+
+        self.log_text.configure(state='disabled')
+
+    def clear_logs(self):
+        self.log_buffer.clear()
+        self.pending_logs.clear()
+        self.log_text.configure(state='normal')
+        self.log_text.delete(1.0, tk.END)
+        self.log_text.configure(state='disabled')
+        
+    def add_log(self, message: str, level: str = "INFO"):
+        from datetime import datetime
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        level = level.upper()
+        log_entry = {
+            'message': message,
+            'level': level,
+            'timestamp': timestamp
+        }
+
+        self.log_buffer.append(log_entry)
+        if len(self.log_buffer) > MAX_BUFFER_SIZE:
+            self.log_buffer.pop(0)
+            
+        self.pending_logs.append(log_entry)
+        self.schedule_update()
 
 
-def setup_logging(log_window=None) -> None:
+def setup_logging(app=None) -> None:
     logger.remove()
 
     logger.add(
@@ -141,12 +292,12 @@ def setup_logging(log_window=None) -> None:
             level="DEBUG"
         )
 
-    if log_window:
+    if app:
         def gui_sink(message):
             record = message.record
             level = record["level"].name
             text = record["message"]
-            log_window.add_log(text, level)
+            app.add_log(text, level)
 
         logger.add(
             sink=gui_sink,
@@ -165,7 +316,7 @@ def main() -> None:
 
         root = tk.Tk()
         app = CursorApp(root)
-        setup_logging(app.log_window)
+        setup_logging(app)
         root.mainloop()
     except Exception as e:
         logger.error(f"程序启动失败: {e}")

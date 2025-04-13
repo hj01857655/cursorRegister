@@ -37,7 +37,7 @@ class ManageTab(ttk.Frame):
     def setup_ui(self):
         accounts_frame = UI.create_labeled_frame(self, "已保存账号")
 
-        columns = ('域名', '邮箱', '额度', '剩余天数')
+        columns = ('域名', '邮箱', '密码', '状态', '有效期', '额度', '剩余天数')
         tree = ttk.Treeview(accounts_frame, columns=columns, show='headings', height=TREE_VIEW_HEIGHT)
 
         for col in columns:

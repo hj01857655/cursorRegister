@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 from loguru import logger
 
 from registerAc import CursorRegistration
-from utils import Utils, Result, error_handler, CursorManager
+from utils import Utils, Result, error_handler, CursorManager, ConfigManager
 from .ui import UI
 
 
@@ -25,7 +25,7 @@ class RegisterTab(ttk.Frame):
                  entries: Dict[str, ttk.Entry], selected_mode: tk.StringVar,
                  button_commands: Dict[str, Callable], **kwargs):
         super().__init__(parent, style='TFrame', **kwargs)
-        self.env_vars = env_vars
+        self.env_vars = [(var_name, label_text) for var_name, label_text in env_vars if var_name != 'DOMAIN']
         self.buttons = buttons
         self.entries = entries
         self.selected_mode = selected_mode
@@ -35,17 +35,31 @@ class RegisterTab(ttk.Frame):
 
     def setup_ui(self):
         account_frame = UI.create_labeled_frame(self, "账号信息")
+        # 定义输入框的提示信息
+        tooltips = {
+            'EMAIL': '用于登录Cursor的邮箱账号',
+            'PASSWORD': '用于登录Cursor的密码',
+            'cookie': 'Cursor登录的会话Cookie信息'
+        }
+        
+        # 添加邮箱和密码输入框
         for row, (var_name, label_text) in enumerate(self.env_vars):
             entry = UI.create_labeled_entry(account_frame, label_text, row)
             if os.getenv(var_name):
                 entry.insert(0, os.getenv(var_name))
             self.entries[var_name] = entry
+            # 添加提示信息
+            if var_name in tooltips:
+                UI.create_tooltip(entry, tooltips[var_name])
 
-        self.entries['cookie'] = UI.create_labeled_entry(account_frame, "Cookie", len(self.env_vars))
+        # 添加Cookie输入框，标签改为"Cookies"
+        self.entries['cookie'] = UI.create_labeled_entry(account_frame, "Cookies", len(self.env_vars))
         if os.getenv('COOKIES_STR'):
             self.entries['cookie'].insert(0, os.getenv('COOKIES_STR'))
         else:
             self.entries['cookie'].insert(0, "WorkosCursorSessionToken")
+        # 添加提示信息
+        UI.create_tooltip(self.entries['cookie'], tooltips['cookie'])
 
         radio_frame = ttk.Frame(account_frame, style='TFrame')
         radio_frame.grid(row=len(self.env_vars) + 1, column=0, columnspan=2, sticky='w', pady=(8, 0))
@@ -92,6 +106,14 @@ class RegisterTab(ttk.Frame):
                 for var_name, _ in self.env_vars
                 if (value := self.entries[var_name].get().strip())
             }
+            
+            domain_result = ConfigManager.get_config_value('DOMAIN')
+            if domain_result.success and domain_result.data:
+                domain = domain_result.data
+                logger.debug(f"从ConfigManager获取到域名: {domain}")
+                updates['DOMAIN'] = domain
+            else:
+                logger.warning("未能从ConfigManager获取域名配置")
 
         if updates and not Utils.update_env_vars(updates):
             UI.show_warning(self, "保存环境变量失败")
@@ -105,15 +127,24 @@ class RegisterTab(ttk.Frame):
                     "生成账号",
                     "正在生成账号信息，请稍候..."
                 ))
-
+                
+                # 记录当前环境变量状态
                 logger.debug(f"当前环境变量 DOMAIN: {os.getenv('DOMAIN', '未设置')}")
                 logger.debug(f"当前环境变量 EMAIL: {os.getenv('EMAIL', '未设置')}")
                 logger.debug(f"当前环境变量 PASSWORD: {os.getenv('PASSWORD', '未设置')}")
                 
-                if domain := self.entries['DOMAIN'].get().strip():
+                # 从ConfigManager获取域名配置
+                domain_result = ConfigManager.get_config_value('DOMAIN')
+                if domain_result.success and domain_result.data:
+                    domain = domain_result.data
+                    logger.debug(f"从ConfigManager获取到域名: {domain}")
+                    
+                    # 更新环境变量中的DOMAIN，但不显示在界面上
                     if not Utils.update_env_vars({'DOMAIN': domain}):
                         raise RuntimeError("保存域名失败")
                     load_dotenv(override=True)
+                else:
+                    logger.warning("未能获取到域名，将使用默认域名")
 
                 if not (result := CursorManager.generate_cursor_account()):
                     raise RuntimeError(result.message)
@@ -145,6 +176,16 @@ class RegisterTab(ttk.Frame):
     @error_handler
     def auto_register(self) -> None:
         mode = self.selected_mode.get()
+        
+        # 先获取ConfigManager中的域名配置
+        domain_result = ConfigManager.get_config_value('DOMAIN')
+        if domain_result.success and domain_result.data:
+            domain = domain_result.data
+            logger.debug(f"从ConfigManager获取到域名: {domain}")
+            # 更新环境变量中的DOMAIN
+            os.environ['DOMAIN'] = domain
+        
+        # 保存所有环境变量，包括从ConfigManager获取的域名
         self._save_env_vars()
         load_dotenv(override=True)
 
@@ -212,14 +253,30 @@ class RegisterTab(ttk.Frame):
                     raise ValueError(f"未知的注册模式: {mode}")
 
                 if token := register_method(create_dialog):
+                    cookies_value = f"WorkosCursorSessionToken={token}"
+                    
+                    # 更新输入框
                     self.winfo_toplevel().after(0, lambda: [
                         self.entries['EMAIL'].delete(0, tk.END),
                         self.entries['EMAIL'].insert(0, os.getenv('EMAIL', '未获取到')),
                         self.entries['PASSWORD'].delete(0, tk.END),
                         self.entries['PASSWORD'].insert(0, os.getenv('PASSWORD', '未获取到')),
                         self.entries['cookie'].delete(0, tk.END),
-                        self.entries['cookie'].insert(0, f"WorkosCursorSessionToken={token}")
+                        self.entries['cookie'].insert(0, cookies_value)
                     ])
+                    
+                    # 更新环境变量中的COOKIES_STR
+                    Utils.update_env_vars({'COOKIES_STR': cookies_value})
+                    load_dotenv(override=True)
+                    logger.debug("已更新COOKIES_STR环境变量")
+                    
+                    # 同时更新ConfigManager中的配置
+                    config = ConfigManager.load_config()
+                    if config.success:
+                        updated_config = config.data
+                        updated_config['COOKIES_STR'] = cookies_value
+                        ConfigManager.save_config(updated_config)
+                        logger.debug("已同步更新ConfigManager中的COOKIES_STR配置")
                     
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     self.winfo_toplevel().after(0, lambda: UI.show_success(
@@ -286,17 +343,15 @@ class RegisterTab(ttk.Frame):
                     if not Utils.update_env_vars({'COOKIES_STR': cookie_value}):
                         raise RuntimeError("更新COOKIES_STR环境变量失败")
                     load_dotenv(override=True)
-
-                env_vars = {
-                    "DOMAIN": os.getenv("DOMAIN", ""),
+                
+                # 只备份账号相关信息
+                account_vars = {
                     "EMAIL": os.getenv("EMAIL", ""),
                     "PASSWORD": os.getenv("PASSWORD", ""),
-                    "COOKIES_STR": os.getenv("COOKIES_STR", ""),
-                    "API_KEY": os.getenv("API_KEY", ""),
-                    "MOE_MAIL_URL": os.getenv("MOE_MAIL_URL", "")
+                    "COOKIES_STR": os.getenv("COOKIES_STR", "")
                 }
 
-                if not any(env_vars.values()):
+                if not any(account_vars.values()):
                     raise ValueError("未找到任何账号信息，请先注册或更新账号")
 
                 backup_dir = Path("env_backups")
@@ -307,7 +362,7 @@ class RegisterTab(ttk.Frame):
 
                 with open(backup_path, 'w', encoding='utf-8', newline='') as f:
                     f.write("variable,value\n")
-                    for key, value in env_vars.items():
+                    for key, value in account_vars.items():
                         if value:
                             f.write(f"{key},{value}\n")
 
