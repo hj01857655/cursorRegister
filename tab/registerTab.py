@@ -54,9 +54,9 @@ class RegisterTab(ttk.Frame):
         mode_label.pack(side=tk.LEFT, padx=(3, 8))
 
         modes = [
-            ("人工验证", "semi"),
+            ("全自动", "admin"),
             ("自动验证", "auto"),
-            ("全自动", "admin")
+            ("人工验证", "semi")
         ]
 
         for text, value in modes:
@@ -197,8 +197,8 @@ class RegisterTab(ttk.Frame):
             try:
                 self.winfo_toplevel().after(0, lambda: UI.show_loading(
                     self.winfo_toplevel(),
-                    "自动注册",
-                    "正在执行注册流程，请稍候..."
+                    "全自动注册",
+                    "正在执行全自动注册流程，无需手动干预，请稍候..."
                 ))
 
                 self.registrar = CursorRegistration()
@@ -224,7 +224,7 @@ class RegisterTab(ttk.Frame):
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     self.winfo_toplevel().after(0, lambda: UI.show_success(
                         self.winfo_toplevel(),
-                        "自动注册成功，账号信息已填入"
+                        "全自动注册成功，账号信息已填入"
                     ))
                     
                     threading.Thread(target=self.backup_account, daemon=True).start()
@@ -259,7 +259,7 @@ class RegisterTab(ttk.Frame):
             for widget in self.winfo_children():
                 if isinstance(widget, ttk.Frame):
                     for child in widget.winfo_children():
-                        if isinstance(child, ttk.Button) and child['text'] == "自动注册":
+                        if isinstance(child, ttk.Button) and child['text'] == "全自动注册":
                             self.after(0, lambda: child.configure(state=state))
 
         find_and_update_button('disabled')

@@ -296,7 +296,7 @@ def error_handler(func: Callable) -> Callable:
 
     return wrapper
 
-
+#
 class CursorManager:
     def __init__(self):
         self.db_manager = DatabaseManager(Utils.get_path('cursor') / 'state.vscdb')
@@ -441,7 +441,7 @@ class CursorManager:
             logger.error(f"错误详情: {str(e)}")
             return Result.fail(str(e))
 
-
+# MoemailManager类用于管理MoeMail的相关操作
 class MoemailManager:
     @staticmethod
     def _check_env_vars() -> Result[Tuple[str, str]]:

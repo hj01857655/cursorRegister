@@ -20,10 +20,10 @@ class CursorRegistration:
     CURSOR_SIGNUP_PASSWORD_URL = "https://authenticator.cursor.sh/sign-up/password"
     CURSOR_SETTING_URL = "https://www.cursor.com/settings"
     CURSOR_EMAIL_VERIFICATION_URL = "https://authenticator.cursor.sh/email-verification"
-
+    
     def __init__(self):
         load_dotenv()
-        self.headless = False
+        self.headless = True
         if not os.getenv('GITHUB_ACTIONS'):
             required_vars = ['EMAIL', 'PASSWORD', 'DOMAIN']
             if not all(os.getenv(var) for var in required_vars):
@@ -37,6 +37,7 @@ class CursorRegistration:
         self.browser = self.tab = self.moe = None
         self.admin = False
 
+    #安全操作，防止异常中断注册流程
     def _safe_action(self, action, *args, **kwargs):
         try:
             return action(*args, **kwargs)
@@ -44,6 +45,7 @@ class CursorRegistration:
             logger.error(f"{action.__name__}失败: {str(e)}")
             raise
 
+    #初始化浏览器，并访问注册页面
     def init_browser(self):
         co = ChromiumOptions()
         co.new_env()
@@ -56,23 +58,24 @@ class CursorRegistration:
         self.tab.get(self.CURSOR_SIGNUP_URL)
         logger.debug("浏览器初始化成功")
 
+    #输入注册信息
     def input_field(self, fields_dict):
         for name, value in fields_dict.items():
             self.tab.ele(f'@name={name}').input(value)
             time.sleep(random.uniform(1, 4))
             logger.debug(f"成功输入 {name}")
             logger.debug(f"{value}")
-
+    #填写注册表单
     def fill_registration_form(self):
         self.input_field({
             'first_name': self.first_name,
             'last_name': self.last_name,
             'email': self.email
         })
-
+    #填写密码
     def fill_password(self):
         self.input_field({'password': self.password})
-
+    #获取试用信息
     def get_trial_info(self, cookie=None):
         logger.debug("开始获取试用信息")
         self.tab.get(self.CURSOR_SETTING_URL)
@@ -107,6 +110,7 @@ class CursorRegistration:
         logger.debug("成功获取所有试用信息")
         return usage_ele.text, trial_days.text
 
+    #获取cookie中的token值，用于后续操作
     def get_cursor_token(self):
         for attempt in range(3):
             try:

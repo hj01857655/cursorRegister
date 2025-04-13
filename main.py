@@ -30,7 +30,7 @@ class WindowConfig:
     ])
     buttons: List[Tuple[str, str]] = field(default_factory=lambda: [
         ("生成账号", "generate_account"),
-        ("注册账号", "auto_register"),
+        ("全自动注册", "auto_register"),
         ("备份账号", "backup_account")
     ])
 
@@ -40,7 +40,7 @@ class CursorApp:
         self.root = root
         self.config = WindowConfig()
         self.entries: Dict[str, ttk.Entry] = {}
-        self.selected_mode = tk.StringVar(value="semi")
+        self.selected_mode = tk.StringVar(value="admin")
 
         self.root.title(self.config.title)
         UI.center_window(self.root, self.config.width, self.config.height)
