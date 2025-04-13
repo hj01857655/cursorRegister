@@ -1,7 +1,8 @@
-WINDOW_WIDTH = 900
+WINDOW_WIDTH = 1000
 WINDOW_HEIGHT = 520
 WINDOW_TITLE = "Cursor注册小助手"
 BACKUP_DIR = "env_backups"
+CONTENT_RATIO = 0.5  # 对半分
 
 import os
 import sys
@@ -49,29 +50,58 @@ class CursorApp:
         self.root.configure(bg=UI.COLORS['bg'])
         if os.name == 'nt':
             self.root.attributes('-alpha', 0.98)
+            
+        # 计算有效内容区域宽度（减去内边距）
+        padding = 20  # 左右各10像素的padding
+        self.effective_width = self.config.width - padding
+        # 计算分隔位置
+        self.sash_position = int(self.effective_width * CONTENT_RATIO)
+        # 计算两侧面板宽度
+        self.content_width = int(self.effective_width * CONTENT_RATIO)
+        self.log_width = self.effective_width - self.content_width
 
         UI.setup_styles()
         self.setup_ui()
         
-        # 在UI完全加载后调整分隔线位置
-        self.root.after(100, self.adjust_sash_position)
+        # 窗口显示后立即设置分隔线位置
+        self.root.update_idletasks()
+        self.set_sash_position()
+        
+        # 绑定窗口大小变化和分隔线移动事件
+        self.root.bind("<Configure>", self.on_window_configure)
+        self.paned_window.bind("<ButtonRelease-1>", self.on_sash_moved)
 
-    def adjust_sash_position(self):
-        """在窗口完全加载后调整分隔线的位置"""
-        window_width = self.root.winfo_width()
-        if window_width > 0:
-            # 设置分隔线位置在窗口宽度的50%处（对半分）
-            self.paned_window.sashpos(0, int(window_width * 0.5))
+    def set_sash_position(self):
+        """设置分隔线位置"""
+        try:
+            self.paned_window.sashpos(0, self.sash_position)
+        except:
+            # 如果设置失败，可能是窗口还未完全初始化
+            self.root.after(100, self.set_sash_position)
+            
+    def on_window_configure(self, event=None):
+        """窗口配置改变时调用"""
+        if event and event.widget == self.root:
+            # 重新设置分隔线位置
+            self.set_sash_position()
+            
+    def on_sash_moved(self, event=None):
+        """用户移动分隔线后重置到预设位置"""
+        self.root.after(10, self.set_sash_position)  # 短暂延迟后重置分隔线位置
 
     def setup_ui(self) -> None:
         self.main_frame = ttk.Frame(self.root, padding="10", style='TFrame')
         self.main_frame.pack(fill=tk.BOTH, expand=True)
 
+        # 创建分隔窗口
         self.paned_window = ttk.PanedWindow(self.main_frame, orient=tk.HORIZONTAL)
         self.paned_window.pack(fill=tk.BOTH, expand=True, padx=0, pady=0)
 
-        self.content_frame = ttk.Frame(self.paned_window, style='TFrame')
-        self.content_frame.configure(width=500)
+        # 左侧内容区域
+        self.content_frame = ttk.Frame(self.paned_window, style='TFrame', width=self.content_width)
+        
+        # 强制框架保持固定宽度
+        self.content_frame.pack_propagate(False)
 
         title_label = ttk.Label(
             self.content_frame,
@@ -112,12 +142,17 @@ class CursorApp:
         )
         footer.pack(side=tk.LEFT)
 
+        # 添加左侧内容区域
         self.paned_window.add(self.content_frame, weight=1)
         
+        # 设置日志面板
         self.setup_log_panel()
 
     def setup_log_panel(self):
-        self.log_frame = ttk.Frame(self.paned_window, style='TFrame')
+        # 右侧日志面板
+        self.log_frame = ttk.Frame(self.paned_window, style='TFrame', width=self.log_width)
+        # 强制框架保持固定宽度
+        self.log_frame.pack_propagate(False)
         
         title_frame = ttk.Frame(self.log_frame, style='TFrame')
         title_frame.pack(fill=tk.X, padx=5, pady=(0, 5))
@@ -138,16 +173,16 @@ class CursorApp:
             style='TCheckbutton',
             command=self.refresh_logs
         )
-        debug_checkbox.pack(side=tk.LEFT, padx=(10, 20))
+        debug_checkbox.pack(side=tk.LEFT, padx=(5, 5))
 
         clear_button = ttk.Button(
             title_frame,
             text="清除日志",
             command=self.clear_logs,
             style='Custom.TButton',
-            width=8
+            width=6
         )
-        clear_button.pack(side=tk.RIGHT, padx=(0, 10))
+        clear_button.pack(side=tk.RIGHT, padx=(0, 5))
 
         text_container = ttk.Frame(self.log_frame, style='TFrame')
         text_container.pack(fill=tk.BOTH, expand=True)
@@ -155,13 +190,13 @@ class CursorApp:
         self.log_text = tk.Text(
             text_container,
             wrap=tk.WORD,
-            width=35,
+            width=25,
             font=UI.FONT,
             bg=UI.COLORS['card_bg'],
             fg=UI.COLORS['label_fg'],
             relief='flat',
-            padx=8,
-            pady=8
+            padx=5,
+            pady=5
         )
         scrollbar = ttk.Scrollbar(text_container, orient="vertical", command=self.log_text.yview)
         self.log_text.configure(yscrollcommand=scrollbar.set)
@@ -176,7 +211,7 @@ class CursorApp:
         self.pending_logs = []
         self.update_scheduled = False
         
-        # 调整日志面板的比例权重，使其与主内容区域相同
+        # 添加右侧日志面板
         self.paned_window.add(self.log_frame, weight=1)
 
     def setup_log_tags(self):
