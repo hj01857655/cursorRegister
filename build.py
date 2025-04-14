@@ -1,6 +1,7 @@
 import os
 import shutil
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -14,7 +15,7 @@ def check_requirements():
             __import__(package)
         except ImportError:
             print(f"正在安装 {package}...")
-            subprocess.run(['pip', 'install', package], check=True, encoding='utf-8')
+            subprocess.run([sys.executable, '-m', 'pip', 'install', package], check=True, encoding='utf-8')
 
 
 def build_executable():
@@ -24,15 +25,15 @@ def build_executable():
 
     check_requirements()
 
-    build_command = ['pyinstaller', 'cursorHelper.spec', '--clean', '2>&1']
+    build_command = [sys.executable, '-m', 'PyInstaller', 'cursorHelper.spec', '--clean']
     try:
-        subprocess.run(build_command, encoding='utf-8', check=True, shell=True)
+        subprocess.run(build_command, encoding='utf-8', check=True)
     except subprocess.CalledProcessError as e:
         print("构建失败！")
         return False
     except UnicodeDecodeError:
         try:
-            subprocess.run(build_command, encoding='gbk', check=True, shell=True)
+            subprocess.run(build_command, encoding='gbk', check=True)
         except subprocess.CalledProcessError as e:
             print("构建失败！")
             return False
