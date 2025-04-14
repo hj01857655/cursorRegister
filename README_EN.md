@@ -9,15 +9,15 @@
 > 💫 Making registration simple and elegant
 
 <p align="center">
-<img src="https://img.shields.io/github/v/release/ktovoz/cursorRegister?style=flat&logo=github&color=blue" alt="GitHub release"/>
+<img src="https://img.shields.io/github/v/release/hj01857655/cursorHelper?style=flat&logo=github&color=blue" alt="GitHub release"/>
 <img src="https://img.shields.io/badge/license-CC%20BY--NC--ND%204.0-lightgrey.svg?style=flat&logo=creative-commons&color=green" alt="License"/>
-<img src="https://img.shields.io/github/stars/ktovoz/cursorRegister?style=flat&logo=github&color=yellow" alt="GitHub stars"/>
+<img src="https://img.shields.io/github/stars/hj01857655/cursorHelper?style=flat&logo=github&color=yellow" alt="GitHub stars"/>
 <br/>
 <img src="https://img.shields.io/badge/Windows-0078D6?style=flat&logo=windows&logoColor=white" alt="Windows Support"/>
 <img src="https://img.shields.io/badge/Python-3.7+-blue.svg?style=flat&logo=python&logoColor=white" alt="Python"/>
 <br/>
-<a href="https://github.com/ktovoz/cursorRegister/issues"><img src="https://img.shields.io/github/issues/ktovoz/cursorRegister?style=flat&logo=github&color=orange" alt="GitHub issues"/></a>
-<a href="https://github.com/ktovoz/cursorRegister/network"><img src="https://img.shields.io/github/forks/ktovoz/cursorRegister?style=flat&logo=github&color=purple" alt="GitHub forks"/></a>
+<a href="https://github.com/hj01857655/cursorHelper/issues"><img src="https://img.shields.io/github/issues/hj01857655/cursorHelper?style=flat&logo=github&color=orange" alt="GitHub issues"/></a>
+<a href="https://github.com/hj01857655/cursorHelper/network"><img src="https://img.shields.io/github/forks/hj01857655/cursorHelper?style=flat&logo=github&color=purple" alt="GitHub forks"/></a>
 </p>
 
 </div>
@@ -91,7 +91,7 @@
 <details>
 <summary><b>🛠️ Registration Assistant</b></summary>
 
-- 📦 [Download from Release Page](https://github.com/ktovoz/cursorRegister/releases)
+- 📦 [Download from Release Page](https://github.com/hj01857655/cursorHelper/releases)
 
 > 💡 Please download the latest version for the best experience
 
@@ -522,7 +522,7 @@ This project is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/lic
 
 <div align="center">
 
-**[⬆ Back to Top](#-cursor-helper)**
+**[⬆ Back to Top](#-cursorhelper)**
 
 <br/>
 

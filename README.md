@@ -1,4 +1,4 @@
-# 🎯 cursorHelper
+# 🎯 Cursor 注册助手
 
 <div align="center">
 
