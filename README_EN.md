@@ -1,4 +1,4 @@
-# 🎯 Cursor Registration Assistant
+# 🎯 cursorHelper
 
 <div align="center">
 
@@ -440,8 +440,8 @@ for complete tutorial.
 Thanks to all contributors who make this project better!
 
 <div align="center">
-<a href="https://github.com/ktovoz/cursorRegister/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=ktovoz/cursorRegister&max=100" />
+<a href="https://github.com/hj01857655/cursorHelper/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=hj01857655/cursorHelper&max=100" />
 </a>
 </div>
 
@@ -453,10 +453,10 @@ Thanks to the following open-source projects and their authors for providing ins
 <table>
 <tr>
 <td align="center">
-<a href="https://github.com/Ktovoz">
-<img src="https://github.com/Ktovoz.png" width="100px;" alt="Ktovoz"/><br/>
-<sub><b>Ktovoz</b></sub><br/>
-<sub><a href="https://github.com/Ktovoz/cursorRegister"> cursorRegister</a></sub><br/>
+<a href="https://github.com/hj01857655">
+<img src="https://github.com/hj01857655.png" width="100px;" alt="hj01857655"/><br/>
+<sub><b>hj01857655</b></sub><br/>
+<sub><a href="https://github.com/hj01857655/cursorHelper">cursorHelper</a></sub><br/>
 </a>
 </td>
 <td align="center">
@@ -522,11 +522,11 @@ This project is licensed under [CC BY-NC-ND 4.0](https://creativecommons.org/lic
 
 <div align="center">
 
-**[⬆ Back to Top](#-cursor-registration-assistant)**
+**[⬆ Back to Top](#-cursor-helper)**
 
 <br/>
 
-<sub>Made with ❤️ | Copyright © 2025 ktovoz</sub>
+<sub>Made with ❤️ | Copyright © 2025 hj01857655</sub>
 
 </div>
 
