@@ -140,40 +140,50 @@ class EnvManager:
 
 #工具类
 class Utils:
+    #获取路径
     @staticmethod
     def get_path(path_type: str) -> Path:
         paths = {
+            #获取当前执行文件路径
             'base': Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).parent,
+            #获取.env文件路径
             'env': lambda: Utils.get_path('base') / '.env',
+            #获取appdata路径
             'appdata': lambda: Path(os.getenv("APPDATA") or ''),
+            #获取cursor路径
             'cursor': lambda: Utils.get_path('appdata') / 'Cursor/User/globalStorage'
         }
+        #获取路径函数
         path_func = paths.get(path_type)
         if callable(path_func):
             return path_func()
         return paths.get(path_type, Path())
-
+    #确保路径存在
     @staticmethod
     def ensure_path(path: Path) -> None:
         path.mkdir(parents=True, exist_ok=True)
 
+    #更新环境变量
     @staticmethod
     def update_env_vars(updates: Dict[str, str]) -> Result[None]:
         try:
+            #获取.env文件路径
             env_path = Utils.get_path('env')
+            #读取.env文件内容
             content = env_path.read_text(encoding='utf-8').splitlines() if env_path.exists() else []
+            #更新环境变量
             updated = {line.split('=')[0]: line for line in content if '=' in line}
-
+            #更新环境变量
             for key, value in updates.items():
                 updated[key] = f'{key}=\'{value}\''
                 os.environ[key] = value
-
+            #写入.env文件
             env_path.write_text('\n'.join(updated.values()) + '\n', encoding='utf-8')
             logger.debug(f"已更新环境变量: {', '.join(updates.keys())}")
             return Result.ok()
         except Exception as e:
             return Result.fail(f"更新环境变量失败: {e}")
-
+    #备份文件
     @staticmethod
     def backup_file(source: Path, backup_dir: Path, prefix: str, max_backups: int = 10) -> Result[None]:
         try:
@@ -198,7 +208,7 @@ class Utils:
                 return Result.ok()
         except Exception as e:
             return Result.fail(f"备份文件失败: {e}")
-
+    #管理文件权限
     @staticmethod
     def manage_file_permissions(path: Path, make_read_only: bool = True) -> bool:
         try:
@@ -214,7 +224,7 @@ class Utils:
             return True
         except:
             return False
-
+    #更新json文件
     @staticmethod
     def update_json_file(file_path: Path, updates: Dict[str, Any], make_read_only: bool = False) -> Result[None]:
         try:
@@ -301,7 +311,8 @@ class CursorManager:
     def __init__(self):
         self.db_manager = DatabaseManager(Utils.get_path('cursor') / 'state.vscdb')
         self.env_manager = EnvManager()
-
+    
+    #生成Cursor账号
     @staticmethod
     @error_handler
     def generate_cursor_account() -> Tuple[str, str]:
@@ -309,7 +320,7 @@ class CursorManager:
             random_length = random.randint(5, 20)
             
             # 首先尝试从ConfigManager获取域名配置
-            domain_result = ConfigManager.get_config_value('DOMAIN')
+            domain_result = ConfigManager.get_config('DOMAIN')
             if domain_result.success and domain_result.data:
                 domain = domain_result.data
                 logger.debug(f"从ConfigManager获取到域名: {domain}")
@@ -331,7 +342,8 @@ class CursorManager:
         except Exception as e:
             logger.error(f"generate_cursor_account 执行失败: {e}")
             raise
-
+    
+    #重置机器码
     @staticmethod
     @error_handler
     def reset() -> Result:
@@ -645,7 +657,7 @@ class ConfigManager:
     
     @staticmethod
     @error_handler
-    def get_config_value(key: str) -> Result[str]:
+    def get_config(key: str) -> Result[str]:
         """获取单个配置项的值
         
         先尝试从环境变量获取，如果不存在则从.env文件读取，

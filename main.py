@@ -21,6 +21,7 @@ from tab.logWindow import MAX_BUFFER_SIZE, UI_UPDATE_BATCH, MAX_TEXT_LENGTH
 console_mode = False
 
 
+
 @dataclass
 class WindowConfig:
     width: int = WINDOW_WIDTH

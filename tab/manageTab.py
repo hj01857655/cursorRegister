@@ -81,21 +81,21 @@ class ManageTab(ttk.Frame):
 
         self.account_tree = tree
         self.selected_item = None
-
+    #选中账号
     def on_select(self, event):
         selected_items = self.account_tree.selection()
         if selected_items:
             self.selected_item = selected_items[0]
         else:
             self.selected_item = None
-
+    #获取csv文件列表
     def get_csv_files(self) -> List[str]:
         try:
             return glob.glob('env_backups/cursor_account_*.csv')
         except Exception as e:
             logger.error(f"获取CSV文件列表失败: {str(e)}")
             return []
-
+    #解析csv文件
     def parse_csv_file(self, csv_file: str) -> Dict[str, str]:
         account_data = {
             'DOMAIN': '',
@@ -119,7 +119,7 @@ class ManageTab(ttk.Frame):
         except Exception as e:
             logger.error(f"解析文件 {csv_file} 失败: {str(e)}")
         return account_data
-
+    #更新csv文件
     def update_csv_file(self, csv_file: str, **fields_to_update) -> None:
         if not fields_to_update:
             logger.debug("没有需要更新的字段")
@@ -149,7 +149,7 @@ class ManageTab(ttk.Frame):
         except Exception as e:
             logger.error(f"更新CSV文件失败: {str(e)}")
             raise
-
+    #刷新列表
     def refresh_list(self):
         for item in self.account_tree.get_children():
             self.account_tree.delete(item)
@@ -168,7 +168,7 @@ class ManageTab(ttk.Frame):
             logger.info("账号列表已刷新")
         except Exception as e:
             UI.show_error(self.winfo_toplevel(), "刷新列表失败", e)
-
+    #获取选中的账号
     def get_selected_account(self) -> Tuple[str, Dict[str, str]]:
         if not self.selected_item:
             raise ValueError("请先选择要操作的账号")
@@ -192,7 +192,7 @@ class ManageTab(ttk.Frame):
         except Exception as e:
             UI.show_error(self.winfo_toplevel(), f"{action_name}失败", e)
             logger.error(f"{action_name}失败: {str(e)}")
-
+    #获取账号信息
     def get_trial_usage(self, cookie_str: str) -> Tuple[str, str, str, str]:
         if not cookie_str:
             raise ValueError("Cookie信息不能为空")

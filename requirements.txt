@@ -2,3 +2,6 @@ loguru~=0.7.3
 python-dotenv~=1.0.1
 requests~=2.32.3
 drissionpage~=4.1.0.17
+PyQt5~=5.15.9
+playwright~=1.39.0
+faker~=37.1.0

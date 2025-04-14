@@ -107,7 +107,7 @@ class RegisterTab(ttk.Frame):
                 if (value := self.entries[var_name].get().strip())
             }
             
-            domain_result = ConfigManager.get_config_value('DOMAIN')
+            domain_result = ConfigManager.get_config('DOMAIN')
             if domain_result.success and domain_result.data:
                 domain = domain_result.data
                 logger.debug(f"从ConfigManager获取到域名: {domain}")
@@ -134,7 +134,7 @@ class RegisterTab(ttk.Frame):
                 logger.debug(f"当前环境变量 PASSWORD: {os.getenv('PASSWORD', '未设置')}")
                 
                 # 从ConfigManager获取域名配置
-                domain_result = ConfigManager.get_config_value('DOMAIN')
+                domain_result = ConfigManager.get_config('DOMAIN')
                 if domain_result.success and domain_result.data:
                     domain = domain_result.data
                     logger.debug(f"从ConfigManager获取到域名: {domain}")
@@ -172,13 +172,14 @@ class RegisterTab(ttk.Frame):
                 ))
 
         threading.Thread(target=generate_thread, daemon=True).start()
-
+    
+    #自动注册
     @error_handler
     def auto_register(self) -> None:
         mode = self.selected_mode.get()
         
         # 先获取ConfigManager中的域名配置
-        domain_result = ConfigManager.get_config_value('DOMAIN')
+        domain_result = ConfigManager.get_config('DOMAIN')
         if domain_result.success and domain_result.data:
             domain = domain_result.data
             logger.debug(f"从ConfigManager获取到域名: {domain}")
@@ -188,7 +189,7 @@ class RegisterTab(ttk.Frame):
         # 保存所有环境变量，包括从ConfigManager获取的域名
         self._save_env_vars()
         load_dotenv(override=True)
-
+        #创建对话框
         def create_dialog(message: str) -> bool:
             dialog = tk.Toplevel(self)
             dialog.title("等待确认")
@@ -328,7 +329,8 @@ class RegisterTab(ttk.Frame):
             find_and_update_button('normal')
 
         threading.Thread(target=restore_button, daemon=True).start()
-
+    
+    #备份账号
     @error_handler
     def backup_account(self) -> None:
         def backup_thread():
