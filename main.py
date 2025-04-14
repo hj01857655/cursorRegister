@@ -7,6 +7,7 @@ CONTENT_RATIO = 0.5  # 对半分
 import os
 import sys
 import tkinter as tk
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from tkinter import ttk
@@ -346,30 +347,101 @@ def setup_gui_logging(app) -> None:
     )
 
 def main() -> None:
+    root = None
     try:
         # 设置基本日志系统
         setup_basic_logging()
         
-        # 移除不必要的 TOKEN 环境变量
+        logger.info("程序开始启动...")
         
+        # 确保备份目录存在
+        os.makedirs(BACKUP_DIR, exist_ok=True)
+        logger.debug("备份目录检查完成")
         
-        base_path = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(__file__)
-        env_path = os.path.join(base_path, '.env')
-        if os.path.exists(env_path):
-            load_dotenv(dotenv_path=env_path)
-
-        root = tk.Tk()
-        app = CursorApp(root)
+        # 简化环境变量处理 - 使用最简单的方式加载
+        try:
+            load_dotenv()
+            logger.debug("环境变量加载完成")
+        except Exception as e:
+            logger.warning(f"加载环境变量出错 (不影响基本功能): {str(e)}")
         
-        # 设置GUI日志系统
-        setup_gui_logging(app)
-        
-        root.mainloop()
+        try:
+            logger.debug("准备创建主窗口...")
+            root = tk.Tk()
+            logger.debug("主窗口创建成功")
+            
+            # 设置窗口属性以确保可见
+            root.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+100+100")  # 设置窗口大小和位置
+            root.lift()  # 将窗口提升到最前
+            root.attributes('-topmost', True)  # 设置窗口置顶
+            root.update()  # 强制窗口更新
+            root.attributes('-topmost', False)  # 取消窗口置顶
+            
+            # 进一步确保窗口可见
+            root.deiconify()  # 确保窗口不是最小化的
+            
+            logger.debug("初始化应用组件...")
+            app = CursorApp(root)
+            logger.debug("应用组件初始化完成")
+            
+            # 再次确保窗口更新和可见
+            root.after(100, lambda: root.focus_force())  # 在短暂延时后强制获取焦点
+            
+            # 设置GUI日志系统
+            logger.debug("设置GUI日志系统...")
+            setup_gui_logging(app)
+            logger.debug("GUI日志系统设置完成")
+            
+            logger.info("应用启动成功，进入主循环")
+            root.mainloop()
+        except Exception as gui_error:
+            logger.error(f"GUI初始化失败: {gui_error}")
+            import traceback
+            logger.error(f"错误详情: {traceback.format_exc()}")
+            
+            # 尝试显示一个基本的错误窗口
+            if root:
+                try:
+                    root.withdraw()  # 隐藏主窗口
+                    import tkinter.messagebox as messagebox
+                    messagebox.showerror("启动错误", f"程序启动失败: {str(gui_error)}\n\n请检查日志文件获取详细信息。")
+                except:
+                    pass  # 如果连错误窗口都无法显示，只能放弃了
+            
+            sys.exit(1)  # 退出程序
+            
     except Exception as e:
         logger.error(f"程序启动失败: {e}")
-        if 'root' in locals():
-            UI.show_error(root, "程序启动失败", e)
+        import traceback
+        logger.error(f"错误堆栈: {traceback.format_exc()}")
+        
+        if root:
+            try:
+                UI.show_error(root, "程序启动失败", str(e))
+            except:
+                pass  # 如果UI也无法初始化，至少我们记录了日志
 
+# 在.env.example自动复制功能分离为独立函数
+def copy_env_example_if_needed():
+    try:
+        # 确定基础路径
+        base_path = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(__file__)
+        
+        # 环境变量文件路径
+        env_path = os.path.join(base_path, '.env')
+        env_example_path = os.path.join(base_path, '.env.example')
+        
+        # 检查并创建.env文件
+        if not os.path.exists(env_path) and os.path.exists(env_example_path):
+            shutil.copy(env_example_path, env_path)
+            logger.info("已从.env.example创建.env文件，请在配置中填写相关信息")
+            return True
+    except Exception as e:
+        logger.error(f"处理环境变量文件时出错: {str(e)}")
+    return False
 
 if __name__ == "__main__":
+    # 先尝试复制环境变量文件
+    copy_env_example_if_needed()
+    # 然后启动主程序
     main()
