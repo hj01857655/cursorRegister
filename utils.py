@@ -31,6 +31,18 @@ from loguru import logger
 
 T = TypeVar('T')
 
+#错误处理装饰器
+def error_handler(func: Callable) -> Callable:
+    @wraps(func)
+    def wrapper(*args, **kwargs) -> Result:
+        try:
+            result = func(*args, **kwargs)
+            return Result.ok(result) if not isinstance(result, Result) else result
+        except Exception as e:
+            logger.error(f"{func.__name__} 执行失败: {e}")
+            return Result.fail(str(e))
+
+    return wrapper
 
 class Result(Generic[T]):
     def __init__(self, success: bool, data: T = None, message: str = ""):
@@ -158,6 +170,7 @@ class Utils:
         if callable(path_func):
             return path_func()
         return paths.get(path_type, Path())
+    
     #确保路径存在
     @staticmethod
     def ensure_path(path: Path) -> None:
@@ -268,8 +281,34 @@ class Utils:
     @staticmethod
     def kill_process(process_names: list[str]) -> Result[None]:
         try:
+            # 尝试使用psutil更精确地终止进程
+            try:
+                import psutil
+                for proc in psutil.process_iter(['pid', 'name']):
+                    proc_name = proc.info.get('name', '').lower()
+                    for target in process_names:
+                        if target.lower() in proc_name or f"{target.lower()}.exe" == proc_name:
+                            pid = proc.info.get('pid')
+                            logger.info(f"正在终止进程: {proc_name} (PID: {pid})")
+                            try:
+                                p = psutil.Process(pid)
+                                p.terminate()  # 先尝试优雅终止
+                                gone, alive = psutil.wait_procs([p], timeout=2)
+                                if alive:  # 如果进程还活着，强制终止
+                                    logger.warning(f"进程 {proc_name} (PID: {pid}) 未响应terminate请求，将强制结束")
+                                    p.kill()
+                            except psutil.NoSuchProcess:
+                                logger.debug(f"进程 {pid} 已不存在")
+                            except Exception as e:
+                                logger.error(f"使用psutil终止进程 {pid} 失败: {e}")
+            except ImportError:
+                logger.warning("未安装psutil，将使用taskkill终止进程")
+            
+            # 使用taskkill作为备用方法
             for name in process_names:
+                logger.debug(f"使用taskkill终止进程: {name}")
                 subprocess.run(['taskkill', '/F', '/IM', f'{name}.exe'], capture_output=True, check=False)
+                
             return Result.ok()
         except Exception as e:
             return Result.fail(f"结束进程失败: {e}")
@@ -323,28 +362,189 @@ class Utils:
             logger.error(f"无效的 {token_key}: {str(e)}")
             return None
 
-#错误处理装饰器
-def error_handler(func: Callable) -> Callable:
-    @wraps(func)
-    def wrapper(*args, **kwargs) -> Result:
+    #确保必要的包已安装
+    @staticmethod
+    @error_handler
+    def ensure_packages() -> Result:
         try:
-            result = func(*args, **kwargs)
-            return Result.ok(result) if not isinstance(result, Result) else result
+            # 需要确保安装的包
+            required_packages = {
+                'psutil': '5.9.0',  # 指定最低版本
+                'requests': '2.28.0',
+                'loguru': '0.6.0'
+            }
+            
+            # 导入importlib
+            import importlib
+            import importlib.util
+            import sys
+            import platform
+            import subprocess
+            
+            # 检查是否为Windows系统
+            is_windows = platform.system().lower() == 'windows'
+            
+            # 检查是否可以使用yarn
+            use_yarn = False
+            if is_windows:
+                try:
+                    yarn_result = subprocess.run(['yarn', '--version'], 
+                                               capture_output=True, 
+                                               text=True, 
+                                               shell=True)
+                    if yarn_result.returncode == 0:
+                        logger.debug(f"检测到yarn: {yarn_result.stdout.strip()}")
+                        use_yarn = True
+                except Exception:
+                    logger.debug("未检测到yarn，将使用pip安装")
+            
+            # 检查每个包是否已安装
+            missing_packages = {}
+            for package, min_version in required_packages.items():
+                try:
+                    # 尝试导入包
+                    module = importlib.import_module(package)
+                    if hasattr(module, '__version__'):
+                        current_version = module.__version__
+                        logger.debug(f"包 {package} 已安装，版本: {current_version}")
+                        
+                        # 检查版本是否满足要求
+                        if current_version < min_version:
+                            logger.warning(f"包 {package} 版本过低 ({current_version} < {min_version})，需要更新")
+                            missing_packages[package] = min_version
+                    else:
+                        logger.debug(f"包 {package} 已安装，但无法确定版本")
+                except ImportError:
+                    logger.warning(f"包 {package} 未安装，将尝试安装")
+                    missing_packages[package] = min_version
+            
+            # 如果有缺失的包，尝试安装
+            if missing_packages:
+                logger.info(f"正在安装缺失的包: {', '.join(missing_packages.keys())}")
+                
+                for package, version in missing_packages.items():
+                    try:
+                        logger.info(f"正在安装 {package} (>={version})...")
+                        package_spec = f"{package}>={version}"
+                        
+                        if use_yarn:
+                            # 使用yarn安装
+                            cmd = ['yarn', 'add', package_spec]
+                            logger.debug(f"执行命令: {' '.join(cmd)}")
+                            subprocess.check_call(cmd, shell=True)
+                            logger.info(f"包 {package} 安装成功 (使用yarn)")
+                        else:
+                            # 使用pip安装
+                            cmd = [sys.executable, '-m', 'pip', 'install', '--upgrade', package_spec]
+                            logger.debug(f"执行命令: {' '.join(cmd)}")
+                            subprocess.check_call(cmd)
+                            logger.info(f"包 {package} 安装成功 (使用pip)")
+                    except subprocess.CalledProcessError as e:
+                        logger.error(f"安装包 {package} 失败: {e}")
+                        # 尝试使用备用方法安装
+                        try:
+                            logger.debug("尝试使用备用方法安装...")
+                            if use_yarn:
+                                subprocess.check_call([sys.executable, '-m', 'pip', 'install', '--upgrade', package_spec])
+                            else:
+                                subprocess.check_call(['pip', 'install', '--upgrade', package_spec], shell=True)
+                            logger.info(f"包 {package} 使用备用方法安装成功")
+                        except Exception as alt_err:
+                            logger.error(f"备用安装方法也失败: {alt_err}")
+            
+            # 再次检查包是否已全部安装
+            still_missing = []
+            for package in required_packages.keys():
+                try:
+                    importlib.import_module(package)
+                except ImportError:
+                    still_missing.append(package)
+            
+            if still_missing:
+                return Result.fail(f"以下包安装失败: {', '.join(still_missing)}")
+            
+            return Result.ok("所有必要的包已安装")
         except Exception as e:
-            logger.error(f"{func.__name__} 执行失败: {e}")
+            logger.error(f"确保包安装时出错: {e}")
             return Result.fail(str(e))
 
-    return wrapper
+
 
 #Cursor管理类
 class CursorManager:
+    # 认证信息键（静态变量）
+    AUTH_KEYS = {
+        "sign_up": "cursorAuth/cachedSignUpType",
+        "email": "cursorAuth/cachedEmail",
+        "access": "cursorAuth/accessToken",
+        "refresh": "cursorAuth/refreshToken",
+        "stripe": "cursorAuth/stripeMembershipType"
+    }
+    
+    # 可能的Cursor可执行文件路径
+    CURSOR_PATHS = [
+        Path(os.path.expandvars('%LOCALAPPDATA%/Programs/Cursor/Cursor.exe')),
+        Path(os.path.expandvars('%LOCALAPPDATA%/Cursor/Cursor.exe')),
+        Path(os.path.expandvars('%PROGRAMFILES%/Cursor/Cursor.exe')),
+        Path(os.path.expandvars('%PROGRAMFILES(X86)%/Cursor/Cursor.exe')),
+        # VSCode路径 (Cursor基于VSCode)
+        Path(os.path.expandvars('%LOCALAPPDATA%/Programs/Microsoft VS Code/Code.exe')),
+    ]
+    
     def __init__(self):
         self.db_manager = DatabaseManager(Utils.get_path('cursor') / 'state.vscdb')
         self.env_manager = EnvManager()
     
+    @staticmethod
+    def find_cursor_executable() -> Optional[Path]:
+        """
+        查找Cursor可执行文件
+        
+        Returns:
+            Optional[Path]: 找到的Cursor可执行文件路径，如果未找到则返回None
+        """
+        for path in CursorManager.CURSOR_PATHS:
+            if path.exists():
+                logger.info(f"找到Cursor可执行文件: {path}")
+                return path
+        
+        logger.error("找不到Cursor可执行文件")
+        return None
+
+    @staticmethod
+    def is_cursor_running() -> Tuple[bool, Optional[int]]:
+        """
+        检查Cursor进程是否正在运行
+        
+        Returns:
+            Tuple[bool, Optional[int]]: (是否运行, 进程ID)
+        """
+        try:
+            # 确保psutil已安装
+            Utils.ensure_packages()
+            
+            # 检查进程
+            import psutil
+            for proc in psutil.process_iter(['name', 'pid']):
+                proc_name = proc.info.get('name')
+                if proc_name and proc_name.lower() in ['cursor.exe', 'cursor']:
+                    pid = proc.info.get('pid')
+                    logger.debug(f"检测到Cursor进程正在运行 (PID: {pid})")
+                    return True, pid
+            
+            logger.debug("未检测到Cursor进程运行")
+            return False, None
+        except ImportError:
+            logger.warning("未安装psutil库，无法检查进程状态")
+            return False, None
+        except Exception as e:
+            logger.error(f"检查进程状态出错: {e}")
+            return False, None
+
     # 获取令牌
     @error_handler
     def get_long_token(self, session_token: str) -> Result[str]:
+        cursor_reg = None
         try:
             logger.info("【令牌获取-CM】开始使用CursorManager尝试获取长期令牌...")
             
@@ -394,12 +594,48 @@ class CursorManager:
         finally:
             # 确保浏览器实例被关闭
             try:
-                if 'cursor_reg' in locals() and hasattr(cursor_reg, 'browser'):
+                if cursor_reg and hasattr(cursor_reg, 'browser'):
                     logger.debug("【令牌获取-CM】正在关闭浏览器实例...")
                     cursor_reg.browser.quit()
                     logger.debug("【令牌获取-CM】浏览器实例已成功关闭")
             except Exception as e:
                 logger.error(f"【令牌获取-CM】关闭浏览器实例失败: {str(e)}")
+
+    # 启动Cursor应用程序
+    @staticmethod
+    @error_handler
+    def start_cursor_app() -> Result:
+        try:
+            # 检查Cursor是否已在运行
+            is_running, pid = CursorManager.is_cursor_running()
+            if is_running:
+                logger.info(f"Cursor已在运行 (PID: {pid})，无需重新启动")
+                return Result.ok("Cursor已在运行")
+            
+            # 查找Cursor可执行文件
+            cursor_exe = CursorManager.find_cursor_executable()
+            if not cursor_exe:
+                return Result.fail("找不到Cursor可执行文件，请确保已安装Cursor")
+                
+            # 启动Cursor应用
+            logger.info(f"正在启动Cursor应用: {cursor_exe}")
+            try:
+                subprocess.Popen([str(cursor_exe)], shell=True, creationflags=subprocess.CREATE_NO_WINDOW, start_new_session=True)
+                logger.info("启动命令已发送")
+                return Result.ok("已启动Cursor应用")
+            except Exception as start_error:
+                logger.error(f"启动应用时出错: {start_error}")
+                # 尝试使用其他方法启动
+                try:
+                    os.startfile(str(cursor_exe))
+                    logger.info("使用备用方法启动")
+                    return Result.ok("已使用备用方法启动Cursor应用")
+                except Exception as alt_error:
+                    logger.error(f"备用启动方法也失败: {alt_error}")
+                    return Result.fail(f"所有启动方法都失败，请手动启动Cursor")
+        except Exception as e:
+            logger.error(f"启动Cursor应用失败: {e}")
+            return Result.fail(f"启动Cursor应用失败: {e}")
     
     #生成Cursor账号
     @staticmethod
@@ -505,31 +741,72 @@ class CursorManager:
                 
             if not email:
                 return Result.fail("邮箱不能为空")
+            
+            # 首先确保 psutil 包已安装
+            Utils.ensure_packages()
+            
+            # 检查 Cursor 进程是否在运行
+            cursor_running, pid = CursorManager.is_cursor_running()
+            
+            # 如果 Cursor 在运行，则先关闭进程
+            if cursor_running:
+                logger.info(f"正在关闭 Cursor 进程 (PID: {pid})...")
+                kill_result = Utils.kill_process(['Cursor', 'cursor'])
+                if not kill_result.success:
+                    logger.warning(f"关闭 Cursor 进程可能失败: {kill_result.message}")
                 
-            # 定义认证信息的键
-            auth_keys = {k: f"cursorAuth/{v}" for k, v in {
-                "sign_up": "cachedSignUpType",
-                "email": "cachedEmail",
-                "access": "accessToken",
-                "refresh": "refreshToken"
-            }.items()}
-
+                # 等待进程完全关闭，最多等待5秒
+                import time
+                import psutil
+                wait_time = 0
+                check_interval = 0.5
+                max_wait_time = 5  # 最多等待5秒
+                
+                logger.debug("等待Cursor进程完全关闭...")
+                while wait_time < max_wait_time:
+                    still_running, _ = CursorManager.is_cursor_running()
+                    if not still_running:
+                        logger.debug(f"Cursor进程已完全关闭，耗时 {wait_time:.1f} 秒")
+                        break
+                    time.sleep(check_interval)
+                    wait_time += check_interval
+                
+                if wait_time >= max_wait_time:
+                    logger.warning(f"等待Cursor进程关闭超时 ({max_wait_time}秒)，将继续执行")
+            else:
+                logger.info("未检测到 Cursor 进程运行，将直接更新认证信息")
+                
             # 日志记录长期令牌信息
             logger.debug(f"使用长期令牌: {long_token[:15]}... 更新认证信息")
             
             # 准备要更新的数据
             updates = {
-                auth_keys["sign_up"]: "Auth_0",
-                auth_keys["email"]: email,
-                auth_keys["access"]: long_token,
-                auth_keys["refresh"]: long_token
+                self.AUTH_KEYS["sign_up"]: "Auth_0",
+                self.AUTH_KEYS["email"]: email,
+                self.AUTH_KEYS["access"]: long_token,
+                self.AUTH_KEYS["refresh"]: long_token,
+                self.AUTH_KEYS["stripe"]: "free_trial"  # 设置为免费试用类型
             }
 
             logger.debug("正在使用长期令牌更新认证信息...")
             if not (result := self.db_manager.update(updates)):
                 return result
-
-            return Result.ok(message="使用长期令牌更新认证信息成功")
+                
+            # 启动 Cursor 应用（如果之前在运行或用户希望启动）
+            if cursor_running:
+                logger.info("认证信息已更新，正在重启 Cursor 应用...")
+                start_result = CursorManager.start_cursor_app()
+                if not start_result.success:
+                    logger.warning(f"重启 Cursor 应用失败: {start_result.message}")
+                    return Result.ok(message="使用长期令牌更新认证信息成功，但重启应用失败")
+                return Result.ok(message="使用长期令牌更新认证信息成功，已重启应用")
+            else:
+                logger.info("认证信息已更新，准备启动 Cursor 应用...")
+                start_result = CursorManager.start_cursor_app()
+                if not start_result.success:
+                    logger.warning(f"启动 Cursor 应用失败: {start_result.message}")
+                    return Result.ok(message="使用长期令牌更新认证信息成功，但启动应用失败")
+                return Result.ok(message="使用长期令牌更新认证信息成功，已启动应用")
         except Exception as e:
             logger.error(f"process_long_token 执行失败: {e}")
             return Result.fail(str(e))
@@ -537,17 +814,10 @@ class CursorManager:
     @error_handler
     def get_cookies(self) -> Result[Dict[str, str]]:
         try:
-            auth_keys = {k: f"cursorAuth/{v}" for k, v in {
-                "sign_up": "cachedSignUpType",
-                "email": "cachedEmail",
-                "access": "accessToken",
-                "refresh": "refreshToken"
-            }.items()}
-
             logger.debug("正在查询认证信息...")
-            logger.debug(f"查询的键值: {list(auth_keys.values())}")
+            logger.debug(f"查询的键值: {list(self.AUTH_KEYS.values())}")
             
-            result = self.db_manager.query(list(auth_keys.values()))
+            result = self.db_manager.query(list(self.AUTH_KEYS.values()))
             if not result:
                 logger.error(f"查询失败: {result.message}")
                 return Result.fail("查询认证信息失败")
@@ -563,9 +833,11 @@ class CursorManager:
                 logger.debug(f"值: {value}")
                 logger.debug("-" * 50)
 
-            # 反转auth_keys字典，用于将数据库键映射回原始键名
-            reverse_keys = {v: k for k, v in auth_keys.items()}
+            # 反转AUTH_KEYS字典，用于将数据库键映射回原始键名
+            reverse_keys = {v: k for k, v in self.AUTH_KEYS.items()}
             logger.debug(f"键值映射关系: {reverse_keys}")
+            
+            return Result.ok(auth_data)
         except Exception as e:
             logger.error(f"get_cookies 执行失败: {e}")
             logger.error(f"错误详情: {str(e)}")
