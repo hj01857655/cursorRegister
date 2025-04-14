@@ -76,7 +76,9 @@ def create_zip():
 def main():
     print("=== Cursor Helper 打包工具 ===")
     if build_executable():
-        create_zip()
+        # 暂时禁用压缩包创建
+        # create_zip()
+        print("\n注意：已临时禁用压缩包创建功能，仅生成exe文件")
     print("\n打包过程完成！")
 
 
