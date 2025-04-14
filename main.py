@@ -1,5 +1,5 @@
-WINDOW_WIDTH = 1000
-WINDOW_HEIGHT = 520
+WINDOW_WIDTH = 1280
+WINDOW_HEIGHT = 720
 WINDOW_TITLE = "Cursor注册小助手"
 BACKUP_DIR = "env_backups"
 CONTENT_RATIO = 0.5  # 对半分
@@ -17,11 +17,12 @@ from loguru import logger
 
 from tab import ManageTab, RegisterTab, AboutTab, ConfigTab, UI
 from tab.logWindow import MAX_BUFFER_SIZE, UI_UPDATE_BATCH, MAX_TEXT_LENGTH
+from utils import Utils, Result, ConfigManager
 
 console_mode = False
 
 
-
+#窗口配置
 @dataclass
 class WindowConfig:
     width: int = WINDOW_WIDTH
@@ -37,7 +38,7 @@ class WindowConfig:
         ("备份账号", "backup_account")
     ])
 
-
+#主窗口
 class CursorApp:
     def __init__(self, root: tk.Tk) -> None:
         self.root = root
@@ -138,7 +139,7 @@ class CursorApp:
 
         footer = ttk.Label(
             footer_frame,
-            text="POWERED BY KTO 仅供学习使用",
+            text="POWERED BY Hj01857655 仅供学习使用",
             style='Footer.TLabel'
         )
         footer.pack(side=tk.LEFT)
@@ -303,7 +304,8 @@ class CursorApp:
         self.schedule_update()
 
 
-def setup_logging(app=None) -> None:
+def setup_basic_logging() -> None:
+    """设置基本日志系统，不包含GUI部分"""
     logger.remove()
 
     logger.add(
@@ -328,23 +330,35 @@ def setup_logging(app=None) -> None:
             level="DEBUG"
         )
 
-    if app:
-        def gui_sink(message):
-            record = message.record
-            level = record["level"].name
-            text = record["message"]
-            app.add_log(text, level)
+def setup_gui_logging(app) -> None:
+    """设置GUI日志系统"""
+    def gui_sink(message):
+        record = message.record
+        level = record["level"].name
+        text = record["message"]
+        app.add_log(text, level)
 
-        logger.add(
-            sink=gui_sink,
-            format="{message}",
-            level="DEBUG",
-            enqueue=True
-        )
-
+    logger.add(
+        sink=gui_sink,
+        format="{message}",
+        level="DEBUG",
+        enqueue=True
+    )
 
 def main() -> None:
     try:
+        # 设置基本日志系统
+        setup_basic_logging()
+        
+        # 移除不必要的 TOKEN 环境变量
+        if 'TOKEN' in os.environ or 'TOKEN' in ConfigManager._CORE_CONFIG_KEYS:
+            logger.info("检测到TOKEN环境变量，将其移除以避免显示在系统配置中")
+            result = Utils.remove_env_var('TOKEN')
+            if result.success:
+                logger.info("成功移除TOKEN环境变量")
+            else:
+                logger.warning(f"移除TOKEN环境变量失败: {result.message}")
+        
         base_path = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(__file__)
         env_path = os.path.join(base_path, '.env')
         if os.path.exists(env_path):
@@ -352,7 +366,10 @@ def main() -> None:
 
         root = tk.Tk()
         app = CursorApp(root)
-        setup_logging(app)
+        
+        # 设置GUI日志系统
+        setup_gui_logging(app)
+        
         root.mainloop()
     except Exception as e:
         logger.error(f"程序启动失败: {e}")

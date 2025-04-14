@@ -247,14 +247,19 @@ class RegisterTab(ttk.Frame):
                 logger.debug("正在启动注册流程...")
 
                 if not (register_method := {
-                    "auto": self.registrar.auto_register,
-                    "semi": self.registrar.semi_auto_register,
-                    "admin": self.registrar.admin_auto_register
+                    "auto": self.registrar.auto_register,#全自动注册
+                    "semi": self.registrar.semi_auto_register,#
+                    "admin": self.registrar.admin_auto_register#人工验证
                 }.get(mode)):
                     raise ValueError(f"未知的注册模式: {mode}")
 
-                if token := register_method(create_dialog):
-                    cookies_value = f"WorkosCursorSessionToken={token}"
+                # 获取短期和长期令牌
+                cookie_token, long_token = register_method(create_dialog)
+                
+                if cookie_token or long_token:
+                    # 准备保存的值
+                    cookies_value = f"WorkosCursorSessionToken={cookie_token}" if cookie_token else ""
+                    token_value = long_token or ""
                     
                     # 更新输入框
                     self.winfo_toplevel().after(0, lambda: [
@@ -266,18 +271,32 @@ class RegisterTab(ttk.Frame):
                         self.entries['cookie'].insert(0, cookies_value)
                     ])
                     
-                    # 更新环境变量中的COOKIES_STR
-                    Utils.update_env_vars({'COOKIES_STR': cookies_value})
-                    load_dotenv(override=True)
-                    logger.debug("已更新COOKIES_STR环境变量")
+                    # 更新环境变量
+                    env_updates = {}
+                    if cookies_value:
+                        env_updates['COOKIES_STR'] = cookies_value
+                    # 更新TOKEN到环境变量
+                    if token_value:
+                        env_updates['TOKEN'] = token_value
+                        logger.info(f"将长期令牌保存: {token_value[:15]}...")
+                        
+                    if env_updates:
+                        Utils.update_env_vars(env_updates)
+                        load_dotenv(override=True)
+                        logger.debug(f"已更新环境变量: {', '.join(env_updates.keys())}")
                     
                     # 同时更新ConfigManager中的配置
                     config = ConfigManager.load_config()
                     if config.success:
                         updated_config = config.data
-                        updated_config['COOKIES_STR'] = cookies_value
+                        if cookies_value:
+                            updated_config['COOKIES_STR'] = cookies_value
+                        # 也将TOKEN更新到ConfigManager中
+                        if token_value:
+                            updated_config['TOKEN'] = token_value
+                            logger.debug("将TOKEN更新到ConfigManager中")
                         ConfigManager.save_config(updated_config)
-                        logger.debug("已同步更新ConfigManager中的COOKIES_STR配置")
+                        logger.debug("已同步更新ConfigManager中的配置")
                     
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     self.winfo_toplevel().after(0, lambda: UI.show_success(
@@ -285,7 +304,9 @@ class RegisterTab(ttk.Frame):
                         "全自动注册成功，账号信息已填入"
                     ))
                     
-                    threading.Thread(target=self.backup_account, daemon=True).start()
+                    # 直接在这里执行备份，确保长期令牌被保存到CSV
+                    # 使用in_thread=False确保同步执行，避免TOKEN未及时保存
+                    self.backup_account(in_thread=False)
                 else:
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     self.winfo_toplevel().after(0, lambda: UI.show_warning(
@@ -332,8 +353,8 @@ class RegisterTab(ttk.Frame):
     
     #备份账号
     @error_handler
-    def backup_account(self) -> None:
-        def backup_thread():
+    def backup_account(self, in_thread=True) -> None:
+        def backup_process():
             try:
                 self.winfo_toplevel().after(0, lambda: UI.show_loading(
                     self.winfo_toplevel(),
@@ -346,14 +367,34 @@ class RegisterTab(ttk.Frame):
                         raise RuntimeError("更新COOKIES_STR环境变量失败")
                     load_dotenv(override=True)
                 
+                # 直接从环境变量获取TOKEN值
+                token_value = os.getenv("TOKEN", "")
+                logger.debug(f"从环境变量中获取TOKEN: {token_value[:15]}..." if token_value else "未找到TOKEN环境变量")
+                
                 # 只备份账号相关信息
                 account_vars = {
                     "EMAIL": os.getenv("EMAIL", ""),
                     "PASSWORD": os.getenv("PASSWORD", ""),
-                    "COOKIES_STR": os.getenv("COOKIES_STR", "")
+                    "COOKIES_STR": os.getenv("COOKIES_STR", ""),
+                    "TOKEN": token_value,  # 使用从环境变量获取的TOKEN值
+                    "USERID": "",  # 用户ID将通过 JWT 解析添加
+                    "STATUS": "异常",  # 默认状态
+                    "QUOTA": "0/150",  # 默认配额
+                    "DAYS": "14"  # 默认试用天数
                 }
 
-                if not any(account_vars.values()):
+                # 尝试从 Cookie 解析用户 ID
+                try:
+                    from tab.manageTab import ManageTab
+                    if account_vars["COOKIES_STR"]:
+                        user_id, status = ManageTab.extract_user_from_jwt.__func__(None, account_vars["COOKIES_STR"])
+                        if user_id and user_id != "未知":
+                            account_vars["USERID"] = user_id
+                            account_vars["STATUS"] = status
+                except Exception as e:
+                    logger.warning(f"从 JWT 提取用户信息失败: {str(e)}")
+
+                if not any(v for k, v in account_vars.items() if k in ["EMAIL", "PASSWORD", "COOKIES_STR", "TOKEN"]):
                     raise ValueError("未找到任何账号信息，请先注册或更新账号")
 
                 backup_dir = Path("env_backups")
@@ -365,8 +406,9 @@ class RegisterTab(ttk.Frame):
                 with open(backup_path, 'w', encoding='utf-8', newline='') as f:
                     f.write("variable,value\n")
                     for key, value in account_vars.items():
-                        if value:
+                        if value or key in ["USERID", "STATUS", "QUOTA", "DAYS"]:  # 这些键即使为空也要保存
                             f.write(f"{key},{value}\n")
+                            logger.debug(f"保存到CSV: {key}={value[:15]}..." if key == "TOKEN" and value else f"保存到CSV: {key}={value}")
 
                 self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                 logger.info(f"账号信息已备份到: {backup_path}")
@@ -384,4 +426,7 @@ class RegisterTab(ttk.Frame):
                     str(e)
                 ))
 
-        threading.Thread(target=backup_thread, daemon=True).start()
+        if in_thread:
+            threading.Thread(target=backup_process, daemon=True).start()
+        else:
+            backup_process()

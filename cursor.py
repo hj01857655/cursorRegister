@@ -1,4 +1,6 @@
 import requests
+from utils import CursorManager
+from loguru import logger
 
 #Cursor类
 class Cursor:
@@ -39,7 +41,7 @@ class Cursor:
             "Content-Type": "application/json",
             "Cookie": f"WorkosCursorSessionToken={token}"
         }
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=30)
         usage = response.json().get("gpt-4", None)
         if usage is None or "maxRequestUsage" not in usage or "numRequests" not in usage:
             return None
@@ -55,6 +57,33 @@ class Cursor:
             "Content-Type": "application/json",
             "Cookie": f"WorkosCursorSessionToken={token}"
         }
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=30)
         remaining_days = response.json().get("daysRemainingOnTrial", None)
         return remaining_days
+
+    #使用会话令牌获取令牌
+    @classmethod
+    def get_long_token(cls, session_token: str) -> str:
+        """
+        使用会话令牌获取令牌
+        
+        Args:
+            session_token: WorkosCursorSessionToken的值（短令牌）
+            
+        Returns:
+            str: 令牌，失败时返回None
+        """
+        try:
+            # 使用CursorManager获取令牌
+            cursor_manager = CursorManager()
+            result = cursor_manager.get_long_token(session_token)
+            
+            if result.success:
+                logger.info("成功获取令牌")
+                return result.data
+            else:
+                logger.error(f"获取令牌失败: {result.message}")
+                return None
+        except Exception as e:
+            logger.error(f"获取令牌时发生错误: {str(e)}")
+            return None

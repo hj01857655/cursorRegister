@@ -183,6 +183,35 @@ class Utils:
             return Result.ok()
         except Exception as e:
             return Result.fail(f"更新环境变量失败: {e}")
+    #移除环境变量
+    @staticmethod
+    def remove_env_var(key: str) -> Result[None]:
+        """从环境变量和.env文件中移除指定的变量"""
+        try:
+            # 获取.env文件路径
+            env_path = Utils.get_path('env')
+            if not env_path.exists():
+                return Result.ok()
+                
+            # 读取.env文件内容
+            content = env_path.read_text(encoding='utf-8').splitlines()
+            # 过滤掉要移除的变量
+            updated_content = [line for line in content if not line.startswith(f"{key}=")]
+            
+            # 如果该变量存在于环境变量中，也移除它
+            if key in os.environ:
+                os.environ.pop(key, None)
+                
+            # 如果该变量存在于核心配置列表中，也移除它
+            if key in ConfigManager._CORE_CONFIG_KEYS:
+                ConfigManager._CORE_CONFIG_KEYS.remove(key)
+                
+            # 写回.env文件
+            env_path.write_text('\n'.join(updated_content) + '\n', encoding='utf-8')
+            logger.debug(f"已移除环境变量: {key}")
+            return Result.ok()
+        except Exception as e:
+            return Result.fail(f"移除环境变量失败: {e}")
     #备份文件
     @staticmethod
     def backup_file(source: Path, backup_dir: Path, prefix: str, max_backups: int = 10) -> Result[None]:
@@ -235,7 +264,7 @@ class Utils:
                 return Result.ok()
         except Exception as e:
             return Result.fail(f"更新JSON文件失败: {e}")
-
+    #结束进程
     @staticmethod
     def kill_process(process_names: list[str]) -> Result[None]:
         try:
@@ -244,7 +273,7 @@ class Utils:
             return Result.ok()
         except Exception as e:
             return Result.fail(f"结束进程失败: {e}")
-
+    #管理员权限
     @staticmethod
     def run_as_admin() -> bool:
         try:
@@ -258,11 +287,11 @@ class Utils:
             return int(ret) > 32
         except:
             return False
-
+    #生成随机字符串
     @staticmethod
     def generate_random_string(length: int, chars: str = string.ascii_lowercase + string.digits) -> str:
         return ''.join(random.choices(chars, k=length))
-
+    #生成安全密码
     @staticmethod
     def generate_secure_password(length: int = 16) -> str:
         chars = string.ascii_letters + string.digits + "!@#$%^&*()"
@@ -275,7 +304,8 @@ class Utils:
         password = required + random.choices(chars, k=length - 4)
         random.shuffle(password)
         return ''.join(password)
-
+    
+    #提取token
     @staticmethod
     def extract_token(cookies: str, token_key: str) -> Union[str, None]:
         try:
@@ -311,6 +341,65 @@ class CursorManager:
     def __init__(self):
         self.db_manager = DatabaseManager(Utils.get_path('cursor') / 'state.vscdb')
         self.env_manager = EnvManager()
+    
+    # 获取令牌
+    @error_handler
+    def get_long_token(self, session_token: str) -> Result[str]:
+        try:
+            logger.info("【令牌获取-CM】开始使用CursorManager尝试获取长期令牌...")
+            
+            # 导入CursorRegistration
+            try:
+                logger.debug("【令牌获取-CM】正在导入CursorRegistration类...")
+                from registerAc import CursorRegistration
+                logger.debug("【令牌获取-CM】成功导入CursorRegistration类")
+            except ImportError as e:
+                logger.error(f"【令牌获取-CM】导入CursorRegistration失败: {str(e)}")
+                return Result.fail(f"导入CursorRegistration失败: {str(e)}")
+                
+            # 创建CursorRegistration实例并初始化浏览器
+            try:
+                logger.debug("【令牌获取-CM】正在创建CursorRegistration实例...")
+                cursor_reg = CursorRegistration()
+                cursor_reg.headless = True  # 使用无头模式避免弹出浏览器窗口
+                logger.debug("【令牌获取-CM】成功创建CursorRegistration实例，设置为无头模式")
+                
+                logger.debug("【令牌获取-CM】正在初始化浏览器...")
+                cursor_reg.init_browser()
+                logger.debug("【令牌获取-CM】浏览器初始化成功")
+                
+                # 设置cookie
+                cookie_str = f"WorkosCursorSessionToken={session_token}"
+                logger.debug(f"【令牌获取-CM】准备设置Cookie，Cookie字符串长度: {len(cookie_str)}")
+                cursor_reg.tab.set.cookies(cookie_str)
+                logger.debug("【令牌获取-CM】Cookie设置成功")
+                
+                # 获取令牌
+                logger.info("【令牌获取-CM】开始调用get_cursor_long_token方法...")
+                long_token = cursor_reg.get_cursor_long_token()
+                if not long_token:
+                    logger.error("【令牌获取-CM】get_cursor_long_token方法返回空值，获取令牌失败")
+                    return Result.fail("获取令牌失败")
+                    
+                logger.info(f"【令牌获取-CM】成功获取长期令牌: {long_token[:15]}...")
+                return Result.ok(long_token, "成功获取令牌")
+                
+            except Exception as e:
+                logger.error(f"【令牌获取-CM】获取令牌过程中发生异常: {str(e)}")
+                return Result.fail(f"获取令牌失败: {str(e)}")
+            
+        except Exception as e:
+            logger.error(f"【令牌获取-CM】get_long_token方法执行失败: {e}")
+            return Result.fail(str(e))
+        finally:
+            # 确保浏览器实例被关闭
+            try:
+                if 'cursor_reg' in locals() and hasattr(cursor_reg, 'browser'):
+                    logger.debug("【令牌获取-CM】正在关闭浏览器实例...")
+                    cursor_reg.browser.quit()
+                    logger.debug("【令牌获取-CM】浏览器实例已成功关闭")
+            except Exception as e:
+                logger.error(f"【令牌获取-CM】关闭浏览器实例失败: {str(e)}")
     
     #生成Cursor账号
     @staticmethod
@@ -515,22 +604,26 @@ class MoemailManager:
                 logger.error("API请求返回空响应")
                 return Result.fail("API请求返回空响应")
 
-            if response.status_code == 200:
-                try:
-                    response_data = response.json()
-                    if not response_data:
-                        logger.warning("API返回空数据")
-                        return Result.fail("API返回空数据")
-                    logger.debug(f"API响应数据: {response_data}")
+            try:
+                response_data = response.json()
+                logger.debug(f"API响应状态码: {response.status_code}")
+                logger.debug(f"API响应数据: {response_data}")
+                
+                # 处理不同的状态码
+                if response.status_code == 200:
                     return Result.ok(response_data)
-                except ValueError as e:
-                    logger.error(f"解析JSON响应失败: {e}")
-                    return Result.fail(f"无效的JSON响应: {response.text}")
+                else:
+                    # 对于非 200 状态码，将响应数据包含在结果中，但标记为失败
+                    error_msg = f"请求状态码非 200: {response.status_code}"
+                    logger.warning(error_msg)
+                    result = Result.fail(error_msg)
+                    # 设置响应数据
+                    result.data = response_data
+                    return result
+            except ValueError as e:
+                logger.error(f"解析JSON响应失败: {e}")
+                return Result.fail(f"无效的JSON响应: {response.text}")
             
-            error_msg = f"请求失败 (状态码: {response.status_code}): {response.text}"
-            logger.error(error_msg)
-            return Result.fail(error_msg)
-
         except requests.exceptions.RequestException as e:
             error_msg = f"网络请求错误: {str(e)}"
             logger.error(error_msg)
@@ -543,17 +636,57 @@ class MoemailManager:
     def create_email(self, email: str, expiry_time: int = 3600000) -> Result[dict]:
         try:
             name, domain = email.split('@')
-
+            
+            # 先检查邮箱是否已存在
+            logger.debug(f"检查邮箱 {email} 是否已存在")
+            email_list_result = self.get_email_list()
+            
+            # 检查是否成功获取邮箱列表
+            if email_list_result.success:
+                emails = email_list_result.data.get('emails', [])
+                
+                # 检查邮箱是否已存在
+                for existing_email in emails:
+                    if existing_email.get('address') == email:
+                        logger.info(f"邮箱 {email} 已存在，直接使用现有邮箱")
+                        return Result.ok({
+                            "email": email,
+                            "id": existing_email.get('id'),
+                            "expiresAt": existing_email.get('expiresAt')
+                        })
+            else:
+                logger.warning(f"获取邮箱列表失败: {email_list_result.message}，将尝试直接创建邮箱")
+            
+            # 邮箱不存在，创建新邮箱
             data = {
                 "name": name,
                 "expiryTime": expiry_time,
                 "domain": domain
             }
 
+            logger.debug(f"创建新邮箱: {email}")
             result = self._make_request("POST", "/emails/generate", json=data)
+            
             if not result.success:
+                # 如果创建失败，但错误是因为邮箱已存在
+                if hasattr(result, 'data') and isinstance(result.data, dict):
+                    error = result.data.get('error', '')
+                    if 'already exists' in error or 'already registered' in error:
+                        logger.info(f"邮箱 {email} 已存在（从错误响应中确认）")
+                        # 尝试再次获取邮箱列表，找到已存在的邮箱
+                        retry_list_result = self.get_email_list()
+                        if retry_list_result.success:
+                            for existing_email in retry_list_result.data.get('emails', []):
+                                if existing_email.get('address') == email:
+                                    return Result.ok({
+                                        "email": email,
+                                        "id": existing_email.get('id'),
+                                        "expiresAt": existing_email.get('expiresAt')
+                                    })
+                
                 logger.error(f"创建邮箱失败: {result.message}")
                 return result
+                
             return Result.ok(result.data)
 
         except Exception as e:

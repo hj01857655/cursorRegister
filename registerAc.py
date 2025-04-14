@@ -118,20 +118,77 @@ class CursorRegistration:
 
     #输入注册信息
     def input_field(self, fields_dict):
+        # 存储已输入的值
+        input_values = {}
         for name, value in fields_dict.items():
-            self.tab.ele(f'@name={name}').input(value)
-            time.sleep(random.uniform(1, 4))
-            logger.debug(f"成功输入 {name}")
-            logger.debug(f"{value}")
+            # 获取当前输入框的值
+            field = self.tab.ele(f'@name={name}')
+            # 保存当前输入的值
+            input_values[name] = value
+            # 再次检查之前输入的内容是否还在
+            for prev_name, prev_value in input_values.items():
+                if prev_name != name:
+                    prev_field = self.tab.ele(f'@name={prev_name}')
+                    prev_current_value = prev_field.attr('value')
+                    # 如果之前的值被清空，重新输入
+                    if not prev_current_value or prev_current_value != prev_value:
+                        logger.debug(f"检测到 {prev_name} 的值被清空，正在重新输入")
+                        prev_field.input(prev_value)
+                        time.sleep(random.uniform(0.5, 1))
+            # 输入当前字段的值
+            field.input(value)
+            time.sleep(random.uniform(1, 2))
+            logger.debug(f"成功输入 {name}: {value}")
     
 
     #填写注册表单
     def fill_registration_form(self):
+        # 分别输入每个字段，检查并维护所有字段的值
         self.input_field({
+            'first_name': self.first_name
+        })
+        time.sleep(random.uniform(0.5, 1))
+        
+        # 检查 first_name 是否仍然存在
+        first_name_field = self.tab.ele('@name=first_name')
+        first_name_value = first_name_field.attr('value')
+        if not first_name_value or first_name_value != self.first_name:
+            logger.debug(f"检测到 first_name 的值已被清空，重新输入")
+            first_name_field.input(self.first_name)
+            time.sleep(random.uniform(0.5, 1))
+            
+        # 输入 last_name
+        self.tab.ele('@name=last_name').input(self.last_name)
+        time.sleep(random.uniform(1, 2))
+        logger.debug(f"成功输入 last_name: {self.last_name}")
+        
+        # 检查 first_name 和 last_name 是否仍然存在
+        first_name_field = self.tab.ele('@name=first_name')
+        first_name_value = first_name_field.attr('value')
+        if not first_name_value or first_name_value != self.first_name:
+            logger.debug(f"检测到 first_name 的值已被清空，重新输入")
+            first_name_field.input(self.first_name)
+            time.sleep(random.uniform(0.5, 1))
+            
+        # 输入 email
+        self.tab.ele('@name=email').input(self.email)
+        time.sleep(random.uniform(1, 2))
+        logger.debug(f"成功输入 email: {self.email}")
+        
+        # 最终检查并确保所有字段都有值
+        fields = {
             'first_name': self.first_name,
             'last_name': self.last_name,
             'email': self.email
-        })
+        }
+        
+        for name, value in fields.items():
+            field = self.tab.ele(f'@name={name}')
+            current_value = field.attr('value')
+            if not current_value or current_value != value:
+                logger.debug(f"最终检查: {name} 的值需要重新输入")
+                field.input(value)
+                time.sleep(random.uniform(0.5, 1))
     
     #填写密码
     def fill_password(self):
@@ -148,7 +205,20 @@ class CursorRegistration:
                     time.sleep(wait_time)
 
                 if not self.tab.wait.url_change(target_url, timeout=3) and current_url in self.tab.url:
-                    self._cursor_turnstile( )
+                    # 这里添加等待用户手动验证的提示
+                    logger.info("等待用户手动完成验证...")
+                    
+                    # 等待用户手动验证 (30秒)
+                    for i in range(30):
+                        # 每秒检查一次是否已经完成验证
+                        if self.tab.wait.url_change(current_url, timeout=1):
+                            logger.info("检测到页面已变化，可能验证已完成")
+                            break
+                        if i % 5 == 0:  # 每5秒提示一次
+                            logger.info(f"请手动完成验证，已等待 {i} 秒...")
+                    
+                    # 尝试处理 turnstile
+                    self._cursor_turnstile()
 
                 if self.tab.wait.url_change(target_url, timeout=5):
                     logger.debug(f"成功前往{action_description}")
@@ -165,7 +235,7 @@ class CursorRegistration:
                     raise Exception(f"在{action_description}时超时")
         return False
     
-    #半自动注册
+    # 
     def semi_auto_register(self, wait_callback=None):
         try:
             #初始化浏览器
@@ -182,13 +252,25 @@ class CursorRegistration:
                         wait_callback(message)
                     except Exception as e:
                         logger.info("用户终止了注册流程")
-                        return None
+                        return None, None
                     self._safe_action(step)
 
-            if token := self._safe_action(self.get_cursor_token):
-                if not Utils.update_env_vars({"COOKIES_STR": f"WorkosCursorSessionToken={token}"}).success:
-                    logger.error("更新环境变量COOKIES_STR失败")
-            return token
+            # 获取短期和长期令牌
+            cookie_token, long_token = self._safe_action(self.get_cursor_token_and_cookie)
+            
+            # 更新环境变量
+            if cookie_token or long_token:
+                env_updates = {}
+                if cookie_token:
+                    env_updates["COOKIES_STR"] = f"WorkosCursorSessionToken={cookie_token}"
+                if long_token:
+                    env_updates["TOKEN"] = long_token
+                
+                if not Utils.update_env_vars(env_updates).success:
+                    logger.error("更新环境变量失败")
+            
+            # 返回获取的令牌
+            return cookie_token, long_token
 
         except Exception as e:
             logger.error(f"注册过程发生错误: {str(e)}")
@@ -203,10 +285,37 @@ class CursorRegistration:
             self._safe_action(self.init_browser)
             self._safe_action(self.fill_registration_form)
             time.sleep(random.uniform(1, 4))
+            
+            # 最后检查一次所有字段是否已填写
+            fields = {
+                'first_name': self.first_name,
+                'last_name': self.last_name,
+                'email': self.email
+            }
+            for name, value in fields.items():
+                field = self.tab.ele(f'@name={name}')
+                current_value = field.attr('value')
+                if not current_value or current_value != value:
+                    logger.info(f"提交前检查: {name} 需要重新输入")
+                    field.input(value)
+                    time.sleep(random.uniform(0.5, 1))
+            
             submit = self.tab.ele("@type=submit")
             self.tab.actions.move_to(ele_or_loc=submit)
             self.tab.actions.click(submit)
-            # self.tab.ele("@type=submit").click()
+            
+            # 等待用户完成验证 (最多60秒)
+            logger.info("等待用户完成 Turnstile 验证...")
+            max_wait_time = 60  # 等待最长60秒
+            for i in range(max_wait_time):
+                # 每秒检查一次页面是否已跳转
+                if self.tab.wait.url_change(self.CURSOR_SIGNUP_URL, timeout=1):
+                    logger.info("检测到页面变化，验证可能已完成")
+                    break
+                if i % 10 == 0:  # 每10秒提示一次
+                    logger.info(f"请手动完成验证，已等待 {i} 秒，还有 {max_wait_time - i} 秒...")
+            
+            # 检查是否进入密码设置页面
             if not self._handle_page_transition(
                     self.CURSOR_SIGNUP_URL,
                     self.CURSOR_SIGNUP_PASSWORD_URL,
@@ -219,7 +328,17 @@ class CursorRegistration:
             submit = self.tab.ele("@type=submit")
             self.tab.actions.move_to(ele_or_loc=submit)
             self.tab.actions.click(submit)
-            # self.tab.ele("@type=submit").click()
+            
+            # 等待用户完成验证 (最多60秒)
+            logger.info("等待用户完成密码页面的 Turnstile 验证...")
+            for i in range(max_wait_time):
+                # 每秒检查一次页面是否已跳转
+                if self.tab.wait.url_change(self.CURSOR_SIGNUP_PASSWORD_URL, timeout=1):
+                    logger.info("检测到页面变化，验证可能已完成")
+                    break
+                if i % 10 == 0:  # 每10秒提示一次
+                    logger.info(f"请手动完成验证，已等待 {i} 秒，还有 {max_wait_time - i} 秒...")
+            
             if not self._handle_page_transition(
                     self.CURSOR_SIGNUP_PASSWORD_URL,
                     self.CURSOR_EMAIL_VERIFICATION_URL,
@@ -238,11 +357,13 @@ class CursorRegistration:
                         wait_callback("请输入邮箱验证码继续")
                     except Exception as e:
                         logger.info("用户终止了注册流程")
-                        return None
-            if token := self._safe_action(self.get_cursor_token):
-                if not Utils.update_env_vars({"COOKIES_STR": f"WorkosCursorSessionToken={token}"}).success:
-                    logger.error("更新环境变量COOKIES_STR失败")
-            return token
+                        return None, None
+                        
+            # 获取短期和长期令牌
+            cookie_token, long_token = self._safe_action(self.get_cursor_token_and_cookie)
+            
+            # 返回获取的令牌
+            return cookie_token, long_token
 
         except Exception as e:
             logger.error(f"注册过程发生错误: {str(e)}")
@@ -253,23 +374,137 @@ class CursorRegistration:
     
     #全自动注册
     def admin_auto_register(self, wait_callback=None):
-        self.moe = MoemailManager()
-        email_info = self.moe.create_email(email=self.email)
-        logger.debug(f"已创建邮箱 ： {email_info.data.get('email')}")
-        self.admin = True
-        token = self._safe_action(self.auto_register, wait_callback)
-        if token:
-            env_updates = {
-                "COOKIES_STR": f"WorkosCursorSessionToken={token}",
-                "EMAIL": self.email,
-                "PASSWORD": self.password
+        try:
+            self.moe = MoemailManager()
+            email_info = self.moe.create_email(email=self.email)
+            logger.debug(f"已创建邮箱 ： {email_info.data.get('email')}")
+            self.admin = True
+            
+            # 初始化浏览器
+            self._safe_action(self.init_browser)
+            # 填写注册表单
+            self._safe_action(self.fill_registration_form)
+            time.sleep(random.uniform(1, 4))
+            
+            # 最后检查一次所有字段是否已填写
+            fields = {
+                'first_name': self.first_name,
+                'last_name': self.last_name,
+                'email': self.email
             }
-            Utils.update_env_vars(env_updates)
-        return token
+            for name, value in fields.items():
+                field = self.tab.ele(f'@name={name}')
+                current_value = field.attr('value')
+                if not current_value or current_value != value:
+                    logger.info(f"提交前检查: {name} 需要重新输入")
+                    field.input(value)
+                    time.sleep(random.uniform(0.5, 1))
+            
+            # 点击提交按钮
+            submit = self.tab.ele("@type=submit")
+            self.tab.actions.move_to(ele_or_loc=submit)
+            self.tab.actions.click(submit)
+            
+            # 等待用户完成验证 (最多90秒)
+            logger.info("等待用户完成 Turnstile 验证...")
+            max_wait_time = 90  # 等待最长90秒
+            for i in range(max_wait_time):
+                # 每秒检查一次页面是否已跳转
+                if self.tab.wait.url_change(self.CURSOR_SIGNUP_URL, timeout=1):
+                    logger.info("检测到页面变化，验证可能已完成")
+                    break
+                if i % 10 == 0:  # 每10秒提示一次
+                    logger.info(f"请手动完成验证，已等待 {i} 秒，还有 {max_wait_time - i} 秒...")
+                    if wait_callback:
+                        try:
+                            wait_callback(f"请手动完成验证，已等待 {i} 秒")
+                        except Exception as e:
+                            logger.info("用户终止了注册流程")
+                            return None, None
+            
+            # 检查是否进入密码设置页面
+            if not self._handle_page_transition(
+                    self.CURSOR_SIGNUP_URL,
+                    self.CURSOR_SIGNUP_PASSWORD_URL,
+                    "密码设置页面"
+            ):
+                raise Exception("无法进入密码设置页面")
+
+            # 填写密码
+            self._safe_action(self.fill_password)
+            time.sleep(random.uniform(1, 4))
+            
+            # 点击提交按钮
+            submit = self.tab.ele("@type=submit")
+            self.tab.actions.move_to(ele_or_loc=submit)
+            self.tab.actions.click(submit)
+            
+            # 等待用户完成验证 (最多90秒)
+            logger.info("等待用户完成密码页面的 Turnstile 验证...")
+            for i in range(max_wait_time):
+                # 每秒检查一次页面是否已跳转
+                if self.tab.wait.url_change(self.CURSOR_SIGNUP_PASSWORD_URL, timeout=1):
+                    logger.info("检测到页面变化，验证可能已完成")
+                    break
+                if i % 10 == 0:  # 每10秒提示一次
+                    logger.info(f"请手动完成验证，已等待 {i} 秒，还有 {max_wait_time - i} 秒...")
+                    if wait_callback:
+                        try:
+                            wait_callback(f"请手动完成密码页面验证，已等待 {i} 秒")
+                        except Exception as e:
+                            logger.info("用户终止了注册流程")
+                            return None, None
+            
+            # 检查是否进入邮箱验证页面
+            if not self._handle_page_transition(
+                    self.CURSOR_SIGNUP_PASSWORD_URL,
+                    self.CURSOR_EMAIL_VERIFICATION_URL,
+                    "邮箱验证页面"
+            ):
+                raise Exception("无法进入邮箱验证页面")
+
+            # 获取并输入验证码
+            email_data = self.get_email_data()
+            verify_code = self.parse_cursor_verification_code(email_data)
+            time.sleep(random.uniform(2, 5))
+            self._safe_action(self.input_email_verification, verify_code)
+            
+            # 获取短期和长期令牌
+            cookie_token, long_token = self._safe_action(self.get_cursor_token_and_cookie)
+            
+            # 更新环境变量
+            if cookie_token or long_token:
+                env_updates = {
+                    "EMAIL": self.email,
+                    "PASSWORD": self.password
+                }
+                if cookie_token:
+                    env_updates["COOKIES_STR"] = f"WorkosCursorSessionToken={cookie_token}"
+                if long_token:
+                    env_updates["TOKEN"] = long_token
+                
+                Utils.update_env_vars(env_updates)
+            
+            # 返回获取的令牌
+            return cookie_token, long_token
+
+        except Exception as e:
+            logger.error(f"注册过程发生错误: {str(e)}")
+            raise
+        finally:
+            if self.browser:
+                self.browser.quit()
+    
     #获取使用信息
     def get_usage(self,user_id):
-        tab=self.browser.new_tab(f"{self.CURSOR_USAGE_URL}?user={user_id}")
-        return tab.json
+        try:
+            # 设置更长的超时时间
+            self.browser.set.timeout(30)
+            tab=self.browser.new_tab(f"{self.CURSOR_USAGE_URL}?user={user_id}")
+            return tab.json
+        except Exception as e:
+            logger.error(f"获取使用信息失败: {str(e)}")
+            return None
     
     #获取试用信息
     def get_trial_info(self, cookie=None):
@@ -316,7 +551,11 @@ class CursorRegistration:
         return tab
 
     #处理clouldflare验证
-    def _cursor_turnstile(self,tab):
+    def _cursor_turnstile(self, tab=None):
+        # 如果未传入tab参数，使用当前tab
+        if tab is None:
+            tab = self.tab
+            
         max_retries = 5
         for retry in range(max_retries):
             try:
@@ -409,7 +648,7 @@ class CursorRegistration:
                 if not self.tab.wait.url_change(self.CURSOR_URL,
                                                 timeout=3) and self.CURSOR_EMAIL_VERIFICATION_URL in self.tab.url:
                     logger.debug("检测到需要验证码验证，开始处理")
-                    self._cursor_turnstile(self.tab)
+                    self._cursor_turnstile()
                     time.sleep(random.uniform(1, 3))
 
             except Exception as e:
@@ -591,40 +830,172 @@ class CursorRegistration:
     
 
     #通过pkce获取cursor的长期token，用于后续操作
-    def get_cursor_cookie(self, tab):
-        def _generate_pkce_pair():
-            code_verifier = secrets.token_urlsafe(43)
-            code_challenge_digest = hashlib.sha256(code_verifier.encode('utf-8')).digest()
-            code_challenge = base64.urlsafe_b64encode(code_challenge_digest).decode('utf-8').rstrip('=')    
-            return code_verifier, code_challenge
+    def get_cursor_long_token(self, tab=None):
+        if tab is None:
+            tab = self.tab
+        
         try:
-            verifier, challenge = _generate_pkce_pair()
-            id = uuid.uuid4()
-            client_login_url = f"https://www.cursor.com/cn/loginDeepControl?challenge={challenge}&uuid={id}&mode=login"
-            tab.get(client_login_url)
-            tab.ele("xpath=//span[contains(text(), 'Yes, Log In')]").click()
-
-            auth_pooll_url = f"https://api2.cursor.sh/auth/poll?uuid={id}&verifier={verifier}"
+            logger.info("【令牌获取】开始获取Cursor长期令牌流程...")
+            
+            # 从GitHub仓库cursorLogin.js中提取的方法
+            def generate_pkce_pair():
+                logger.debug("【令牌获取】正在生成PKCE配对...")
+                verifier = base64.urlsafe_b64encode(os.urandom(43)).decode('utf-8').rstrip('=')
+                challenge_bytes = hashlib.sha256(verifier.encode('utf-8')).digest()
+                challenge = base64.urlsafe_b64encode(challenge_bytes).decode('utf-8').rstrip('=')    
+                logger.debug("【令牌获取】PKCE配对生成成功")
+                return verifier, challenge
+            
+            # 生成PKCE对和UUID
+            verifier, challenge = generate_pkce_pair()
+            uuid_val = str(uuid.uuid4())
+            logger.debug(f"【令牌获取】生成UUID: {uuid_val}")
+            
+            # 获取登录URL (参考GitHub仓库cursorLogin.js的getLoginUrl函数)
+            login_url = f"https://www.cursor.com/loginDeepControl?challenge={challenge}&uuid={uuid_val}&mode=login"
+            logger.info(f"【令牌获取】生成的登录URL: {login_url}")
+            
+            # 获取当前的cookie
+            logger.debug("【令牌获取】正在检查现有Cookie...")
+            current_cookie = ""
+            for cookie in tab.cookies():
+                if cookie.get("name") == "WorkosCursorSessionToken":
+                    current_cookie = cookie["value"]
+                    logger.debug(f"【令牌获取】找到现有WorkosCursorSessionToken Cookie (长度: {len(current_cookie)})")
+                    break
+            
+            if current_cookie:
+                # 如果有现有cookie，使用GitHub仓库cursor.js中的loginDeepCallbackControl接口
+                logger.info("【令牌获取】检测到现有Cookie，尝试使用API方式获取令牌...")
+                login_deep_url = "https://www.cursor.com/api/auth/loginDeepCallbackControl"
+                headers = {
+                    "Accept": "*/*",
+                    "Content-Type": "application/json",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/0.48.6 Chrome/132.0.6834.210 Electron/34.3.4 Safari/537.36",
+                    "Cookie": f"WorkosCursorSessionToken={current_cookie}"
+                }
+                
+                login_data = {
+                    "uuid": uuid_val,
+                    "challenge": challenge
+                }
+                
+                logger.debug(f"【令牌获取】发送登录控制请求到: {login_deep_url}")
+                try:
+                    login_response = requests.post(login_deep_url, headers=headers, json=login_data, timeout=30)
+                    logger.debug(f"【令牌获取】登录控制请求响应状态码: {login_response.status_code}")
+                    
+                    if login_response.status_code == 200:
+                        logger.info("【令牌获取】登录控制请求成功")
+                        try:
+                            response_data = login_response.json()
+                            logger.debug(f"【令牌获取】登录控制响应数据: {str(response_data)[:100]}...")
+                        except:
+                            logger.debug("【令牌获取】登录控制响应不是JSON格式")
+                    else:
+                        logger.warning(f"【令牌获取】登录控制请求失败，状态码: {login_response.status_code}")
+                        logger.debug(f"【令牌获取】错误响应内容: {login_response.text[:200]}...")
+                except Exception as req_error:
+                    logger.error(f"【令牌获取】发送登录控制请求时出错: {str(req_error)}")
+                
+                if login_response.status_code != 200:
+                    logger.error(f"【令牌获取】登录控制请求失败: {login_response.status_code}，切换到浏览器方式")
+                    # 如果接口请求失败，使用浏览器方式登录
+                    logger.info(f"【令牌获取】正在使用浏览器方式访问登录URL: {login_url}")
+                    tab.get(login_url)
+                    logger.debug("【令牌获取】等待登录页面中的'Yes, Log In'按钮...")
+                    if tab.wait.ele_exists("xpath=//span[contains(text(), 'Yes, Log In')]", timeout=5):
+                        logger.info("【令牌获取】找到'Yes, Log In'按钮，准备点击")
+                        tab.ele("xpath=//span[contains(text(), 'Yes, Log In')]").click()
+                        logger.info(f"【令牌获取】已点击'Yes, Log In'按钮")
+                    else:
+                        logger.warning("【令牌获取】未找到'Yes, Log In'按钮，可能页面结构已变化")
+            else:
+                # 如果没有cookie，直接使用浏览器方式登录
+                logger.info("【令牌获取】未检测到现有Cookie，直接使用浏览器方式登录")
+                logger.debug(f"【令牌获取】正在访问登录URL: {login_url}")
+                tab.get(login_url)
+                logger.debug("【令牌获取】等待登录页面加载...")
+                if tab.wait.ele_exists("xpath=//span[contains(text(), 'Yes, Log In')]", timeout=5):
+                    logger.info("【令牌获取】找到'Yes, Log In'按钮，准备点击")
+                    tab.ele("xpath=//span[contains(text(), 'Yes, Log In')]").click()
+                    logger.info(f"【令牌获取】已点击'Yes, Log In'按钮")
+                else:
+                    logger.warning("【令牌获取】未找到'Yes, Log In'按钮，可能页面结构已变化或已自动登录")
+            
+            # 从GitHub仓库cursorLogin.js中提取的queryAuthPoll函数
+            auth_poll_url = f"https://api2.cursor.sh/auth/poll?uuid={uuid_val}&verifier={verifier}"
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/0.48.6 Chrome/132.0.6834.210 Electron/34.3.4 Safari/537.36",
                 "Accept": "*/*"
             }
-            response = requests.get(auth_pooll_url, headers = headers, timeout=5)
-            data = response.json()
-            accessToken = data.get("accessToken", None)
-            authId = data.get("authId", "")
-            if len(authId.split("|")) > 1:
-                userId = authId.split("|")[1]
-                token = f"{userId}%3A%3A{accessToken}"
-            else:
-                token = accessToken
-        except:
-            print(f"[Register][{self.thread_id}] Fail to get cookie.")
+            
+            logger.info(f"【令牌获取】开始轮询获取令牌，轮询地址: {auth_poll_url}")
+            # 尝试30次，每次等待1秒（GitHub仓库中用了60次，我们减少一些）
+            for i in range(30):
+                logger.debug(f"【令牌获取】轮询获取令牌... (第{i+1}次/共30次)")
+                try:
+                    response = requests.get(auth_poll_url, headers=headers, timeout=5)
+                    logger.debug(f"【令牌获取】轮询响应状态码: {response.status_code}")
+                    
+                    if response.status_code == 200:
+                        try:
+                            data = response.json()
+                            logger.debug(f"【令牌获取】轮询返回数据: {str(data)[:100]}...")
+                            
+                            access_token = data.get("accessToken")
+                            refresh_token = data.get("refreshToken")
+                            auth_id = data.get("authId", "")
+                            
+                            if access_token:
+                                logger.debug("【令牌获取】成功获取access_token")
+                            if refresh_token:
+                                logger.debug("【令牌获取】成功获取refresh_token")
+                            if auth_id:
+                                logger.debug(f"【令牌获取】获取到auth_id: {auth_id}")
+                            
+                            token = access_token or refresh_token
+                            
+                            if token:
+                                logger.info(f"【令牌获取】成功获取长期令牌: {token[:15]}...")
+                                return token
+                            else:
+                                logger.debug("【令牌获取】未在响应中找到令牌")
+                        except Exception as json_error:
+                            logger.error(f"【令牌获取】解析轮询响应JSON失败: {str(json_error)}")
+                    else:
+                        logger.warning(f"【令牌获取】轮询请求失败，状态码: {response.status_code}")
+                except Exception as poll_error:
+                    logger.error(f"【令牌获取】轮询请求出错: {str(poll_error)}")
+                
+                logger.debug("【令牌获取】轮询等待1秒...")
+                time.sleep(1)
+            
+            logger.error("【令牌获取】轮询获取令牌超时，30次尝试后仍未成功")
             return None
-
-        if token is not None:
-            print(f"[Register][{self.thread_id}] Get Account Cookie Successfully.")
-        else:
-            print(f"[Register][{self.thread_id}] Get Account Cookie Failed.")
-        return token#
+        except Exception as e:
+            logger.error(f"【令牌获取】获取长期令牌过程中发生异常: {str(e)}")
+            return None
+    
+    #获取短期和长期token，同时更新环境变量
+    def get_cursor_token_and_cookie(self):
+        # 先获取短期token (cookie)
+        cookie_token = self._safe_action(self.get_cursor_token)
+        if not cookie_token:
+            logger.error("无法获取短期令牌")
+            return None, None
+            
+        # 然后获取长期token
+        long_token = self._safe_action(self.get_cursor_long_token)
+        
+        # 更新环境变量 (只更新COOKIES_STR，不更新TOKEN)
+        env_updates = {}
+        if cookie_token:
+            env_updates["COOKIES_STR"] = f"WorkosCursorSessionToken={cookie_token}"
+        
+        if env_updates:
+            if not Utils.update_env_vars(env_updates).success:
+                logger.error("更新环境变量失败")
+                
+        return cookie_token, long_token
 

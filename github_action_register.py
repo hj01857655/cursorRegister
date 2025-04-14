@@ -70,7 +70,8 @@ class GithubActionRegistration(CursorRegistration):
             time.sleep(random.uniform(2, 5))
             self._safe_action(self.input_email_verification, verify_code)
 
-            return self._safe_action(self.get_cursor_token)
+            # 获取短期和长期令牌
+            return self._safe_action(self.get_cursor_token_and_cookie)
         except Exception as e:
             logger.error(f"注册过程发生错误: {str(e)}")
             raise
@@ -82,14 +83,25 @@ class GithubActionRegistration(CursorRegistration):
 if __name__ == "__main__":
     load_dotenv()
     registration = GithubActionRegistration()
-    token = registration.admin_auto_register()
-    if token:
-        env_updates = {
-            "COOKIES_STR": f"WorkosCursorSessionToken={token}",
-            "EMAIL": registration.email,
-            "PASSWORD": registration.password
-        }
+    cookie_token, long_token = registration.admin_auto_register()
+    
+    # 准备环境变量
+    env_updates = {
+        "EMAIL": registration.email,
+        "PASSWORD": registration.password
+    }
+    
+    # 添加短期和长期令牌
+    if cookie_token:
+        env_updates["COOKIES_STR"] = f"WorkosCursorSessionToken={cookie_token}"
+    if long_token:
+        env_updates["TOKEN"] = long_token
+        
+    # 更新环境变量
+    if env_updates:
         registration.utils.update_env_vars(env_updates)
+        
+        # 保存到文件
         try:
             with open('env_variables.csv', 'w', encoding='utf-8', newline='') as f:
                 f.write("variable,value\n")
