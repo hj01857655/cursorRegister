@@ -24,6 +24,7 @@ import json
 import ssl
 import urllib3
 import shutil
+import ctypes
 
 import requests
 from loguru import logger
@@ -37,6 +38,9 @@ class ManageTab(ttk.Frame):
     def __init__(self, parent, **kwargs):
         super().__init__(parent, style='TFrame', **kwargs)
         self.registrar = None
+        
+        # 保存用户调整的列宽
+        self.user_column_widths = {}
         
         # 确保env_backups目录存在
         self.ensure_backup_dir()
@@ -59,28 +63,76 @@ class ManageTab(ttk.Frame):
                               f"无法创建账号备份目录 {backup_dir}，请确保应用具有写入权限。\n\n错误信息: {str(e)}")
 
     def setup_ui(self):
+        # 尝试调整主窗口大小
+        try:
+            # 获取根窗口
+            root = self.winfo_toplevel()
+            # 获取屏幕宽度
+            screen_width = root.winfo_screenwidth()
+            screen_height = root.winfo_screenheight()
+            # 设置窗口大小为屏幕宽度的80%，高度为75%
+            window_width = int(screen_width * 0.8)
+            window_height = int(screen_height * 0.75)
+            # 设置窗口尺寸和位置
+            root.geometry(f"{window_width}x{window_height}+{int((screen_width-window_width)/2)}+{int((screen_height-window_height)/2)}")
+            logger.info(f"已调整主窗口大小为 {window_width}x{window_height}")
+        except Exception as e:
+            logger.warning(f"调整主窗口大小失败: {str(e)}")
+
         accounts_frame = UI.create_labeled_frame(self, "已保存账号")
+        # 让accounts_frame能够自动扩展填充可用空间
+        accounts_frame.pack(fill=tk.BOTH, expand=True)
+
+        # 创建一个内部框架用于正确布局树形视图和滚动条
+        tree_frame = ttk.Frame(accounts_frame)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
 
         columns = ('用户ID', '邮箱', '密码', '账户状态', '剩余天数','使用量','Cookie','令牌')
-        tree = ttk.Treeview(accounts_frame, columns=columns, show='headings', height=TREE_VIEW_HEIGHT)
-        #设置列宽
+        tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=TREE_VIEW_HEIGHT)
+        
+        # 为每列分配适当的初始宽度和最小宽度
+        default_widths = {
+            '用户ID': 120,
+            '邮箱': 180,
+            '密码': 100,
+            '账户状态': 80,
+            '剩余天数': 80,
+            '使用量': 100,
+            'Cookie': 200,
+            '令牌': 200
+        }
+        
+        #设置列宽和最小宽度
         for col in columns:
             tree.heading(col, text=col)
-            tree.column(col, width=COLUMN_WIDTH)
+            width = default_widths.get(col, 100)
+            min_width = width // 2  # 最小宽度为默认宽度的一半
+            tree.column(col, width=width, minwidth=min_width)
+        
+        # 创建垂直和水平滚动条
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=tree.yview)
+        hsb = ttk.Scrollbar(tree_frame, orient="horizontal", command=tree.xview)
+        tree.configure(yscrollcommand=vsb.set, xscrollcommand=hsb.set)
+        
+        # 使用grid布局来正确放置表格和滚动条
+        tree.grid(row=0, column=0, sticky='nsew')
+        vsb.grid(row=0, column=1, sticky='ns')
+        hsb.grid(row=1, column=0, sticky='ew')
+        
+        # 配置tree_frame的列和行权重，确保正确调整大小
+        tree_frame.columnconfigure(0, weight=1)
+        tree_frame.rowconfigure(0, weight=1)
+            
+        # 绑定列调整事件 - 使用不同的事件，确保在拖动结束时捕获
+        tree.bind('<ButtonRelease-1>', self.on_column_resize)
+            
         #绑定事件
         tree.bind('<<TreeviewSelect>>', self.on_select)
-        
-        scrollbar = ttk.Scrollbar(accounts_frame, orient="vertical", command=tree.yview)
-        #设置滚动条
-        tree.configure(yscrollcommand=scrollbar.set)
-        #添加滚动条
-        tree.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
         #添加按钮
         outer_button_frame = ttk.Frame(self, style='TFrame')
         #设置按钮位置
-        outer_button_frame.pack(pady=(PADDING['LARGE'], 0), expand=True)
+        outer_button_frame.pack(pady=(PADDING['LARGE'], 0))
         #添加按钮
         button_frame = ttk.Frame(outer_button_frame, style='TFrame')
         #设置按钮位置
@@ -104,7 +156,7 @@ class ManageTab(ttk.Frame):
         #添加按钮
         ttk.Button(second_row_frame, text="更新信息", command=self.update_account_info, 
                   style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
-        ttk.Button(second_row_frame, text="更换账号", command=self.update_auth, 
+        ttk.Button(second_row_frame, text="切换账号", command=self.update_auth, 
                   style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
         ttk.Button(second_row_frame, text="查看详情", command=self.view_account_details, 
                   style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
@@ -125,18 +177,9 @@ class ManageTab(ttk.Frame):
 
         # 添加右键菜单
         self.context_menu = tk.Menu(self, tearoff=0)
-        self.context_menu.add_command(label="查看详情(双击)", command=self.view_account_details)
-        self.context_menu.add_separator()
-        self.context_menu.add_command(label="复制邮箱", command=lambda: self.copy_column(1))
-        self.context_menu.add_command(label="复制密码", command=lambda: self.copy_column(2))
-        self.context_menu.add_command(label="复制用户ID", command=lambda: self.copy_column(0))
-        self.context_menu.add_command(label="复制Cookie", command=self.copy_cookie)
-        self.context_menu.add_command(label="复制令牌", command=lambda: self.copy_column(7))
-        self.context_menu.add_separator()
-        self.context_menu.add_command(label="复制所有信息", command=self.copy_all_info)
+        self.context_menu.add_command(label="查看详情", command=self.view_account_details)
         
         # 绑定事件
-        tree.bind("<Button-3>", self.show_context_menu)  # 右键菜单
         tree.bind("<Double-1>", self.on_double_click)    # 双击查看详情
         tree.bind("<Return>", lambda e: self.view_account_details())  # 回车查看详情
         
@@ -145,10 +188,7 @@ class ManageTab(ttk.Frame):
             tree.heading(i, text=col, command=lambda col_idx=i: self.on_column_click(col_idx))
             
         # 创建工具提示文本，显示操作指南
-        tip_text = ("操作指南:\n"
-                   "• 双击或按Enter键查看账号详情\n"
-                   "• 右键点击显示菜单\n"
-                   "• 点击列标题可复制该列数据\n")
+        tip_text = "操作指南:\n• 双击账号查看详情\n• 选中账号后点击查看详情按钮\n• 选中账号后按Enter键查看详情"
         tip_label = ttk.Label(self, text=tip_text, style="TipText.TLabel", wraplength=400)
         tip_label.pack(pady=(0, PADDING['MEDIUM']), anchor=tk.W)
 
@@ -156,6 +196,95 @@ class ManageTab(ttk.Frame):
         self.account_tree = tree
         #设置选中账号
         self.selected_item = None
+
+    # 添加列调整事件处理
+    def on_column_resize(self, event):
+        """记住用户手动调整的列宽"""
+        region = self.account_tree.identify_region(event.x, event.y)
+        if region == "separator":
+            # 用户调整了列宽
+            column = self.account_tree.identify_column(event.x)
+            if column:
+                # 列索引是从#1开始的
+                col_idx = int(column.replace('#', '')) - 1
+                if 0 <= col_idx < len(self.account_tree['columns']):
+                    col_name = self.account_tree['columns'][col_idx]
+                    # 获取当前列宽并保存
+                    width = self.account_tree.column(col_name, 'width')
+                    self.user_column_widths[col_name] = width
+                    logger.debug(f"用户调整列 '{col_name}' 宽度为 {width}")
+
+    # 修改自适应列宽方法以尊重用户的手动调整
+    def adjust_column_widths(self):
+        """根据内容自动调整列宽，但尊重用户手动设置的列宽"""
+        columns = self.account_tree['columns']
+        
+        # 首先保存所有当前列宽
+        current_widths = {}
+        for col in columns:
+            current_widths[col] = self.account_tree.column(col, 'width')
+            
+        # 为每列找出最宽内容
+        for i, col in enumerate(columns):
+            # 如果用户手动调整过此列宽度，则使用用户设置的宽度
+            if col in self.user_column_widths:
+                # 确保正确应用用户设置的宽度
+                self.account_tree.column(col, width=self.user_column_widths[col])
+                continue
+                
+            max_width = len(col) * 10  # 列标题宽度作为初始最小宽度
+            
+            # 遍历所有行找出最宽内容
+            for item_id in self.account_tree.get_children():
+                item_values = self.account_tree.item(item_id)['values']
+                if item_values and i < len(item_values):
+                    # 获取单元格内容
+                    cell_content = str(item_values[i])
+                    # 特殊处理超长内容
+                    if col in ['Cookie', '令牌'] and len(cell_content) > 30:
+                        # 超长内容只计算前30个字符的宽度
+                        cell_width = 30 * 8
+                    else:
+                        cell_width = len(cell_content) * 8  # 近似计算内容宽度
+                    
+                    max_width = max(max_width, cell_width)
+            
+            # 设置合理的列宽范围
+            min_width = 80
+            max_allowed = 300
+            
+            # 特别设置某些列的宽度范围
+            if col == '用户ID':
+                min_width = 120
+                max_allowed = 200
+            elif col == '邮箱':
+                min_width = 150
+                max_allowed = 250
+            elif col == '密码':
+                min_width = 100
+                max_allowed = 150
+            elif col == '账户状态':
+                min_width = 80
+                max_allowed = 120
+            elif col == '使用量':
+                min_width = 80
+                max_allowed = 120
+            elif col == '剩余天数':
+                min_width = 80
+                max_allowed = 100
+            elif col == 'Cookie' or col == '令牌':
+                min_width = 150
+                max_allowed = 300
+            
+            # 确保列宽在合理范围内
+            adjusted_width = max(min_width, min(max_width, max_allowed))
+            self.account_tree.column(col, width=adjusted_width)
+        
+        # 移动滚动区域到左侧，确保用户能看到左侧列
+        self.account_tree.xview_moveto(0)
+            
+        logger.debug("已自动调整表格列宽")
+
     #选中账号
     def on_select(self, event):
         selected_items = self.account_tree.selection()
@@ -384,6 +513,9 @@ class ManageTab(ttk.Frame):
                             account_data.get('COOKIES_STR', ''),
                             account_data.get('TOKEN', ''),
                         ))
+                    
+                    # 在更新数据后自动调整列宽
+                    self.adjust_column_widths()
                     
                     logger.info("账号列表已刷新")
                 
@@ -748,14 +880,21 @@ class ManageTab(ttk.Frame):
                                     logger.warning("【令牌获取】无法获取令牌")
                             except Exception as token_error:
                                 logger.error(f"【令牌获取】获取令牌过程中出现异常: {str(token_error)}")
-                                    
-                            logger.info("【令牌获取】令牌获取过程结束")
-                            if long_token:
-                                logger.info("【令牌获取】成功获取到长期令牌")
-                                #关闭浏览器
-                                cursor_reg.close_browser()
-                            else:
-                                logger.warning("【令牌获取】未能获取到长期令牌")
+                            finally:
+                                # 无论令牌获取成功与否，确保浏览器实例被关闭
+                                logger.info("【令牌获取】令牌获取过程结束")
+                                try:
+                                    if cursor_reg and hasattr(cursor_reg, 'browser'):
+                                        logger.debug("【令牌获取】正在关闭浏览器实例...")
+                                        cursor_reg.close_browser()
+                                        logger.debug("【令牌获取】浏览器实例已成功关闭")
+                                except Exception as e:
+                                    logger.error(f"【令牌获取】关闭浏览器实例失败: {str(e)}")
+                                
+                                if long_token:
+                                    logger.info("【令牌获取】成功获取到长期令牌")
+                                else:
+                                    logger.warning("【令牌获取】未能获取到长期令牌")
 
                     except Exception as info_error:
                         logger.error(f"获取账号信息失败: {str(info_error)}")
@@ -831,9 +970,9 @@ class ManageTab(ttk.Frame):
 
         self.handle_account_action("获取账号信息", get_trial_info)
     
-    #更换账号
+    #切换账号
     def update_auth(self) -> None:
-        #更换账号
+        #切换账号
         def update_account_auth(csv_file_path: str, account_data: Dict[str, str]) -> None:
             cookie_str = account_data.get('COOKIES_STR', '')
             email = account_data.get('EMAIL', '')
@@ -842,7 +981,7 @@ class ManageTab(ttk.Frame):
             
             # 必须有长期令牌
             if not long_token:
-                raise ValueError(f"账号 {email} 没有长期令牌，无法更换账号。请先更新账号信息获取长期令牌。")
+                raise ValueError(f"账号 {email} 没有长期令牌，无法切换账号。请先更新账号信息获取长期令牌。")
             
             if not email:
                 raise ValueError("账号邮箱不能为空")
@@ -852,10 +991,28 @@ class ManageTab(ttk.Frame):
                 try:
                     self.winfo_toplevel().after(0, lambda: UI.show_loading(
                         self.winfo_toplevel(),
-                        "更换账号",
+                        "切换账号",
                         "正在检查 Cursor 进程状态并更新认证信息，请稍候..."
                     ))
 
+                    # 检查是否有管理员权限
+                    has_admin = ctypes.windll.shell32.IsUserAnAdmin()
+                    if has_admin:
+                        # 有管理员权限，执行重置机器码，但切换账号时不需要在重置后立即启动Cursor（由后续切换账号过程处理）
+                        logger.info("具有管理员权限，切换账号前先重置机器码...")
+                        # 调用reset_machine_id但不自动启动Cursor
+                        self.reset_machine_id(auto_start_cursor=False)
+                        logger.info("重置机器码成功，继续执行账号切换")
+                    else:
+                        # 没有管理员权限，显示提示
+                        logger.warning("切换账号需要重置机器码，但当前没有管理员权限")
+                        UI.show_warning(
+                            self.winfo_toplevel(),
+                            "管理员权限提示",
+                            "为了完全切换账号，建议先点击\"重置机器ID\"按钮以管理员身份运行。\n\n将继续执行账号切换，但可能会导致部分功能受限。"
+                        )
+
+                    # 使用长期令牌更新认证信息
                     logger.info(f"使用长期令牌更新账号 {email}")
                     result = CursorManager().process_long_token(long_token, email)
                     
@@ -868,7 +1025,7 @@ class ManageTab(ttk.Frame):
                     if "但重启应用失败" in result.message:
                         UI.show_warning(
                             self.winfo_toplevel(), 
-                            "更换账号部分成功", 
+                            "切换账号部分成功", 
                             f"账号 {email} 的认证信息已使用长期令牌更新，但自动启动 Cursor 应用失败，请手动启动 Cursor。"
                         )
                     elif "Cursor 未启动" in result.message:
@@ -896,7 +1053,7 @@ class ManageTab(ttk.Frame):
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     self.winfo_toplevel().after(0, lambda: UI.show_error(
                         self.winfo_toplevel(),
-                        "更换账号失败",
+                        "切换账号失败",
                         str(e)
                     ))
 
@@ -906,8 +1063,25 @@ class ManageTab(ttk.Frame):
 
     #重置机器ID
     @error_handler
-    def reset_machine_id(self) -> None:
-        #重置机器ID
+    def reset_machine_id(self, auto_start_cursor=True) -> None:
+        # 首先检查是否有管理员权限
+        has_admin = ctypes.windll.shell32.IsUserAnAdmin()
+        if not has_admin:
+            # 没有管理员权限，尝试以管理员身份重新启动
+            logger.info("重置机器ID需要管理员权限，正在尝试以管理员身份运行...")
+            if Utils.run_as_admin():
+                # 如果成功启动了管理员权限的进程，当前进程可以退出
+                return
+            else:
+                # 提升权限失败，显示错误消息
+                UI.show_error(
+                    self.winfo_toplevel(),
+                    "权限不足",
+                    "重置机器ID需要管理员权限，但无法启动管理员进程。请右键点击程序，选择'以管理员身份运行'。"
+                )
+                return
+        
+        # 已有管理员权限，继续执行重置操作
         def reset_thread():
             try:
                 #显示加载
@@ -921,7 +1095,8 @@ class ManageTab(ttk.Frame):
                 
                 #关闭加载   
                 self.after(0, lambda: UI.close_loading(self.winfo_toplevel()))
-                #显示成功
+                
+                #显示结果
                 if not result.success:
                     self.after(0, lambda: UI.show_error(
                         self.winfo_toplevel(),
@@ -929,11 +1104,33 @@ class ManageTab(ttk.Frame):
                         result.message
                     ))          
                     return
-                #显示成功
-                self.after(0, lambda: UI.show_success(
-                    self.winfo_toplevel(),
-                    result.message
-                ))
+                
+                # 根据参数决定是否自动启动Cursor应用
+                if auto_start_cursor:
+                    # 重置成功后，自动启动Cursor应用
+                    logger.info("重置机器ID成功，正在启动Cursor应用...")
+                    start_result = CursorManager.start_cursor_app()
+                    
+                    if start_result.success:
+                        success_message = f"{result.message}\n\nCursor应用已成功启动。"
+                        self.after(0, lambda: UI.show_success(
+                            self.winfo_toplevel(),
+                            success_message
+                        ))
+                    else:
+                        warning_message = f"{result.message}\n\n但启动Cursor应用失败: {start_result.message}，请手动启动Cursor。"
+                        self.after(0, lambda: UI.show_warning(
+                            self.winfo_toplevel(),
+                            "重置成功但启动失败",
+                            warning_message
+                        ))
+                else:
+                    # 仅显示重置成功消息，不启动Cursor
+                    success_message = result.message
+                    self.after(0, lambda: UI.show_success(
+                        self.winfo_toplevel(),
+                        success_message
+                    ))
                 
             except Exception as e:
                 #关闭加载       
@@ -995,66 +1192,6 @@ class ManageTab(ttk.Frame):
 
         self.handle_account_action("删除账号", delete_account_file)
 
-    #复制列
-    def copy_column(self, column_index):
-        if not self.selected_item:
-            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")            
-            return
-        
-        item_values = self.account_tree.item(self.selected_item)['values']
-        if not item_values or len(item_values) <= column_index:            return
-        
-        copy_text = str(item_values[column_index])
-        
-        self.winfo_toplevel().clipboard_clear()
-        self.winfo_toplevel().clipboard_append(copy_text)
-        
-        column_name = self.account_tree['columns'][column_index]
-        UI.show_success(self.winfo_toplevel(), f"已复制 {column_name}")
-
-    #复制Cookie
-    def copy_cookie(self):
-        if not self.selected_item:
-            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")            
-            return
-        
-        try:
-            _, account_data = self.get_selected_account()
-            cookie = account_data.get('COOKIES_STR', '')
-            
-            if not cookie:
-                UI.show_warning(self.winfo_toplevel(), "所选账号没有Cookie信息")            
-                return
-                
-            self.winfo_toplevel().clipboard_clear()
-            self.winfo_toplevel().clipboard_append(cookie)
-            
-            UI.show_success(self.winfo_toplevel(), "已复制Cookie")
-        except Exception as e:
-            UI.show_error(self.winfo_toplevel(), "复制Cookie失败", str(e))
-
-    #复制所有信息
-    def copy_all_info(self):
-        if not self.selected_item:
-            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")            
-            return
-        
-        try:
-            csv_file_path, account_data = self.get_selected_account()
-            
-            # 构建完整的信息文本
-            copy_text = "账号详细信息:\n"
-            for key, value in account_data.items():
-                if value:  # 只包含非空值
-                    copy_text += f"{key}: {value}\n"
-            
-            self.winfo_toplevel().clipboard_clear()
-            self.winfo_toplevel().clipboard_append(copy_text)
-            
-            UI.show_success(self.winfo_toplevel(), "已复制账号详细信息")
-        except Exception as e:
-            UI.show_error(self.winfo_toplevel(), "复制账号信息失败", str(e))
-
     #查看账号详细信息
     def view_account_details(self):
         """查看账号详细信息"""
@@ -1097,35 +1234,12 @@ class ManageTab(ttk.Frame):
             button_frame = ttk.Frame(main_frame, style='TFrame')
             button_frame.pack(pady=10)
             
-            # 复制按钮
-            def copy_all():
-                details_dialog.clipboard_clear()
-                details_dialog.clipboard_append(info_text.get(1.0, tk.END))
-                UI.show_success(details_dialog, "已复制所有信息")
-            
-            ttk.Button(button_frame, text="复制全部", command=copy_all, 
-                      style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=5)
-            
-            # 关闭按钮
+            # 只保留关闭按钮
             ttk.Button(button_frame, text="关闭", command=details_dialog.destroy, 
                       style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=5)
             
         except Exception as e:
             UI.show_error(self.winfo_toplevel(), "查看账号详情失败", str(e))
-
-    # 处理右键菜单显示
-    def show_context_menu(self, event):
-        """显示右键菜单"""
-        try:
-            # 先判断是否有选中项
-            if self.account_tree.selection():
-                # 显示上下文菜单
-                self.context_menu.tk_popup(event.x_root, event.y_root)
-            else:
-                UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")
-        finally:
-            # 确保菜单能够正确关闭
-            self.context_menu.grab_release()
 
     # 处理双击事件
     def on_double_click(self, event):
@@ -1134,22 +1248,44 @@ class ManageTab(ttk.Frame):
             self.view_account_details()
 
     def on_column_click(self, column_idx):
-        """点击列标题时排序或复制整列"""
-        # 如果添加排序功能，可以在这里实现
-        # 弹出确认是否要复制整列
+        """点击列标题时进行排序"""
         column_name = self.account_tree['columns'][column_idx]
-        if messagebox.askyesno("复制确认", f"是否要复制所有账号的{column_name}?"):
-            values = []
-            for item in self.account_tree.get_children():
-                item_values = self.account_tree.item(item)['values']
-                if item_values and len(item_values) > column_idx:
-                    values.append(str(item_values[column_idx]))
+        
+        # 特别处理使用量列的排序
+        if column_name == '使用量':
+            # 获取所有项目
+            items = []
+            for item_id in self.account_tree.get_children():
+                item_values = self.account_tree.item(item_id)['values']
+                if item_values and len(item_values) > 5:  # 确保有使用量列
+                    usage_str = str(item_values[5])
+                    
+                    # 解析使用量字符串（格式：已用/总量）
+                    try:
+                        used = 0
+                        if '/' in usage_str:
+                            used_str = usage_str.split('/')[0].strip()
+                            if used_str.isdigit():
+                                used = int(used_str)
+                    except Exception as e:
+                        logger.warning(f"解析使用量字符串失败: {usage_str}, {str(e)}")
+                        used = 0
+                        
+                    items.append((item_id, used))
+                    
+            # 按使用量升序排序
+            items.sort(key=lambda x: x[1])
             
-            if values:
-                copy_text = "\n".join(values)
-                self.winfo_toplevel().clipboard_clear()
-                self.winfo_toplevel().clipboard_append(copy_text)
-                UI.show_success(self.winfo_toplevel(), f"已复制所有账号的{column_name}")
+            # 重新排列表格项目
+            for index, (item_id, _) in enumerate(items):
+                self.account_tree.move(item_id, '', index)
+                
+            UI.show_success(self.winfo_toplevel(), f"已按使用量升序排序")
+            
+        # 未来可以扩展其他列的排序功能
+        # elif column_name == '剩余天数':
+        #     # 类似实现剩余天数排序
+        #     pass
 
     #添加账号
     def add_account(self):

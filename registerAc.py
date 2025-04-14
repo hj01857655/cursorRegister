@@ -828,8 +828,11 @@ class CursorRegistration:
 
     #通过pkce获取cursor的长期token，用于后续操作
     def get_cursor_long_token(self, tab=None):
+        browser_created_internally = False  # 标记是否在此方法内创建了浏览器
         if tab is None:
             tab = self.tab
+            # 如果使用的是类自身的tab，则标记浏览器是内部创建的
+            browser_created_internally = True
         
         try:
             logger.info("【令牌获取】开始获取Cursor长期令牌流程...")
@@ -981,6 +984,17 @@ class CursorRegistration:
         except Exception as e:
             logger.error(f"【令牌获取】获取长期令牌过程中发生异常: {str(e)}")
             return None
+        finally:
+            # 只有当浏览器是在此方法内部创建时才自动关闭
+            # 注意：这里不应该关闭外部提供的tab，因为那可能是别的地方还要用的
+            if browser_created_internally:
+                logger.debug("【令牌获取】浏览器是在get_cursor_long_token方法内创建的，尝试关闭")
+                try:
+                    self.close_browser()
+                except Exception as e:
+                    logger.error(f"【令牌获取】关闭浏览器失败: {str(e)}")
+            else:
+                logger.debug("【令牌获取】浏览器是外部提供的，不在此处关闭")
     
     #获取短期和长期token，同时更新环境变量
     def get_cursor_token_and_cookie(self):
@@ -1003,6 +1017,18 @@ class CursorRegistration:
                 logger.error("更新环境变量失败")
                 
         return cookie_token, long_token
+
+    #关闭浏览器
+    def close_browser(self):
+        try:
+            if self.browser:
+                logger.debug("【浏览器】正在关闭浏览器实例...")
+                self.browser.quit()
+                self.browser = None
+                self.tab = None
+                logger.debug("【浏览器】浏览器实例已成功关闭")
+        except Exception as e:
+            logger.error(f"【浏览器】关闭浏览器实例失败: {str(e)}")
 
 # 修改make_request函数以支持代理
 def make_request(method, url, headers=None, data=None, json=None, params=None, timeout=30, allow_redirects=True, verify=True):
