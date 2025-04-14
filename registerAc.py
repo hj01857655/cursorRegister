@@ -834,7 +834,6 @@ class CursorRegistration:
         try:
             logger.info("【令牌获取】开始获取Cursor长期令牌流程...")
             
-            # 从GitHub仓库cursorLogin.js中提取的方法
             def generate_pkce_pair():
                 logger.debug("【令牌获取】正在生成PKCE配对...")
                 verifier = base64.urlsafe_b64encode(os.urandom(43)).decode('utf-8').rstrip('=')
@@ -862,7 +861,7 @@ class CursorRegistration:
                     break
             
             if current_cookie:
-                # 如果有现有cookie，使用GitHub仓库cursor.js中的loginDeepCallbackControl接口
+                # 如果有现有cookie，使用中loginDeepCallbackControl接口
                 logger.info("【令牌获取】检测到现有Cookie，尝试使用API方式获取令牌...")
                 login_deep_url = "https://www.cursor.com/api/auth/loginDeepCallbackControl"
                 headers = {
