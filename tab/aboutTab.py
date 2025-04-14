@@ -16,7 +16,7 @@ class AboutTab(ttk.Frame):
         self.setup_ui()
 
     def open_github(self, event):
-        webbrowser.open("https://github.com/Ktovoz/cursorRegister")
+        webbrowser.open("https://github.com/hj01857655/cursorHelper")
 
     def create_separator(self, container):
         separator = ttk.Separator(container, orient='horizontal')
@@ -45,7 +45,7 @@ class AboutTab(ttk.Frame):
 
         author_info = ttk.Label(
             info_frame,
-            text="作者: kto",
+            text="作者: hj01857655",
             style='TLabel',
             font=('Microsoft YaHei UI', 10),
             foreground='#202124'
@@ -54,7 +54,7 @@ class AboutTab(ttk.Frame):
 
         description = ttk.Label(
             info_frame,
-            text="这是一个用于自动注册和管理Cursor账号的工具。",
+            text="这是一个用于自动管理和使用Cursor账号的工具。",
             style='TLabel',
             wraplength=400,
             justify='center',
@@ -76,7 +76,7 @@ class AboutTab(ttk.Frame):
 
         github_info = ttk.Label(
             info_frame,
-            text="项目地址: https://github.com/Ktovoz/cursorRegister",
+            text="项目地址: https://github.com/hj01857655/cursorHelper",
             style='TLabel',
             cursor="hand2",
             foreground='#1a73e8',

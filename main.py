@@ -1,6 +1,6 @@
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-WINDOW_TITLE = "Cursor注册小助手"
+WINDOW_TITLE = "Cursor账号助手"
 BACKUP_DIR = "env_backups"
 CONTENT_RATIO = 0.5  # 对半分
 
@@ -309,16 +309,16 @@ def setup_basic_logging() -> None:
     """设置基本日志系统，不包含GUI部分"""
     logger.remove()
 
-    logger.add(
-        sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD}.log",
-        format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
-        rotation="50 MB",
-        retention="30 days",
-        compression="gz",
+    # 设置日志记录
+    console_sink = logger.add(sys.stderr, colorize=True, level="INFO", enqueue=True)
+    file_sink = logger.add(
+        sink=Path("./cursorHelper_log") / "{time:YYYY-MM-DD}.log",
+        rotation="1 day", 
+        encoding="utf-8", 
         enqueue=True,
-        backtrace=True,
-        diagnose=True,
-        level="DEBUG"
+        retention="10 days",
+        level="DEBUG",
+        format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | <level>{message}</level>"
     )
 
     if console_mode:

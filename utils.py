@@ -468,7 +468,59 @@ class Utils:
             logger.error(f"确保包安装时出错: {e}")
             return Result.fail(str(e))
 
-
+    @staticmethod
+    def set_proxy(proxy_settings: dict) -> Result:
+        """
+        设置系统代理
+        
+        Args:
+            proxy_settings: 包含代理设置的字典
+                - enabled: 是否启用代理
+                - http: HTTP代理地址
+                - https: HTTPS代理地址
+                - no_proxy: 不使用代理的地址
+                
+        Returns:
+            Result: 操作结果
+        """
+        try:
+            # 更新CursorManager中的代理设置
+            for key, value in proxy_settings.items():
+                if key in CursorManager.PROXY_SETTINGS:
+                    CursorManager.PROXY_SETTINGS[key] = value
+            
+            if proxy_settings.get('enabled', False):
+                # 设置环境变量
+                os.environ['HTTP_PROXY'] = proxy_settings.get('http', '')
+                os.environ['HTTPS_PROXY'] = proxy_settings.get('https', '')
+                os.environ['NO_PROXY'] = proxy_settings.get('no_proxy', 'localhost,127.0.0.1')
+                logger.info(f"已启用代理: HTTP={proxy_settings.get('http')}, HTTPS={proxy_settings.get('https')}")
+            else:
+                # 清除环境变量
+                for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY']:
+                    if var in os.environ:
+                        del os.environ[var]
+                logger.info("已禁用代理")
+            
+            return Result.ok("代理设置已更新")
+        except Exception as e:
+            logger.error(f"设置代理时出错: {e}")
+            return Result.fail(f"设置代理失败: {e}")
+    
+    @staticmethod
+    def get_proxy_settings() -> dict:
+        """
+        获取当前代理设置
+        
+        Returns:
+            dict: 当前代理设置
+        """
+        return {
+            'enabled': CursorManager.PROXY_SETTINGS['enabled'],
+            'http': CursorManager.PROXY_SETTINGS['http'],
+            'https': CursorManager.PROXY_SETTINGS['https'],
+            'no_proxy': CursorManager.PROXY_SETTINGS['no_proxy']
+        }
 
 #Cursor管理类
 class CursorManager:
@@ -490,6 +542,14 @@ class CursorManager:
         # VSCode路径 (Cursor基于VSCode)
         Path(os.path.expandvars('%LOCALAPPDATA%/Programs/Microsoft VS Code/Code.exe')),
     ]
+    
+    # 添加代理设置
+    PROXY_SETTINGS = {
+        'enabled': False,
+        'http': '',
+        'https': '',
+        'no_proxy': 'localhost,127.0.0.1'
+    }
     
     def __init__(self):
         self.db_manager = DatabaseManager(Utils.get_path('cursor') / 'state.vscdb')
@@ -879,49 +939,47 @@ class MoemailManager:
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
         try:
-            if not method or not endpoint:
-                logger.error("请求方法或端点为空")
-                return Result.fail("请求参数无效：方法或端点为空")
-
-            base = self.base_url.rstrip('/')
-            clean_endpoint = endpoint.lstrip('/')
-            url = f"{base}/api/{clean_endpoint}"
+            # 准备请求参数
+            url = f"{self.base_url}{endpoint}"
+            headers = self.get_headers()
             
-            logger.debug(f"发送 {method} 请求到 {url}")
-            response = requests.request(method, url, headers=self.headers, **kwargs)
+            # 添加代理支持
+            proxies = None
+            if CursorManager.PROXY_SETTINGS['enabled']:
+                proxies = {
+                    'http': CursorManager.PROXY_SETTINGS['http'],
+                    'https': CursorManager.PROXY_SETTINGS['https'],
+                    'no_proxy': CursorManager.PROXY_SETTINGS['no_proxy']
+                }
             
-            if not response:
-                logger.error("API请求返回空响应")
-                return Result.fail("API请求返回空响应")
-
-            try:
-                response_data = response.json()
-                logger.debug(f"API响应状态码: {response.status_code}")
-                logger.debug(f"API响应数据: {response_data}")
+            # 发送请求
+            response = requests.request(
+                method,
+                url,
+                headers=headers,
+                proxies=proxies,
+                timeout=30,
+                **kwargs
+            )
+            
+            # 处理响应
+            if response.status_code in [200, 201, 204]:
+                try:
+                    data = response.json()
+                    return Result.ok(data)
+                except:
+                    return Result.ok(response.text)
+            else:
+                try:
+                    error_data = response.json()
+                    error_message = error_data.get('message', f"请求失败: {response.status_code}")
+                    return Result.fail(error_message, error_data)
+                except:
+                    return Result.fail(f"请求失败: {response.status_code}", {'text': response.text})
                 
-                # 处理不同的状态码
-                if response.status_code == 200:
-                    return Result.ok(response_data)
-                else:
-                    # 对于非 200 状态码，将响应数据包含在结果中，但标记为失败
-                    error_msg = f"请求状态码非 200: {response.status_code}"
-                    logger.warning(error_msg)
-                    result = Result.fail(error_msg)
-                    # 设置响应数据
-                    result.data = response_data
-                    return result
-            except ValueError as e:
-                logger.error(f"解析JSON响应失败: {e}")
-                return Result.fail(f"无效的JSON响应: {response.text}")
-            
-        except requests.exceptions.RequestException as e:
-            error_msg = f"网络请求错误: {str(e)}"
-            logger.error(error_msg)
-            return Result.fail(error_msg)
         except Exception as e:
-            error_msg = f"请求处理错误: {str(e)}"
-            logger.error(error_msg)
-            return Result.fail(error_msg)
+            logger.error(f"请求出错 {method} {endpoint}: {str(e)}")
+            return Result.fail(str(e))
 
     def create_email(self, email: str, expiry_time: int = 3600000) -> Result[dict]:
         try:

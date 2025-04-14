@@ -1,9 +1,9 @@
 name: 创建临时构建
 
 env:
-  APP_NAME: cursorRegister
-  EXE_NAME: cursorRegister.exe
-  ARTIFACT_NAME: cursorRegister-Windows-Temp
+  APP_NAME: cursorHelper
+  EXE_NAME: cursorHelper.exe
+  ARTIFACT_NAME: cursorHelper-Windows-Temp
   PYTHON_VERSION: '3.11'
   CACHE_VERSION: v1
 

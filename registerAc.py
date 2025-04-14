@@ -11,8 +11,7 @@ import threading
 import queue
 from DrissionPage import ChromiumOptions, Chromium
 from loguru import logger
-from utils import MoemailManager
-from utils import Utils
+from utils import MoemailManager, Utils, CursorManager, Result
 #生成随机字符串
 from faker import Faker
 
@@ -850,7 +849,6 @@ class CursorRegistration:
             
             logger.debug(f"【令牌获取】生成UUID: {uuid_val}")
             
-            # 获取登录URL (参考GitHub仓库cursorLogin.js的getLoginUrl函数)
             login_url = f"https://www.cursor.com/loginDeepControl?challenge={challenge}&uuid={uuid_val}&mode=login"
             logger.info(f"【令牌获取】生成的登录URL: {login_url}")
             
@@ -881,8 +879,17 @@ class CursorRegistration:
                 
                 logger.debug(f"【令牌获取】发送登录控制请求到: {login_deep_url}")
                 try:
-                    login_response = requests.post(login_deep_url, headers=headers, json=login_data, timeout=30)
-                    logger.debug(f"【令牌获取】登录控制请求响应状态码: {login_response.status_code}")
+                    logger.info("正在发送登录请求...")
+                    login_response = make_request(
+                        method="POST", 
+                        url=login_deep_url, 
+                        headers=headers, 
+                        json=login_data, 
+                        timeout=30
+                    )
+                    if login_response is None:
+                        logger.error("登录请求发送失败")
+                        return Result.FALSE, None, None
                     
                     if login_response.status_code == 200:
                         logger.info("【令牌获取】登录控制请求成功")
@@ -922,7 +929,7 @@ class CursorRegistration:
                 else:
                     logger.warning("【令牌获取】未找到'Yes, Log In'按钮，可能页面结构已变化或已自动登录")
             
-            # 从GitHub仓库cursorLogin.js中提取的queryAuthPoll函数
+            
             auth_poll_url = f"https://api2.cursor.sh/auth/poll?uuid={uuid_val}&verifier={verifier}"
             headers = {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Cursor/0.48.6 Chrome/132.0.6834.210 Electron/34.3.4 Safari/537.36",
@@ -934,10 +941,10 @@ class CursorRegistration:
             for i in range(30):
                 logger.debug(f"【令牌获取】轮询获取令牌... (第{i+1}次/共30次)")
                 try:
-                    response = requests.get(auth_poll_url, headers=headers, timeout=5)
-                    logger.debug(f"【令牌获取】轮询响应状态码: {response.status_code}")
+                    response = make_request(method="GET", url=auth_poll_url, headers=headers, timeout=5)
+                    logger.debug(f"【令牌获取】轮询响应状态码: {response.status_code if response else 'Failed'}")
                     
-                    if response.status_code == 200:
+                    if response and response.status_code == 200:
                         try:
                             data = response.json()
                             logger.debug(f"【令牌获取】轮询返回数据: {str(data)[:100]}...")
@@ -997,4 +1004,40 @@ class CursorRegistration:
                 logger.error("更新环境变量失败")
                 
         return cookie_token, long_token
+
+# 修改make_request函数以支持代理
+def make_request(method, url, headers=None, data=None, json=None, params=None, timeout=30, allow_redirects=True, verify=True):
+    try:
+        # 添加代理支持
+        proxies = None
+        if CursorManager.PROXY_SETTINGS['enabled']:
+            proxies = {
+                'http': CursorManager.PROXY_SETTINGS['http'],
+                'https': CursorManager.PROXY_SETTINGS['https'],
+                'no_proxy': CursorManager.PROXY_SETTINGS['no_proxy']
+            }
+            logger.debug(f"正在使用代理: {proxies}")
+        
+        response = requests.request(
+            method=method,
+            url=url,
+            headers=headers,
+            data=data,
+            json=json,
+            params=params,
+            timeout=timeout,
+            allow_redirects=allow_redirects,
+            verify=verify,
+            proxies=proxies
+        )
+        return response
+    except requests.exceptions.Timeout:
+        logger.error("请求超时")
+        return None
+    except requests.exceptions.ConnectionError:
+        logger.error("连接错误")
+        return None
+    except Exception as e:
+        logger.error(f"请求过程中发生错误: {e}")
+        return None
 

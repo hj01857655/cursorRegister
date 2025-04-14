@@ -1,5 +1,5 @@
 /.env
-/cursorRegister_log
+/cursorHelper_log
 /.idea
 /build
 /dist
@@ -26,7 +26,7 @@ output/
 
 # 忽略日志文件
 *.log
-cursorRegister_log/
+cursorHelper_log/
 
 # 忽略系统文件
 .DS_Store

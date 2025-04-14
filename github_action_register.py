@@ -13,7 +13,7 @@ class GithubActionRegistration(CursorRegistration):
     def __init__(self):
         super().__init__()
         logger.add(
-            sink=Path("./cursorRegister_log") / "{time:YYYY-MM-DD}.log",
+            sink=Path("./cursorHelper_log") / "{time:YYYY-MM-DD}.log",
             format="{time:YYYY-MM-DD HH:mm:ss} |{level:8}| - {message}",
             rotation="50 MB",
             retention="30 days",

@@ -447,11 +447,18 @@ Thanks to all contributors who make this project better!
 
 ### 🏆 Special Thanks
 
-Thanks to the following open source projects and their authors for providing inspiration and reference:
+Thanks to the following open-source projects and their authors for providing inspiration and reference:
 
 <div align="center">
 <table>
 <tr>
+<td align="center">
+<a href="https://github.com/Ktovoz">
+<img src="https://github.com/Ktovoz.png" width="100px;" alt="Ktovoz"/><br/>
+<sub><b>Ktovoz</b></sub><br/>
+<sub><a href="https://github.com/Ktovoz/cursorRegister"> cursorRegister</a></sub><br/>
+</a>
+</td>
 <td align="center">
 <a href="https://github.com/chengazhen">
 <img src="https://github.com/chengazhen.png" width="100px;" alt="chengazhen"/><br/>

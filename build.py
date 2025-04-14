@@ -24,7 +24,7 @@ def build_executable():
 
     check_requirements()
 
-    build_command = ['pyinstaller', 'cursorRegister.spec', '--clean', '2>&1']
+    build_command = ['pyinstaller', 'cursorHelper.spec', '--clean', '2>&1']
     try:
         subprocess.run(build_command, encoding='utf-8', check=True, shell=True)
     except subprocess.CalledProcessError as e:
@@ -37,7 +37,7 @@ def build_executable():
             print("构建失败！")
             return False
 
-    exe_path = Path('dist/cursorRegister.exe')
+    exe_path = Path('dist/cursorHelper.exe')
     if not exe_path.exists():
         print("构建失败：未找到输出文件！")
         return False
@@ -66,14 +66,14 @@ def create_zip():
     output_dir = 'output'
     os.makedirs(output_dir, exist_ok=True)
 
-    zip_name = f"cursorRegister-Windows-{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
+    zip_name = f"cursorHelper-Windows-{datetime.now().strftime('%Y%m%d_%H%M%S')}.zip"
     zip_path = os.path.join(output_dir, zip_name)
     shutil.make_archive(zip_path.replace('.zip', ''), 'zip', 'dist')
     print(f"\n已创建压缩包：{zip_path}")
 
 
 def main():
-    print("=== Cursor Register 打包工具 ===")
+    print("=== Cursor Helper 打包工具 ===")
     if build_executable():
         create_zip()
     print("\n打包过程完成！")

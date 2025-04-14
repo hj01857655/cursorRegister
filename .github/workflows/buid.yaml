@@ -1,10 +1,10 @@
 name: 构建并发布可执行文件
 
 env:
-  APP_NAME: cursorRegister
-  EXE_NAME: cursorRegister.exe
-  ARTIFACT_NAME: cursorRegister-Windows
-  ZIP_NAME: cursorRegister-Windows.zip
+  APP_NAME: cursorHelper
+  EXE_NAME: cursorHelper.exe
+  ARTIFACT_NAME: cursorHelper-Windows
+  ZIP_NAME: cursorHelper-Windows.zip
   PYTHON_VERSION: '3.11'
   CACHE_VERSION: v1
 
