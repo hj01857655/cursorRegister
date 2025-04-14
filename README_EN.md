@@ -502,6 +502,15 @@ Special thanks to the following open source projects and their authors for provi
 </a>
 </td>
 </tr>
+<tr>
+<td align="center">
+<a href="https://github.com/JiuZ-Chn">
+<img src="https://github.com/JiuZ-Chn.png" width="100px;" alt="JiuZ-Chn"/><br/>
+<sub><b>JiuZ-Chn</b></sub><br/>
+<sub><a href="https://github.com/JiuZ-Chn/Cursor-To-OpenAI">Cursor-To-OpenAI</a></sub><br/>
+</a>
+</td>
+</tr>
 </table>
 </div>
 
