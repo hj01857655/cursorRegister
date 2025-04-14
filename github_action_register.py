@@ -103,7 +103,7 @@ if __name__ == "__main__":
         
         # 保存到文件
         try:
-            with open('env_variables.csv', 'w', encoding='utf-8', newline='') as f:
+            with open('env_variables.csv', 'w', encoding='utf-8-sig', newline='') as f:
                 f.write("variable,value\n")
                 for key, value in env_updates.items():
                     f.write(f"{key},{value}\n")

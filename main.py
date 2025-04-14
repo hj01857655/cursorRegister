@@ -351,13 +351,7 @@ def main() -> None:
         setup_basic_logging()
         
         # 移除不必要的 TOKEN 环境变量
-        if 'TOKEN' in os.environ or 'TOKEN' in ConfigManager._CORE_CONFIG_KEYS:
-            logger.info("检测到TOKEN环境变量，将其移除以避免显示在系统配置中")
-            result = Utils.remove_env_var('TOKEN')
-            if result.success:
-                logger.info("成功移除TOKEN环境变量")
-            else:
-                logger.warning(f"移除TOKEN环境变量失败: {result.message}")
+        
         
         base_path = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(__file__)
         env_path = os.path.join(base_path, '.env')

@@ -849,6 +849,7 @@ class CursorRegistration:
             # 生成PKCE对和UUID
             verifier, challenge = generate_pkce_pair()
             uuid_val = str(uuid.uuid4())
+            
             logger.debug(f"【令牌获取】生成UUID: {uuid_val}")
             
             # 获取登录URL (参考GitHub仓库cursorLogin.js的getLoginUrl函数)

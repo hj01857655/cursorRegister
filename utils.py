@@ -488,8 +488,25 @@ class CursorManager:
             return Result.fail(str(e))
 
     @error_handler
-    def process_cookies(self, cookies: str, email: str) -> Result:
+    def process_long_token(self, long_token: str, email: str) -> Result:
+        """
+        使用长期令牌更新Cursor认证信息
+        
+        Args:
+            long_token: 长期令牌
+            email: 账号邮箱
+            
+        Returns:
+            Result: 处理结果
+        """
         try:
+            if not long_token:
+                return Result.fail("长期令牌不能为空")
+                
+            if not email:
+                return Result.fail("邮箱不能为空")
+                
+            # 定义认证信息的键
             auth_keys = {k: f"cursorAuth/{v}" for k, v in {
                 "sign_up": "cachedSignUpType",
                 "email": "cachedEmail",
@@ -497,23 +514,24 @@ class CursorManager:
                 "refresh": "refreshToken"
             }.items()}
 
-            if not (token := Utils.extract_token(cookies, "WorkosCursorSessionToken=")):
-                return Result.fail("无效的 WorkosCursorSessionToken")
-
+            # 日志记录长期令牌信息
+            logger.debug(f"使用长期令牌: {long_token[:15]}... 更新认证信息")
+            
+            # 准备要更新的数据
             updates = {
                 auth_keys["sign_up"]: "Auth_0",
                 auth_keys["email"]: email,
-                auth_keys["access"]: token,
-                auth_keys["refresh"]: token
+                auth_keys["access"]: long_token,
+                auth_keys["refresh"]: long_token
             }
 
-            logger.debug("正在更新认证信息...")
+            logger.debug("正在使用长期令牌更新认证信息...")
             if not (result := self.db_manager.update(updates)):
                 return result
 
-            return Result.ok(message="认证信息更新成功")
+            return Result.ok(message="使用长期令牌更新认证信息成功")
         except Exception as e:
-            logger.error(f"process_cookies 执行失败: {e}")
+            logger.error(f"process_long_token 执行失败: {e}")
             return Result.fail(str(e))
 
     @error_handler

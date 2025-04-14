@@ -23,6 +23,7 @@ import base64
 import json
 import ssl
 import urllib3
+import shutil
 
 import requests
 from loguru import logger
@@ -150,48 +151,80 @@ class ManageTab(ttk.Frame):
         try:
             return glob.glob('env_backups/cursor_account_*.csv')
         except Exception as e:
-            logger.error(f"获取CSV文件列表失败: {str(e)}")
+            logger.error(f"获取CSV文件列表失败: {str(e)}")            
             return []
         
     #解析csv文件
     def parse_csv_file(self, csv_file: str) -> Dict[str, str]:
         #账号数据
-        account_data = {
-            'USERID': '',
-            'EMAIL': '',
-            'PASSWORD': '',
-            'STATUS': '未知',  # 默认状态修改为"未知"而不是"正常"
-            'DAYS': '14',
-            'QUOTA': '0/150',
-            'COOKIES_STR': '',
-            'TOKEN': '',
-        }
+        account_data = {}
+
         try:
             #读取csv文件
-            with open(csv_file, 'r', encoding='utf-8') as f:
-                csv_reader = csv.reader(f)
-                next(csv_reader)
-                for row in csv_reader:
-                    if len(row) >= 2:
-                        key, value = row[0], row[1]
-                        if key in account_data:
-                            account_data[key] = value
+            encodings_to_try = ['utf-8-sig', 'utf-8', 'gbk', 'gb18030', 'latin-1']
+            
+            for encoding in encodings_to_try:
+                try:
+                    with open(csv_file, 'r', encoding=encoding) as f:
+                        csv_reader = csv.reader(f)
+                        next(csv_reader)  # 跳过标题行
+                        for row in csv_reader:
+                            if len(row) >= 2:
+                                account_data[row[0]] = row[1]
+                    logger.debug(f"成功使用 {encoding} 编码读取文件: {csv_file}")
+                    break  # 如果成功读取，跳出循环
+                except UnicodeDecodeError:
+                    if encoding == encodings_to_try[-1]:  # 如果是最后一个尝试的编码
+                        logger.error(f"无法用任何编码读取文件: {csv_file}")
+                        raise
+                    else:
+                        logger.debug(f"尝试使用 {encoding} 编码失败，尝试下一个")
+                        continue
+                except Exception as e:
+                    logger.error(f"读取文件时出错 (编码: {encoding}): {str(e)}")
+                    raise
         except Exception as e:
-            logger.error(f"解析文件 {csv_file} 失败: {str(e)}")
+            logger.error(f"解析文件 {csv_file} 失败: {str(e)}")            
+        
         return account_data
     
     #更新csv文件
     def update_csv_file(self, csv_file: str, **fields_to_update) -> None:
         if not fields_to_update:
-            logger.debug("没有需要更新的字段")
+            logger.debug("没有需要更新的字段")            
             return
 
+        encodings_to_try = ['utf-8-sig', 'utf-8', 'gbk', 'gb18030', 'latin-1']
+        
         try:
+            # 尝试读取文件
             rows = []
-            with open(csv_file, 'r', encoding='utf-8') as f:
-                csv_reader = csv.reader(f)
-                rows = list(csv_reader)
-
+            read_encoding = None
+            
+            for encoding in encodings_to_try:
+                try:
+                    with open(csv_file, 'r', encoding=encoding) as f:
+                        csv_reader = csv.reader(f)
+                        rows = list(csv_reader)
+                    read_encoding = encoding
+                    logger.debug(f"成功使用 {encoding} 编码读取文件: {csv_file}")
+                    break
+                except UnicodeDecodeError:
+                    if encoding == encodings_to_try[-1]:
+                        logger.error(f"无法用任何编码读取文件: {csv_file}")
+                        raise
+                    else:
+                        logger.debug(f"尝试使用 {encoding} 编码失败，尝试下一个")
+                        continue
+                except Exception as e:
+                    logger.error(f"读取文件时出错 (编码: {encoding}): {str(e)}")
+                    raise
+            
+            # 如果没有成功读取任何编码
+            if read_encoding is None:
+                raise ValueError("无法使用任何编码读取文件")
+            
+            # 更新字段
             for field, value in fields_to_update.items():
                 field_found = False
                 for row in rows:
@@ -202,7 +235,8 @@ class ManageTab(ttk.Frame):
                 if not field_found:
                     rows.append([field, str(value)])
 
-            with open(csv_file, 'w', encoding='utf-8', newline='') as f:
+            # 使用相同的编码写回文件
+            with open(csv_file, 'w', encoding=read_encoding, newline='') as f:
                 csv_writer = csv.writer(f)
                 csv_writer.writerows(rows)
 
@@ -226,8 +260,8 @@ class ManageTab(ttk.Frame):
                 if account_data.get('COOKIES_STR'):
                     try:
                         # 如果已有状态，检查是否需要更新
-                        if not account_data.get('STATUS') or account_data['STATUS'] == '未知':
-                            _, account_status = self.extract_user_from_jwt(account_data['COOKIES_STR'])
+                        if not account_data.get('STATUS') or account_data.get('STATUS') == '未知':
+                            _, account_status = self.extract_user_from_jwt(account_data.get('COOKIES_STR', ''))
                             # 更新CSV文件中的状态
                             self.update_csv_file(csv_file, STATUS=account_status)
                             account_data['STATUS'] = account_status
@@ -241,19 +275,20 @@ class ManageTab(ttk.Frame):
                     self.update_csv_file(csv_file, STATUS="非正常")
                         
                 self.account_tree.insert('', 'end', iid=csv_file, values=(
-                    account_data['USERID'],
-                    account_data['EMAIL'],
-                    account_data['PASSWORD'],
-                    account_data['STATUS'],
-                    account_data['DAYS'],
-                    account_data['QUOTA'],
-                    account_data['COOKIES_STR'],
-                    account_data['TOKEN'],
+                    account_data.get('USERID', ''),
+                    account_data.get('EMAIL', ''),
+                    account_data.get('PASSWORD', ''),
+                    account_data.get('STATUS', '未知'),
+                    account_data.get('DAYS', '14'),
+                    account_data.get('QUOTA', '0/150'),
+                    account_data.get('COOKIES_STR', ''),
+                    account_data.get('TOKEN', ''),
                 ))
 
             logger.info("账号列表已刷新")
         except Exception as e:
-            UI.show_error(self.winfo_toplevel(), "刷新列表失败", e)
+            logger.error(f"刷新列表失败: {str(e)}")
+            UI.show_error(self.winfo_toplevel(), "刷新列表失败", str(e))
     #获取选中的账号
     def get_selected_account(self) -> Tuple[str, Dict[str, str]]:
         if not self.selected_item:
@@ -266,9 +301,9 @@ class ManageTab(ttk.Frame):
         csv_file_path = self.selected_item
         account_data = self.parse_csv_file(csv_file_path)
 
-        if not account_data['EMAIL'] or not account_data['PASSWORD']:
+        if not account_data.get('EMAIL') or not account_data.get('PASSWORD'):
             raise ValueError("账号信息不完整")
-
+            
         return csv_file_path, account_data
     #处理账号操作
     def handle_account_action(self, action_name: str, action: Callable[[str, Dict[str, str]], None]) -> None:
@@ -292,6 +327,11 @@ class ManageTab(ttk.Frame):
             Tuple[str, str]: (用户ID, 账户状态)
         """
         try:
+            # 检查 cookies 参数
+            if not cookies:
+                logger.warning("Cookie为空，无法提取JWT")
+                return "未知", "非正常(Cookie为空)"
+                
             # 直接从cookies中提取JWT令牌，不使用Utils.extract_token方法
             if "WorkosCursorSessionToken=" in cookies:
                 jwt_token = cookies.split("WorkosCursorSessionToken=")[1].split(";")[0]
@@ -299,19 +339,49 @@ class ManageTab(ttk.Frame):
                 jwt_token = cookies  # 假设整个字符串就是令牌
                 
             if not jwt_token:
-                return "未知", "非正常"
+                logger.warning("令牌为空")
+                return "未知", "非正常(令牌为空)"
             
             parts = jwt_token.split('.')
             if len(parts) != 3:
+                logger.warning(f"JWT格式错误，parts数量: {len(parts)}")
                 return "未知", "非正常(JWT格式错误)"
+                
             #提取payload
-            payload = parts[1]
-            payload += '=' * (-len(payload) % 4)
-            decoded = base64.b64decode(payload)
-            payload_data = json.loads(decoded)
+            try:
+                payload = parts[1]
+                # 添加必要的填充
+                padding_needed = 4 - (len(payload) % 4)
+                if padding_needed < 4:
+                    payload += '=' * padding_needed
+                    
+                # 解码 base64 数据
+                try:
+                    decoded = base64.b64decode(payload)
+                    if not decoded:
+                        logger.error("Base64解码后数据为空")
+                        return "未知", "非正常(JWT解码失败-空数据)"
+                        
+                    # 解析 JSON 数据
+                    try:
+                        payload_data = json.loads(decoded)
+                        if not isinstance(payload_data, dict):
+                            logger.error(f"JWT payload不是字典: {type(payload_data)}")
+                            return "未知", "非正常(JWT格式错误-非字典)"
+                    except json.JSONDecodeError as json_err:
+                        logger.error(f"JSON解析失败: {json_err}")
+                        return "未知", "非正常(JWT格式错误-JSON解析失败)"
+                except Exception as b64_err:
+                    logger.error(f"Base64解码失败: {b64_err}")
+                    return "未知", "非正常(JWT解码失败-Base64错误)"
+            except Exception as decode_error:
+                logger.error(f"解码JWT失败: {decode_error}")
+                return "未知", "非正常(JWT解码失败)"
+                
             #提取用户ID
             full_user_id = payload_data.get('sub', '')
             if not full_user_id:
+                logger.warning("JWT中未找到用户ID (sub字段为空)")
                 return "未知", "非正常(无用户ID)"
             
             # 处理用户ID格式: 登录类型|真实用户ID
@@ -326,19 +396,30 @@ class ManageTab(ttk.Frame):
                 else:
                     account_status = login_type  # 返回实际的登录类型
             
-            #返回用户ID和账户状态
+            # 返回用户ID和账户状态
             return user_id, account_status
         except Exception as e:
             logger.error(f"从 JWT 提取用户信息失败: {str(e)}")
-            return "未知", "非正常("
+            return "未知", "非正常(解析失败)"
     
     #获取账号信息
     def get_trial_usage(self, cookie_str: str) -> Tuple[str, str, str, str]:
         if not cookie_str:
-            raise ValueError("Cookie信息不能为空")
+            logger.error("Cookie信息为空")
+            return "未知", "未知", "0/150", "14"  # 返回默认值而不是抛出异常
 
         try:
-            user_id, _ = self.extract_user_from_jwt(cookie_str)
+            # 安全地提取用户ID
+            try:
+                result = self.extract_user_from_jwt(cookie_str)
+                if result is None or not isinstance(result, tuple) or len(result) != 2:
+                    logger.error(f"extract_user_from_jwt 返回值异常: {result}")
+                    user_id = "未知"
+                else:
+                    user_id, _ = result
+            except Exception as jwt_error:
+                logger.error(f"提取用户ID失败: {str(jwt_error)}")
+                user_id = "未知"  # 使用默认值
             
             if not cookie_str.startswith('WorkosCursorSessionToken='):
                 cookie_str = f'WorkosCursorSessionToken={cookie_str}'
@@ -375,7 +456,7 @@ class ManageTab(ttk.Frame):
                     try:
                         # 常规请求
                         response = session.get(url, timeout=timeout, headers=local_headers)
-                        response.raise_for_status()
+                        response.raise_for_status()            
                         return response.json()
                     except requests.RequestException as e1:
                         logger.warning(f"第一次请求 {url} 失败: {str(e1)}，尝试备用方法")
@@ -387,7 +468,7 @@ class ManageTab(ttk.Frame):
                             ssl_context.options |= ssl.OP_NO_SSLv2 | ssl.OP_NO_SSLv3 | ssl.OP_NO_TLSv1 | ssl.OP_NO_TLSv1_1
                             session.mount('https://', requests.adapters.HTTPAdapter(max_retries=3))
                             response = session.get(url, timeout=timeout, headers=local_headers)
-                            response.raise_for_status()
+                            response.raise_for_status()            
                             return response.json()
                         except Exception as e2:
                             logger.warning(f"第二次请求 {url} 失败: {str(e2)}，尝试备用方法")
@@ -399,10 +480,11 @@ class ManageTab(ttk.Frame):
                             elif 'usage' in url:
                                 return {"gpt-4": {"numRequestsTotal": 0, "maxRequestUsage": 150}}
                             else:
-                                raise ValueError(f"无法从API获取数据: {url}")
+                                logger.error(f"无法从API获取数据: {url}")
+                                return {}  # 返回空字典而不是抛出异常
                 except Exception as e:
                     logger.error(f"请求 {url} 失败: {str(e)}")
-                    raise ValueError(f"API请求失败: {str(e)}")
+                    return {}  # 返回空字典而不是抛出异常
 
             try:
                 # 多线程获取账号信息
@@ -421,18 +503,17 @@ class ManageTab(ttk.Frame):
                     gpt4_data = usage_data.get('gpt-4', {})
                     used_quota = gpt4_data.get('numRequestsTotal', 0)
                     max_quota = gpt4_data.get('maxRequestUsage', 0)
-                    quota = f"{used_quota} / {max_quota}" if max_quota else '未知'
-
+                    quota = f"{used_quota} / {max_quota}" if max_quota else '未知'            
                     return user_id, email, quota, days
 
             except Exception as e:
                 logger.error(f"获取账号信息失败: {str(e)}")
-                raise ValueError(f"获取账号信息失败: {str(e)}")
+                return user_id, "未知", "0/150", "14"  # 返回部分已知和默认值
             finally:
                 session.close()
         except Exception as e:
             logger.error(f"处理 JWT 失败: {str(e)}")
-            raise ValueError(f"处理 JWT 失败: {str(e)}")
+            return "未知", "未知", "0/150", "14"  # 返回默认值
         
     #更新账号信息
     def update_account_info(self):
@@ -453,11 +534,19 @@ class ManageTab(ttk.Frame):
 
                     logger.debug("开始获取账号信息...")
                     logger.debug(f"获取到的cookie字符串长度: {len(cookie_str) if cookie_str else 0}")
+                    
+                    # 提取用户ID和账户状态
                     try:
-                        #提取用户ID和账户状态
-                        user_id, account_status = self.extract_user_from_jwt(cookie_str)
-                        #重构cookie
-                        reconstructed_cookie = f"WorkosCursorSessionToken={user_id}%3A%3A{cookie_str.split('%3A%3A')[-1]}" if '%3A%3A' in cookie_str else cookie_str
+                        result = self.extract_user_from_jwt(cookie_str)
+                        if result is None or not isinstance(result, tuple) or len(result) != 2:
+                            logger.error(f"extract_user_from_jwt 返回值异常: {result}")
+                            user_id = account_data.get('USERID', '未知')
+                            account_status = "非正常"
+                            reconstructed_cookie = cookie_str
+                        else:
+                            user_id, account_status = result
+                            # 重构cookie
+                            reconstructed_cookie = f"WorkosCursorSessionToken={user_id}%3A%3A{cookie_str.split('%3A%3A')[-1]}" if '%3A%3A' in cookie_str else cookie_str
                     except Exception as jwt_error:
                         logger.error(f"处理JWT失败: {str(jwt_error)}")
                         reconstructed_cookie = cookie_str  # 失败时使用原始cookie
@@ -478,98 +567,44 @@ class ManageTab(ttk.Frame):
                                 session_token = None
                                 if "WorkosCursorSessionToken=" in reconstructed_cookie:
                                     session_token = reconstructed_cookie.split("WorkosCursorSessionToken=")[1].split(";")[0]
-                                    logger.info("【令牌获取】从Cookie中提取WorkosCursorSessionToken")
+                                    logger.info("【令牌获取】提取WorkosCursorSessionToken")
                                 else:
                                     session_token = reconstructed_cookie
                                     logger.info("【令牌获取】使用整个Cookie字符串作为会话令牌")
                                     
-                                logger.info("【令牌获取】开始尝试获取长期令牌...")
-                                # 首先尝试从会话令牌中直接提取令牌
-                                logger.debug("【令牌获取】步骤1: 尝试从会话令牌中直接提取长期令牌")
-                                if '%3A%3A' in session_token:
-                                    parts = session_token.split('%3A%3A')
-                                    if len(parts) >= 2:
-                                        # 第二部分即为令牌
-                                        long_token = parts[1]
-                                        logger.info(f"【令牌获取】从会话令牌中直接提取到令牌(使用%3A%3A分隔符): {long_token[:15]}...")
-                                elif '::' in session_token:
-                                    parts = session_token.split('::')
-                                    if len(parts) >= 2:
-                                        # 第二部分即为令牌
-                                        long_token = parts[1]
-                                        logger.info(f"【令牌获取】从会话令牌中直接提取到令牌(使用::分隔符): {long_token[:15]}...")
+                                logger.info("【令牌获取】开始尝试使用CursorRegistration获取长期令牌...")
+                                
+                                # 使用CursorRegistration类获取令牌
+                                cursor_reg = CursorRegistration()
+                                # 创建cookie字符串
+                                cookie_str_for_pkce = f"WorkosCursorSessionToken={session_token}"
+                                logger.debug(f"【令牌获取】为PKCE方法准备Cookie字符串，长度: {len(cookie_str_for_pkce)}")
+                                # 初始化浏览器
+                                logger.debug("【令牌获取】正在初始化浏览器...")
+                                cursor_reg.init_browser()
+                                logger.debug("【令牌获取】浏览器初始化成功")
+                                # 设置cookie
+                                logger.debug("【令牌获取】正在设置Cookie...")
+                                cursor_reg.tab.set.cookies(cookie_str_for_pkce)
+                                logger.debug("【令牌获取】Cookie设置成功")
+                                # 获取令牌
+                                logger.info("【令牌获取】开始使用PKCE方法获取长期令牌...")
+                                long_token = cursor_reg.get_cursor_long_token()
+                                if long_token:
+                                    logger.info(f"【令牌获取】成功获取令牌: {long_token[:15]}...")
                                 else:
-                                    logger.debug("【令牌获取】未在会话令牌中找到分隔符(%3A%3A或::)")
-                                
-                                # 如果还未获取到令牌，尝试从JWT中提取用户ID并使用会话令牌的后半部分构建
-                                if not long_token:
-                                    logger.debug("【令牌获取】步骤2: 尝试从JWT中提取用户ID")
-                                    try:
-                                        user_id, _ = self.extract_user_from_jwt(session_token)
-                                        logger.debug(f"【令牌获取】从JWT中提取到用户ID: {user_id}")
-                                        if user_id and "未知" not in user_id:
-                                            # 尝试查找令牌部分
-                                            logger.debug("【令牌获取】尝试从会话令牌中查找长字符串作为令牌")
-                                            token_parts = re.findall(r'[a-zA-Z0-9_-]{20,}', session_token)
-                                            if token_parts:
-                                                # 使用最长的部分作为令牌
-                                                token_part = max(token_parts, key=len)
-                                                long_token = token_part
-                                                logger.info(f"【令牌获取】从会话令牌中提取到可能的令牌(最长字符串方式): {long_token[:15]}...")
-                                            else:
-                                                logger.debug("【令牌获取】未在会话令牌中找到长度超过20的字符串")
-                                        else:
-                                            logger.debug("【令牌获取】从JWT中提取的用户ID无效")
-                                    except Exception as jwt_error:
-                                        logger.error(f"【令牌获取】从JWT提取用户ID失败: {str(jwt_error)}")
-                                
-                                # 如果上述方法都失败，尝试使用CursorRegistration类获取令牌
-                                if not long_token:
-                                    logger.info("【令牌获取】步骤3: 从Cookie中直接提取失败，尝试使用CursorRegistration获取令牌...")
-                                    cursor_reg = CursorRegistration()
-                                    # 从会话令牌中创建cookie字符串
-                                    cookie_str_for_pkce = f"WorkosCursorSessionToken={session_token}"
-                                    logger.debug(f"【令牌获取】为PKCE方法准备Cookie字符串，长度: {len(cookie_str_for_pkce)}")
-                                    # 初始化浏览器
-                                    logger.debug("【令牌获取】正在初始化浏览器...")
-                                    cursor_reg.init_browser()
-                                    logger.debug("【令牌获取】浏览器初始化成功")
-                                    # 设置cookie
-                                    logger.debug("【令牌获取】正在设置Cookie...")
-                                    cursor_reg.tab.set.cookies(cookie_str_for_pkce)
-                                    logger.debug("【令牌获取】Cookie设置成功")
-                                    # 获取令牌
-                                    logger.info("【令牌获取】开始使用PKCE方法获取长期令牌...")
-                                    long_token = cursor_reg.get_cursor_long_token()
-                                    if long_token:
-                                        logger.info(f"【令牌获取】成功通过CursorRegistration获取令牌: {long_token[:15]}...")
-                                    else:
-                                        logger.warning("【令牌获取】CursorRegistration无法获取令牌")
+                                    logger.warning("【令牌获取】无法获取令牌")
                             except Exception as token_error:
                                 logger.error(f"【令牌获取】获取令牌过程中出现异常: {str(token_error)}")
-                                logger.debug("【令牌获取】异常处理: 再次尝试从Cookie中直接提取令牌")
-                                # 再次尝试从Cookie中直接提取令牌
-                                session_token = reconstructed_cookie
-                                if '%3A%3A' in session_token:
-                                    parts = session_token.split('%3A%3A')
-                                    if len(parts) >= 2:
-                                        # 第二部分即为令牌
-                                        long_token = parts[1]
-                                        logger.info(f"【令牌获取】在异常处理中从会话令牌中提取到令牌(使用%3A%3A分隔符): {long_token[:15]}...")
-                                elif '::' in session_token:
-                                    parts = session_token.split('::')
-                                    if len(parts) >= 2:
-                                        # 第二部分即为令牌
-                                        long_token = parts[1]
-                                        logger.info(f"【令牌获取】在异常处理中从会话令牌中提取到令牌(使用::分隔符): {long_token[:15]}...")
-                                else:
-                                    logger.debug("【令牌获取】在异常处理中仍未能从会话令牌中提取令牌")
                                     
                             logger.info("【令牌获取】令牌获取过程结束")
                             if long_token:
                                 logger.info("【令牌获取】成功获取到长期令牌")
+                                #关闭浏览器
+                                cursor_reg.close_browser()
                             else:
                                 logger.warning("【令牌获取】未能获取到长期令牌")
+
                     except Exception as info_error:
                         logger.error(f"获取账号信息失败: {str(info_error)}")
                         # 使用现有信息
@@ -650,29 +685,35 @@ class ManageTab(ttk.Frame):
         def update_account_auth(csv_file_path: str, account_data: Dict[str, str]) -> None:
             cookie_str = account_data.get('COOKIES_STR', '')
             email = account_data.get('EMAIL', '')
-            if not cookie_str:
-                raise ValueError(f"未找到账号 {email} 的Cookie信息")
-
-            if "WorkosCursorSessionToken=" not in cookie_str:
-                cookie_str = f"WorkosCursorSessionToken={cookie_str}"
-            #更新账号Cookie
+            # 获取长期令牌
+            long_token = account_data.get('TOKEN', '')
+            
+            # 必须有长期令牌
+            if not long_token:
+                raise ValueError(f"账号 {email} 没有长期令牌，无法更换账号。请先更新账号信息获取长期令牌。")
+            
+            if not email:
+                raise ValueError("账号邮箱不能为空")
+            
+            #更新账号Token
             def process_auth():
                 try:
                     self.winfo_toplevel().after(0, lambda: UI.show_loading(
                         self.winfo_toplevel(),
                         "更换账号",
-                        "正在刷新Cookie，请稍候..."
+                        "正在使用长期令牌更新认证信息，请稍候..."
                     ))
 
-                    result = CursorManager().process_cookies(cookie_str, email)
+                    logger.info(f"使用长期令牌更新账号 {email}")
+                    result = CursorManager().process_long_token(long_token, email)
                     
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     
                     if not result.success:
                         raise ValueError(result.message)
 
-                    UI.show_success(self.winfo_toplevel(), f"账号 {email} 的Cookie已刷新")
-                    logger.info(f"已刷新账号 {email} 的Cookie")
+                    UI.show_success(self.winfo_toplevel(), f"账号 {email} 的认证信息已使用长期令牌更新")
+                    logger.info(f"已使用长期令牌更新账号 {email} 的认证信息")
                 except Exception as e:
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     self.winfo_toplevel().after(0, lambda: UI.show_error(
@@ -683,7 +724,7 @@ class ManageTab(ttk.Frame):
 
             threading.Thread(target=process_auth, daemon=True).start()
 
-        self.handle_account_action("刷新Cookie", update_account_auth)
+        self.handle_account_action("使用长期令牌更新认证", update_account_auth)
 
     #重置机器ID
     @error_handler
@@ -708,7 +749,7 @@ class ManageTab(ttk.Frame):
                         self.winfo_toplevel(),
                         "重置机器ID失败",
                         result.message
-                    ))
+                    ))          
                     return
                 #显示成功
                 self.after(0, lambda: UI.show_success(
@@ -745,7 +786,7 @@ class ManageTab(ttk.Frame):
                 f"令牌：{account_data['TOKEN']}\n"
             )
 
-            if not messagebox.askyesno("确认删除", confirm_message, icon='warning'):
+            if not messagebox.askyesno("确认删除", confirm_message, icon='warning'):            
                 return
             #删除账号
             def process_delete():
@@ -779,12 +820,11 @@ class ManageTab(ttk.Frame):
     #复制列
     def copy_column(self, column_index):
         if not self.selected_item:
-            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")
+            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")            
             return
         
         item_values = self.account_tree.item(self.selected_item)['values']
-        if not item_values or len(item_values) <= column_index:
-            return
+        if not item_values or len(item_values) <= column_index:            return
         
         copy_text = str(item_values[column_index])
         
@@ -797,7 +837,7 @@ class ManageTab(ttk.Frame):
     #复制Cookie
     def copy_cookie(self):
         if not self.selected_item:
-            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")
+            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")            
             return
         
         try:
@@ -805,9 +845,9 @@ class ManageTab(ttk.Frame):
             cookie = account_data.get('COOKIES_STR', '')
             
             if not cookie:
-                UI.show_warning(self.winfo_toplevel(), "所选账号没有Cookie信息")
+                UI.show_warning(self.winfo_toplevel(), "所选账号没有Cookie信息")            
                 return
-            
+                
             self.winfo_toplevel().clipboard_clear()
             self.winfo_toplevel().clipboard_append(cookie)
             
@@ -818,7 +858,7 @@ class ManageTab(ttk.Frame):
     #复制所有信息
     def copy_all_info(self):
         if not self.selected_item:
-            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")
+            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")            
             return
         
         try:
@@ -841,7 +881,7 @@ class ManageTab(ttk.Frame):
     def view_account_details(self):
         """查看账号详细信息"""
         if not self.selected_item:
-            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")
+            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")            
             return
         
         try:
@@ -1056,9 +1096,9 @@ class ManageTab(ttk.Frame):
                 # 确保目录存在
                 os.makedirs('env_backups', exist_ok=True)
                 
-                with open(csv_file, 'w', encoding='utf-8', newline='') as f:
+                with open(csv_file, 'w', encoding='utf-8-sig', newline='') as f:
                     csv_writer = csv.writer(f)
-                    csv_writer.writerow(['key', 'value'])  # 写入标题行
+                    csv_writer.writerow(['variable', 'value'])  # 写入标题行
                     
                     # 映射字段名称
                     field_map = {
@@ -1096,111 +1136,103 @@ class ManageTab(ttk.Frame):
     
     #导入账号
     def import_account(self):
-        """从外部文件导入账号"""
+        logger.info("导入账号")
         file_types = [
             ('CSV文件', '*.csv'),
             ('所有文件', '*.*')
         ]
         
-        # 打开文件选择对话框
         file_path = filedialog.askopenfilename(
-            title="选择账号文件",
+            title="选择要导入的账号文件",
             filetypes=file_types
         )
         
         if not file_path:
+            logger.info("用户取消导入账号")
             return
+            
+        logger.info(f"用户选择导入文件: {file_path}")
         
         try:
-            # 读取文件
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            # 首先尝试以不同编码读取文件
+            content = None
+            used_encoding = None
+            encodings_to_try = ['utf-8-sig', 'utf-8', 'gbk', 'gb18030', 'latin-1']
+            
+            for encoding in encodings_to_try:
+                try:
+                    with open(file_path, 'r', encoding=encoding) as f:
+                        content = f.read()
+                    used_encoding = encoding
+                    logger.debug(f"成功使用 {encoding} 编码读取文件")
+                    break
+                except UnicodeDecodeError:
+                    logger.debug(f"尝试使用 {encoding} 编码失败，尝试下一个")
+                    continue
+                    
+            if content is None:
+                raise ValueError(f"无法读取文件，请检查文件编码")
                 
-            # 尝试解析不同格式的文件
+            # 重新打开文件用CSV读取器读取
             account_data = {}
-            
-            # 检查文件内容，判断格式
-            if "," in content and ("\n" in content or "\r" in content):
-                # 可能是CSV格式
-                try:
-                    # 重新打开文件用CSV读取器读取
-                    with open(file_path, 'r', encoding='utf-8') as f:
-                        csv_reader = csv.reader(f)
-                        rows = list(csv_reader)
-                        
-                    if len(rows) > 0:
-                        if len(rows[0]) >= 2 and rows[0][0].lower() == 'key' and rows[0][1].lower() == 'value':
-                            # 标准格式: key,value
-                            for row in rows[1:]:  # 跳过标题行
-                                if len(row) >= 2:
-                                    account_data[row[0]] = row[1]
-                        else:
-                            # 尝试解析为字段名,值格式
-                            header = rows[0]
-                            if len(rows) > 1:
-                                values = rows[1]
-                                for i, key in enumerate(header):
-                                    if i < len(values):
-                                        account_data[key] = values[i]
-                except Exception as csv_error:
-                    logger.error(f"CSV解析失败: {csv_error}")
-                    raise ValueError(f"导入CSV文件失败: {csv_error}")
-            
-            # 检查必需字段
-            required_fields = ['EMAIL', 'PASSWORD', 'COOKIES_STR']
-            missing_fields = [field for field in required_fields if field not in account_data or not account_data[field]]
-            
-            if missing_fields:
-                raise ValueError(f"缺少必填字段: {', '.join(missing_fields)}")
-            
-            # 提取Cookie中的用户ID和账户状态
-            if 'COOKIES_STR' in account_data and not account_data.get('USERID'):
-                try:
-                    user_id, account_status = self.extract_user_from_jwt(account_data['COOKIES_STR'])
-                    account_data['USERID'] = user_id
-                    if not account_data.get('STATUS'):
-                        account_data['STATUS'] = account_status
-                except Exception as e:
-                    logger.error(f"从Cookie提取用户信息失败: {str(e)}")
-            
-            # 设置默认值
-            if not account_data.get('STATUS'):
-                account_data['STATUS'] = '未知'
-            
-            if not account_data.get('DAYS'):
-                account_data['DAYS'] = '14'
-            
-            if not account_data.get('QUOTA'):
-                account_data['QUOTA'] = '0/150'
-            
+            try:
+                with open(file_path, 'r', encoding=used_encoding) as f:
+                    csv_reader = csv.reader(f)
+                    rows = list(csv_reader)
+                    
+                if len(rows) < 2:
+                    raise ValueError("CSV文件格式错误，至少需要标题行和一行数据")
+                    
+                # 检查是否是标准格式（第一行是标题行）
+                header = rows[0]
+                if len(header) == 2 and (header[0].lower() in ['key', 'variable'] and header[1].lower() == 'value'):
+                    # 标准格式，提取键值对
+                    for row in rows[1:]:
+                        if len(row) >= 2:
+                            account_data[row[0]] = row[1]
+                else:
+                    # 尝试以其他格式解析
+                    UI.show_error(self.winfo_toplevel(), "导入失败", "不支持的CSV格式，请确保文件第一行是包含'variable'和'value'的标题行")
+                    return
+                    
+            except Exception as csv_error:
+                logger.error(f"CSV解析失败: {csv_error}")
+                raise ValueError(f"导入CSV文件失败: {csv_error}")
+                
+            # 检查必要字段
+            required_fields = ['EMAIL', 'PASSWORD']
+            for field in required_fields:
+                if field not in account_data or not account_data[field]:
+                    raise ValueError(f"导入文件缺少必要字段: {field}")
+                    
             # 保存到新的CSV文件
             timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
             output_file = f"env_backups/cursor_account_{timestamp}.csv"
             
-            # 确保目录存在
             os.makedirs('env_backups', exist_ok=True)
             
-            with open(output_file, 'w', encoding='utf-8', newline='') as f:
+            with open(output_file, 'w', encoding='utf-8-sig', newline='') as f:
                 csv_writer = csv.writer(f)
-                csv_writer.writerow(['key', 'value'])  # 写入标题行
+                csv_writer.writerow(['variable', 'value'])  # 写入标题行
                 
                 for key, value in account_data.items():
                     csv_writer.writerow([key, value])
-            
-            logger.info(f"已导入账号，保存到文件: {output_file}")
-            UI.show_success(self.winfo_toplevel(), f"已成功导入账号: {account_data.get('EMAIL')}")
+                    
+            logger.info(f"已导入账号: {account_data.get('EMAIL', '未知')}")
+            UI.show_success(self.winfo_toplevel(), "导入成功", f"已成功导入账号: {account_data.get('EMAIL', '未知')}")
             
             # 刷新账号列表
             self.refresh_list()
             
         except Exception as e:
-            UI.show_error(self.winfo_toplevel(), "导入账号失败", str(e))
+            logger.error(f"导入账号失败: {str(e)}")
+            UI.show_error(self.winfo_toplevel(), "导入失败", str(e))
     
     #导出账号
     def export_account(self):
         """导出当前选中的账号"""
         if not self.selected_item:
-            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")
+            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")            
             return
         
         try:
@@ -1218,16 +1250,22 @@ class ManageTab(ttk.Frame):
                 initialfile=default_filename
             )
             
-            if not save_path:
-                return
+            if not save_path:            return
             
-            # 复制CSV文件
-            with open(csv_file_path, 'r', encoding='utf-8') as src, open(save_path, 'w', encoding='utf-8', newline='') as dst:
-                dst.write(src.read())
+            try:
+                os.makedirs(os.path.dirname(save_path), exist_ok=True)
+                # 复制文件内容
+                with open(csv_file_path, 'r', encoding='utf-8-sig') as src, open(save_path, 'w', encoding='utf-8-sig', newline='') as dst:
+                    shutil.copyfileobj(src, dst)
+            
+            except Exception as e:
+                UI.show_error(self.winfo_toplevel(), "导出账号失败", str(e))
             
             UI.show_success(self.winfo_toplevel(), f"已成功导出账号: {account_data.get('EMAIL')}")
             logger.info(f"已导出账号到: {save_path}")
             
         except Exception as e:
             UI.show_error(self.winfo_toplevel(), "导出账号失败", str(e))
+
+
 
