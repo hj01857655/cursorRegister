@@ -472,17 +472,13 @@
 
 ### 👥 项目贡献者
 
-感谢所有让这个项目变得更好的贡献者们！
+感谢所有让这个项目变得更好的贡献者！
 
 <div align="center">
 <a href="https://github.com/hj01857655/cursorHelper/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=hj01857655/cursorHelper&max=100" />
 </a>
 </div>
-
-### 🏆 特别感谢
-
-感谢以下开源项目及其作者为本项目提供的灵感和参考：
 
 <div align="center">
 <table>
@@ -492,6 +488,24 @@
 <img src="https://github.com/hj01857655.png" width="100px;" alt="hj01857655"/><br/>
 <sub><b>hj01857655</b></sub><br/>
 <sub><a href="https://github.com/hj01857655/cursorHelper">cursorHelper</a></sub><br/>
+</a>
+</td>
+</tr>
+</table>
+</div>
+
+### 🏆 特别鸣谢
+
+特别感谢以下开源项目及其作者为本项目提供灵感和参考：
+
+<div align="center">
+<table>
+<tr>
+<td align="center">
+<a href="https://github.com/Ktovoz">
+<img src="https://github.com/Ktovoz.png" width="100px;" alt="Ktovoz"/><br/>
+<sub><b>Ktovoz</b></sub><br/>
+<sub><a href="https://github.com/Ktovoz/cursorRegister">cursorRegister</a></sub><br/>
 </a>
 </td>
 <td align="center">

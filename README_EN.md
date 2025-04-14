@@ -438,17 +438,13 @@ for complete tutorial.
 
 ### 👥 Project Contributors
 
-Thanks to all contributors who make this project better!
+Thanks to all the contributors who make this project better!
 
 <div align="center">
 <a href="https://github.com/hj01857655/cursorHelper/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=hj01857655/cursorHelper&max=100" />
 </a>
 </div>
-
-### 🏆 Special Thanks
-
-Thanks to the following open-source projects and their authors for providing inspiration and reference:
 
 <div align="center">
 <table>
@@ -458,6 +454,24 @@ Thanks to the following open-source projects and their authors for providing ins
 <img src="https://github.com/hj01857655.png" width="100px;" alt="hj01857655"/><br/>
 <sub><b>hj01857655</b></sub><br/>
 <sub><a href="https://github.com/hj01857655/cursorHelper">cursorHelper</a></sub><br/>
+</a>
+</td>
+</tr>
+</table>
+</div>
+
+### 🏆 Special Thanks
+
+Special thanks to the following open source projects and their authors for providing inspiration and reference for this project:
+
+<div align="center">
+<table>
+<tr>
+<td align="center">
+<a href="https://github.com/Ktovoz">
+<img src="https://github.com/Ktovoz.png" width="100px;" alt="Ktovoz"/><br/>
+<sub><b>Ktovoz</b></sub><br/>
+<sub><a href="https://github.com/Ktovoz/cursorRegister">cursorRegister</a></sub><br/>
 </a>
 </td>
 <td align="center">
