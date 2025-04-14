@@ -452,8 +452,7 @@ Thanks to all the contributors who make this project better!
 <td align="center">
 <a href="https://github.com/hj01857655">
 <img src="https://github.com/hj01857655.png" width="100px;" alt="hj01857655"/><br/>
-<sub><b>hj01857655</b></sub><br/>
-<sub><a href="https://github.com/hj01857655/cursorHelper">cursorHelper</a></sub><br/>
+</a></sub><br/>
 </a>
 </td>
 </tr>

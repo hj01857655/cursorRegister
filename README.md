@@ -476,7 +476,7 @@
 
 <div align="center">
 <a href="https://github.com/hj01857655/cursorHelper/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=hj01857655/cursorHelper&max=100" />
+  
 </a>
 </div>
 
