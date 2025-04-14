@@ -10,9 +10,7 @@ import requests
 import threading
 import queue
 from DrissionPage import ChromiumOptions, Chromium
-from dotenv import load_dotenv
 from loguru import logger
-from cursor import Cursor
 from utils import MoemailManager
 from utils import Utils
 #生成随机字符串
@@ -83,8 +81,8 @@ class CursorRegistration:
         # 如果已有浏览器实例，返回
         if self.browser:
             self.tab = self.browser.latest_tab
-            self.tab.get(self.CURSOR_SIGNUP_URL)
-            logger.debug("使用已有浏览器访问注册页面")
+            # self.tab.get(self.CURSOR_SIGNUP_URL)
+            # logger.debug("使用已有浏览器访问注册页面")
             return
         #初始化浏览器
         co = ChromiumOptions()

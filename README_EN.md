@@ -121,6 +121,8 @@
 - 🎨 Clean interface
 - 📦 One-click packaging and release
 - 💾 Account backup functionality
+- 🔄 Batch account management
+- 🔁 Support switching accounts using long-term token
 
 ### 🔮 Future Plans
 
@@ -373,6 +375,20 @@ We warmly welcome and appreciate all forms of contributions! Here are some ways 
 2. 🌐 Visit cursor.sh and login
 3. 🔎 Find Cookie in Network tab
 4. 📋 Copy and update in program
+
+</details>
+
+<details>
+<summary><b>🔄 How to Switch Accounts</b></summary>
+
+1. Select an account from the account list
+2. Ensure the account has a long-term token (TOKEN)
+   - If there's no long-term token, click "Update Info" first to obtain one
+3. Click the "Switch Account" button
+4. Wait for the system to process, and a success message will appear when completed
+5. Now the Cursor application will use the selected account's identity
+
+> 💡 The account switching feature uses a long-term token, allowing you to switch Cursor accounts without having to log in again, which is very convenient.
 
 </details>
 
