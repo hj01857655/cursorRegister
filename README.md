@@ -436,7 +436,8 @@
 <table>
 <tr>
 <td align="center">
-<img src="assets/wx_20250215215655.jpg" width="280" height="420" alt="微信交流群">
+<img src="assets/wx_20250414201336.jpg" width="280" height="420" alt="微信交流群">
+<p>该二维码7天内（4月21日前）有效，重新进入将更新</p>
 </td>
 <td>
 

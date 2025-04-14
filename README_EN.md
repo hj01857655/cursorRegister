@@ -402,7 +402,8 @@ We warmly welcome and appreciate all forms of contributions! Here are some ways 
 <table>
 <tr>
 <td align="center">
-<img src="assets/wx_20250215215655.jpg" width="280" height="420" alt="WeChat Group">
+<img src="assets/wx_20250414201336.jpg" width="280" height="420" alt="WeChat Group">
+<p>This QR code is valid for 7 days (until April 21), will be updated upon re-entry</p>
 </td>
 <td>
 
