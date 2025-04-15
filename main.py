@@ -13,14 +13,90 @@ from pathlib import Path
 from tkinter import ttk
 from typing import Dict, List, Tuple
 
-from dotenv import load_dotenv
-from loguru import logger
+# 尝试导入dotenv，如果失败提供备用方案
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    # 备用方案：简单的dotenv加载函数
+    def load_dotenv():
+        try:
+            env_file = '.env'
+            if os.path.exists(env_file):
+                with open(env_file, 'r', encoding='utf-8') as f:
+                    for line in f:
+                        line = line.strip()
+                        if line and not line.startswith('#'):
+                            key, value = line.split('=', 1)
+                            os.environ[key.strip()] = value.strip()
+                return True
+        except Exception:
+            pass
+        return False
 
-from tab import ManageTab, RegisterTab, AboutTab, ConfigTab, UI
-from tab.logWindow import MAX_BUFFER_SIZE, UI_UPDATE_BATCH, MAX_TEXT_LENGTH
-from utils import Utils, Result, ConfigManager
+# 尝试导入loguru，如果失败提供备用日志记录机制
+try:
+    from loguru import logger
+except ImportError:
+    import logging
+    # 配置基本日志
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        handlers=[logging.StreamHandler()]
+    )
+    # 创建类似loguru的接口
+    class LoguruLike:
+        def __init__(self):
+            self.logger = logging.getLogger("cursorHelper")
+        
+        def debug(self, msg, *args, **kwargs):
+            self.logger.debug(msg, *args, **kwargs)
+        
+        def info(self, msg, *args, **kwargs):
+            self.logger.info(msg, *args, **kwargs)
+        
+        def warning(self, msg, *args, **kwargs):
+            self.logger.warning(msg, *args, **kwargs)
+        
+        def error(self, msg, *args, **kwargs):
+            self.logger.error(msg, *args, **kwargs)
+        
+        def critical(self, msg, *args, **kwargs):
+            self.logger.critical(msg, *args, **kwargs)
+        
+        def remove(self):
+            pass
+        
+        def add(self, *args, **kwargs):
+            return 1
+            
+    logger = LoguruLike()
 
-console_mode = False
+# 尝试导入应用模块
+try:
+    from tab import ManageTab, RegisterTab, AboutTab, ConfigTab, UI
+    from tab.logWindow import MAX_BUFFER_SIZE, UI_UPDATE_BATCH, MAX_TEXT_LENGTH
+    from utils import Utils, Result, ConfigManager
+except ImportError as e:
+    # 如果导入失败，创建一个紧急错误弹窗
+    def show_import_error(error):
+        try:
+            root = tk.Tk()
+            root.withdraw()
+            import tkinter.messagebox as messagebox
+            messagebox.showerror(
+                "模块导入错误", 
+                f"程序启动失败，缺少必要模块:\n\n{error}\n\n请确保所有依赖已正确安装。"
+            )
+            root.destroy()
+        except:
+            pass
+        sys.exit(1)
+    
+    show_import_error(str(e))
+
+# 控制台模式设置
+console_mode = "--console" in sys.argv
 
 
 #窗口配置
@@ -350,13 +426,19 @@ def main() -> None:
     root = None
     try:
         # 设置基本日志系统
-        setup_basic_logging()
-        
-        logger.info("程序开始启动...")
+        try:
+            setup_basic_logging()
+            logger.info("程序开始启动...")
+        except Exception as log_error:
+            # 日志设置失败不应该阻止程序启动
+            print(f"日志设置失败: {log_error}")
         
         # 确保备份目录存在
-        os.makedirs(BACKUP_DIR, exist_ok=True)
-        logger.debug("备份目录检查完成")
+        try:
+            os.makedirs(BACKUP_DIR, exist_ok=True)
+            logger.debug("备份目录检查完成")
+        except Exception as dir_error:
+            logger.warning(f"创建备份目录失败: {dir_error}")
         
         # 简化环境变量处理 - 使用最简单的方式加载
         try:
@@ -365,9 +447,23 @@ def main() -> None:
         except Exception as e:
             logger.warning(f"加载环境变量出错 (不影响基本功能): {str(e)}")
         
+        # 主窗口创建和初始化
         try:
             logger.debug("准备创建主窗口...")
             root = tk.Tk()
+            
+            # 设置异常处理
+            def report_callback_exception(exc, val, tb):
+                import traceback
+                err_msg = ''.join(traceback.format_exception(exc, val, tb))
+                logger.error(f"未捕获的Tkinter异常: {err_msg}")
+                try:
+                    UI.show_error(root, "操作出错", f"{str(val)}\n请查看日志获取详细信息。")
+                except:
+                    messagebox.showerror("错误", f"操作出错: {str(val)}")
+            
+            root.report_callback_exception = report_callback_exception
+            
             logger.debug("主窗口创建成功")
             
             # 设置窗口属性以确保可见
@@ -441,6 +537,32 @@ def copy_env_example_if_needed():
     return False
 
 if __name__ == "__main__":
+    # 设置应用程序异常处理器
+    def global_exception_handler(exctype, value, traceback):
+        try:
+            import traceback as tb_module
+            error_msg = ''.join(tb_module.format_exception(exctype, value, traceback))
+            
+            # 尝试记录到日志
+            try:
+                logger.error(f"未捕获的异常: {error_msg}")
+            except:
+                pass
+            
+            # 显示错误消息框
+            try:
+                import tkinter.messagebox as messagebox
+                messagebox.showerror("程序错误", f"发生未处理的错误:\n{value}\n\n详细信息已记录到日志文件。")
+            except:
+                # 如果无法显示GUI消息，输出到控制台
+                print(f"严重错误: {error_msg}")
+        except:
+            # 如果异常处理器本身出现问题，使用系统默认处理
+            sys.__excepthook__(exctype, value, traceback)
+    
+    # 设置全局异常处理器
+    sys.excepthook = global_exception_handler
+    
     # 先尝试复制环境变量文件
     copy_env_example_if_needed()
     # 然后启动主程序
