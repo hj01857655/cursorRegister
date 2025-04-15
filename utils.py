@@ -279,35 +279,57 @@ class Utils:
             return Result.fail(f"更新JSON文件失败: {e}")
     #结束进程
     @staticmethod
-    def kill_process(process_names: list[str]) -> Result[None]:
+    def kill_process(process_names: list[str] = None) -> Result[None]:
+        """
+        关闭Cursor进程
+        
+        Args:
+            process_names: 已废弃参数，保留兼容性
+                
+        Returns:
+            Result: 操作结果
+        """
         try:
             # 尝试使用psutil更精确地终止进程
             try:
                 import psutil
-                for proc in psutil.process_iter(['pid', 'name']):
+                current_pid = os.getpid()  # 获取当前进程ID
+                
+                # 查找所有Cursor.exe进程
+                for proc in psutil.process_iter(['pid', 'name', 'exe']):
                     proc_name = proc.info.get('name', '').lower()
-                    for target in process_names:
-                        if target.lower() in proc_name or f"{target.lower()}.exe" == proc_name:
-                            pid = proc.info.get('pid')
-                            logger.info(f"正在终止进程: {proc_name} (PID: {pid})")
-                            try:
-                                p = psutil.Process(pid)
-                                p.terminate()  # 先尝试优雅终止
-                                gone, alive = psutil.wait_procs([p], timeout=2)
-                                if alive:  # 如果进程还活着，强制终止
-                                    logger.warning(f"进程 {proc_name} (PID: {pid}) 未响应terminate请求，将强制结束")
-                                    p.kill()
-                            except psutil.NoSuchProcess:
-                                logger.debug(f"进程 {pid} 已不存在")
-                            except Exception as e:
-                                logger.error(f"使用psutil终止进程 {pid} 失败: {e}")
+                    proc_pid = proc.info.get('pid')
+                    proc_exe = proc.info.get('exe', '')
+                    
+                    # 跳过当前进程
+                    if proc_pid == current_pid:
+                        logger.debug(f"跳过当前进程: {proc_name} (PID: {proc_pid})")
+                        continue
+                    
+                    # 只关闭Cursor.exe进程
+                    if (proc_name == 'cursor.exe' or 
+                        (proc_exe and ('\\cursor\\cursor.exe' in proc_exe.lower() or 
+                                       '\\cursor\\resources\\app\\out\\cursor.exe' in proc_exe.lower() or
+                                       '\\programs\\cursor\\cursor.exe' in proc_exe.lower()))):
+                        logger.info(f"正在终止Cursor进程: {proc_name} (PID: {proc_pid})")
+                        try:
+                            p = psutil.Process(proc_pid)
+                            p.terminate()  # 先尝试优雅终止
+                            gone, alive = psutil.wait_procs([p], timeout=2)
+                            if alive:  # 如果进程还活着，强制终止
+                                logger.warning(f"进程 {proc_name} (PID: {proc_pid}) 未响应terminate请求，将强制结束")
+                                p.kill()
+                        except psutil.NoSuchProcess:
+                            logger.debug(f"进程 {proc_pid} 已不存在")
+                        except Exception as e:
+                            logger.error(f"使用psutil终止进程 {proc_pid} 失败: {e}")
             except ImportError:
                 logger.warning("未安装psutil，将使用taskkill终止进程")
             
-            # 使用taskkill作为备用方法
-            for name in process_names:
-                logger.debug(f"使用taskkill终止进程: {name}")
-                subprocess.run(['taskkill', '/F', '/IM', f'{name}.exe'], capture_output=True, check=False)
+            # 使用taskkill作为备用方法，精确定位Cursor.exe
+            logger.debug("使用taskkill终止Cursor.exe进程")
+            subprocess.run(['taskkill', '/F', '/IM', 'Cursor.exe'], 
+                           capture_output=True, check=False)
                 
             return Result.ok()
         except Exception as e:
@@ -468,60 +490,6 @@ class Utils:
             logger.error(f"确保包安装时出错: {e}")
             return Result.fail(str(e))
 
-    @staticmethod
-    def set_proxy(proxy_settings: dict) -> Result:
-        """
-        设置系统代理
-        
-        Args:
-            proxy_settings: 包含代理设置的字典
-                - enabled: 是否启用代理
-                - http: HTTP代理地址
-                - https: HTTPS代理地址
-                - no_proxy: 不使用代理的地址
-                
-        Returns:
-            Result: 操作结果
-        """
-        try:
-            # 更新CursorManager中的代理设置
-            for key, value in proxy_settings.items():
-                if key in CursorManager.PROXY_SETTINGS:
-                    CursorManager.PROXY_SETTINGS[key] = value
-            
-            if proxy_settings.get('enabled', False):
-                # 设置环境变量
-                os.environ['HTTP_PROXY'] = proxy_settings.get('http', '')
-                os.environ['HTTPS_PROXY'] = proxy_settings.get('https', '')
-                os.environ['NO_PROXY'] = proxy_settings.get('no_proxy', 'localhost,127.0.0.1')
-                logger.info(f"已启用代理: HTTP={proxy_settings.get('http')}, HTTPS={proxy_settings.get('https')}")
-            else:
-                # 清除环境变量
-                for var in ['HTTP_PROXY', 'HTTPS_PROXY', 'NO_PROXY']:
-                    if var in os.environ:
-                        del os.environ[var]
-                logger.info("已禁用代理")
-            
-            return Result.ok("代理设置已更新")
-        except Exception as e:
-            logger.error(f"设置代理时出错: {e}")
-            return Result.fail(f"设置代理失败: {e}")
-    
-    @staticmethod
-    def get_proxy_settings() -> dict:
-        """
-        获取当前代理设置
-        
-        Returns:
-            dict: 当前代理设置
-        """
-        return {
-            'enabled': CursorManager.PROXY_SETTINGS['enabled'],
-            'http': CursorManager.PROXY_SETTINGS['http'],
-            'https': CursorManager.PROXY_SETTINGS['https'],
-            'no_proxy': CursorManager.PROXY_SETTINGS['no_proxy']
-        }
-
 #Cursor管理类
 class CursorManager:
     # 认证信息键（静态变量）
@@ -542,14 +510,6 @@ class CursorManager:
         # VSCode路径 (Cursor基于VSCode)
         Path(os.path.expandvars('%LOCALAPPDATA%/Programs/Microsoft VS Code/Code.exe')),
     ]
-    
-    # 添加代理设置
-    PROXY_SETTINGS = {
-        'enabled': False,
-        'http': '',
-        'https': '',
-        'no_proxy': 'localhost,127.0.0.1'
-    }
     
     def __init__(self):
         self.db_manager = DatabaseManager(Utils.get_path('cursor') / 'state.vscdb')
@@ -736,7 +696,7 @@ class CursorManager:
             if not Utils.run_as_admin():
                 return Result.fail("需要管理员权限")
 
-            if not (result := Utils.kill_process(['Cursor', 'cursor'])):
+            if not (result := Utils.kill_process()):
                 return result
 
             cursor_path = Utils.get_path('cursor')
@@ -811,7 +771,7 @@ class CursorManager:
             # 如果 Cursor 在运行，则先关闭进程
             if cursor_running:
                 logger.info(f"正在关闭 Cursor 进程 (PID: {pid})...")
-                kill_result = Utils.kill_process(['Cursor', 'cursor'])
+                kill_result = Utils.kill_process()
                 if not kill_result.success:
                     logger.warning(f"关闭 Cursor 进程可能失败: {kill_result.message}")
                 
@@ -931,11 +891,38 @@ class MoemailManager:
             raise ValueError(env_check.message)
         
         self.api_key, base_url = env_check.data
+        # 使用浏览器标准请求头
         self.headers = {
-            'Content-Type': 'application/json',
+            "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7",
+            "accept-language": "zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6",
+            "cache-control": "max-age=0",
+            "sec-ch-ua": "\"Microsoft Edge\";v=\"135\", \"Not-A.Brand\";v=\"8\", \"Chromium\";v=\"135\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "sec-fetch-dest": "document",
+            "sec-fetch-mode": "navigate",
+            "sec-fetch-site": "none",
+            "sec-fetch-user": "?1",
+            "upgrade-insecure-requests": "1",
+            # 保留API密钥
             'X-API-Key': self.api_key
         }
+        
         self.base_url = base_url
+
+        # 确保URL末尾没有斜杠
+        if self.base_url.endswith('/'):
+            self.base_url = self.base_url[:-1]
+            
+        # 添加API路径前缀
+        if not '/api' in self.base_url:
+            self.base_url = f"{self.base_url}/api"
+            
+        logger.debug(f"邮箱API基础URL: {self.base_url}")
+    
+    def get_headers(self) -> Dict[str, str]:
+        """获取请求头信息"""
+        return self.headers
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
         try:
@@ -943,24 +930,32 @@ class MoemailManager:
             url = f"{self.base_url}{endpoint}"
             headers = self.get_headers()
             
-            # 添加代理支持
-            proxies = None
-            if CursorManager.PROXY_SETTINGS['enabled']:
-                proxies = {
-                    'http': CursorManager.PROXY_SETTINGS['http'],
-                    'https': CursorManager.PROXY_SETTINGS['https'],
-                    'no_proxy': CursorManager.PROXY_SETTINGS['no_proxy']
-                }
+            # 设置正确的请求参数
+            request_kwargs = {
+                'method': method,
+                'url': url,
+                'headers': headers,
+                'timeout': 30
+            }
+            
+            # 根据提供的fetch，我们需要设置credentials参数
+            # 在requests中，这对应于cookies和auth参数
+            request_kwargs['allow_redirects'] = True
+            
+            # 添加其他参数
+            for key, value in kwargs.items():
+                if key in ['json', 'data', 'params']:
+                    request_kwargs[key] = value
+            
+            logger.debug(f"发送请求: {method} {url}")
+            logger.debug(f"请求头: {headers}")
             
             # 发送请求
-            response = requests.request(
-                method,
-                url,
-                headers=headers,
-                proxies=proxies,
-                timeout=30,
-                **kwargs
-            )
+            response = requests.request(**request_kwargs)
+            
+            # 记录响应信息
+            logger.debug(f"响应状态码: {response.status_code}")
+            logger.debug(f"响应头: {response.headers}")
             
             # 处理响应
             if response.status_code in [200, 201, 204]:
@@ -970,12 +965,14 @@ class MoemailManager:
                 except:
                     return Result.ok(response.text)
             else:
+                logger.error(f"API请求失败: {response.status_code}")
+                logger.error(f"响应内容: {response.text[:200]}")
                 try:
                     error_data = response.json()
                     error_message = error_data.get('message', f"请求失败: {response.status_code}")
-                    return Result.fail(error_message, error_data)
+                    return Result.fail(f"{error_message} - {error_data}")
                 except:
-                    return Result.fail(f"请求失败: {response.status_code}", {'text': response.text})
+                    return Result.fail(f"请求失败: {response.status_code} - {response.text}")
                 
         except Exception as e:
             logger.error(f"请求出错 {method} {endpoint}: {str(e)}")

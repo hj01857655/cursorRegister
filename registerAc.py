@@ -882,7 +882,7 @@ class CursorRegistration:
                 logger.debug(f"【令牌获取】发送登录控制请求到: {login_deep_url}")
                 try:
                     logger.info("正在发送登录请求...")
-                    login_response = make_request(
+                    login_response = requests.request(
                         method="POST", 
                         url=login_deep_url, 
                         headers=headers, 
@@ -943,7 +943,12 @@ class CursorRegistration:
             for i in range(30):
                 logger.debug(f"【令牌获取】轮询获取令牌... (第{i+1}次/共30次)")
                 try:
-                    response = make_request(method="GET", url=auth_poll_url, headers=headers, timeout=5)
+                    response = requests.request(
+                        method="GET", 
+                        url=auth_poll_url, 
+                        headers=headers, 
+                        timeout=5
+                    )
                     logger.debug(f"【令牌获取】轮询响应状态码: {response.status_code if response else 'Failed'}")
                     
                     if response and response.status_code == 200:
@@ -1030,19 +1035,10 @@ class CursorRegistration:
         except Exception as e:
             logger.error(f"【浏览器】关闭浏览器实例失败: {str(e)}")
 
-# 修改make_request函数以支持代理
+# 修改make_request函数
 def make_request(method, url, headers=None, data=None, json=None, params=None, timeout=30, allow_redirects=True, verify=True):
     try:
-        # 添加代理支持
-        proxies = None
-        if CursorManager.PROXY_SETTINGS['enabled']:
-            proxies = {
-                'http': CursorManager.PROXY_SETTINGS['http'],
-                'https': CursorManager.PROXY_SETTINGS['https'],
-                'no_proxy': CursorManager.PROXY_SETTINGS['no_proxy']
-            }
-            logger.debug(f"正在使用代理: {proxies}")
-        
+        # 发送请求
         response = requests.request(
             method=method,
             url=url,
@@ -1052,8 +1048,7 @@ def make_request(method, url, headers=None, data=None, json=None, params=None, t
             params=params,
             timeout=timeout,
             allow_redirects=allow_redirects,
-            verify=verify,
-            proxies=proxies
+            verify=verify
         )
         return response
     except requests.exceptions.Timeout:
