@@ -1,14 +1,11 @@
 ABOUT_TAB_HEIGHT = 300
+VERSION = "版本: 0.1.7"
 
 import tkinter as tk
 import webbrowser
 from tkinter import ttk
 
-# 导入版本信息
-try:
-    from version import __version__
-except ImportError:
-    __version__ = "未知版本"
+version = VERSION
 
 
 class AboutTab(ttk.Frame):
@@ -34,7 +31,7 @@ class AboutTab(ttk.Frame):
 
         version_info = ttk.Label(
             title_frame,
-            text=f"版本: {__version__}",
+            text=version,
             style='TLabel',
             font=('Microsoft YaHei UI', 10),
             foreground='#5f6368'
@@ -144,4 +141,4 @@ class AboutTab(ttk.Frame):
             font=('Microsoft YaHei UI', 9),
             foreground='#80868b'
         )
-        copyright_info.pack(side=tk.BOTTOM, pady=2) 
+        copyright_info.pack(side=tk.BOTTOM, pady=2)

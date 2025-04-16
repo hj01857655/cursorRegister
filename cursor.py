@@ -63,7 +63,7 @@ class Cursor:
 
     #使用会话令牌获取令牌
     @classmethod
-    def get_long_token(cls, session_token: str) -> str:
+    def get_access_token_and_refresh_token(cls, session_token: str) -> str:
         """
         使用会话令牌获取令牌
         
@@ -76,7 +76,7 @@ class Cursor:
         try:
             # 使用CursorManager获取令牌
             cursor_manager = CursorManager()
-            result = cursor_manager.get_long_token(session_token)
+            result = cursor_manager.get_access_token_and_refresh_token(session_token)
             
             if result.success:
                 logger.info("成功获取令牌")

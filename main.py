@@ -1,6 +1,12 @@
+# 导入版本信息
+try:
+    from version import __version__
+except ImportError:
+    __version__ = "未知版本"
+
 WINDOW_WIDTH = 1280
 WINDOW_HEIGHT = 720
-WINDOW_TITLE = "Cursor账号助手"
+WINDOW_TITLE = f"Cursor账号助手 v{__version__}"
 BACKUP_DIR = "env_backups"
 CONTENT_RATIO = 0.5  # 对半分
 
@@ -428,7 +434,7 @@ def main() -> None:
         # 设置基本日志系统
         try:
             setup_basic_logging()
-            logger.info("程序开始启动...")
+            logger.info(f"Cursor账号助手 v{__version__} 程序开始启动...")
         except Exception as log_error:
             # 日志设置失败不应该阻止程序启动
             print(f"日志设置失败: {log_error}")
@@ -520,15 +526,16 @@ def main() -> None:
 # 在.env.example自动复制功能分离为独立函数
 def copy_env_example_if_needed():
     try:
-        # 确定基础路径
-        base_path = os.path.dirname(sys.executable) if getattr(sys, 'frozen', False) else os.path.dirname(__file__)
+        from utils import Utils
         
         # 环境变量文件路径
-        env_path = os.path.join(base_path, '.env')
-        env_example_path = os.path.join(base_path, '.env.example')
+        env_path = Utils.get_path('env')
+        base_path = Utils.get_path('base')
+        env_example_path = base_path / '.env.example'
         
         # 检查并创建.env文件
-        if not os.path.exists(env_path) and os.path.exists(env_example_path):
+        if not env_path.exists() and env_example_path.exists():
+            import shutil
             shutil.copy(env_example_path, env_path)
             logger.info("已从.env.example创建.env文件，请在配置中填写相关信息")
             return True

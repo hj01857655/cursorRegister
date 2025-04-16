@@ -40,13 +40,22 @@ class ManageTab(ttk.Frame):
         self.registrar = None
         
         # 保存用户调整的列宽
-        self.user_column_widths = {}
+        self.user_column_widths = {
+            '用户ID': 120,
+            '邮箱': 180,
+            '密码': 100,
+            'Cookie': 200,
+            '账户状态': 80,
+            '剩余天数': 80,
+            '使用量': 100,
+            '令牌': 200
+        }
         
         # 确保env_backups目录存在
         self.ensure_backup_dir()
         
         self.setup_ui()
-        # 初始化后自动刷新账号列表
+        # 初始化后100ms自动刷新账号列表
         self.after(100, self.refresh_list)
 
     # 确保备份目录存在
@@ -61,7 +70,7 @@ class ManageTab(ttk.Frame):
                 # 显示创建目录失败消息
                 UI.show_error(self.winfo_toplevel(), "创建目录失败", 
                               f"无法创建账号备份目录 {backup_dir}，请确保应用具有写入权限。\n\n错误信息: {str(e)}")
-
+    #设置ui
     def setup_ui(self):
         # 尝试调整主窗口大小
         try:
@@ -69,25 +78,29 @@ class ManageTab(ttk.Frame):
             root = self.winfo_toplevel()
             # 获取屏幕宽度
             screen_width = root.winfo_screenwidth()
+            # 获取屏幕高度
             screen_height = root.winfo_screenheight()
-            # 设置窗口大小为屏幕宽度的80%，高度为75%
-            window_width = int(screen_width * 0.8)
-            window_height = int(screen_height * 0.75)
+            # 设置窗口大小为屏幕宽度的90%，高度为90%
+            window_width = int(screen_width * 0.9)
+            window_height = int(screen_height * 0.9)
             # 设置窗口尺寸和位置
             root.geometry(f"{window_width}x{window_height}+{int((screen_width-window_width)/2)}+{int((screen_height-window_height)/2)}")
             logger.info(f"已调整主窗口大小为 {window_width}x{window_height}")
         except Exception as e:
             logger.warning(f"调整主窗口大小失败: {str(e)}")
-
+        #创建已保存账号框架
         accounts_frame = UI.create_labeled_frame(self, "已保存账号")
+
         # 让accounts_frame能够自动扩展填充可用空间
         accounts_frame.pack(fill=tk.BOTH, expand=True)
 
         # 创建一个内部框架用于正确布局树形视图和滚动条
         tree_frame = ttk.Frame(accounts_frame)
+        #设置框架位置为填充
         tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-
-        columns = ('用户ID', '邮箱', '密码', '账户状态', '剩余天数','使用量','Cookie','令牌')
+        #设置列
+        columns = ('用户ID', '邮箱', '密码','Cookie', '剩余天数','使用量','账户状态','令牌')
+        #创建树
         tree = ttk.Treeview(tree_frame, columns=columns, show='headings', height=TREE_VIEW_HEIGHT)
         
         # 为每列分配适当的初始宽度和最小宽度
@@ -95,10 +108,10 @@ class ManageTab(ttk.Frame):
             '用户ID': 120,
             '邮箱': 180,
             '密码': 100,
+            'Cookie': 200,
             '账户状态': 80,
             '剩余天数': 80,
             '使用量': 100,
-            'Cookie': 200,
             '令牌': 200
         }
         
@@ -156,7 +169,7 @@ class ManageTab(ttk.Frame):
         #添加按钮
         ttk.Button(second_row_frame, text="更新信息", command=self.update_account_info, 
                   style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
-        ttk.Button(second_row_frame, text="切换账号", command=self.update_auth, 
+        ttk.Button(second_row_frame, text="切换账号", command=self.switch_account, 
                   style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
         ttk.Button(second_row_frame, text="查看详情", command=self.view_account_details, 
                   style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=PADDING['MEDIUM'])
@@ -500,23 +513,23 @@ class ManageTab(ttk.Frame):
                 def update_ui():
                     # 移除加载提示
                     loading_label.destroy()
-                    
+                            
                     # 更新树形视图
                     for csv_file, account_data in account_data_list:
-                        self.account_tree.insert('', 'end', iid=csv_file, values=(
-                            account_data.get('USERID', ''),
-                            account_data.get('EMAIL', ''),
-                            account_data.get('PASSWORD', ''),
-                            account_data.get('STATUS', '未知'),
-                            account_data.get('DAYS', '14'),
-                            account_data.get('QUOTA', '0/150'),
-                            account_data.get('COOKIES_STR', ''),
-                            account_data.get('TOKEN', ''),
-                        ))
+                                self.account_tree.insert('', 'end', iid=csv_file, values=(
+                                    account_data.get('USERID', ''),
+                                    account_data.get('EMAIL', ''),
+                                    account_data.get('PASSWORD', ''),
+                                    account_data.get('COOKIES_STR', ''),
+                                    account_data.get('DAYS', '14'),
+                                    account_data.get('QUOTA', '0/150'),
+                                    account_data.get('STATUS', '未知'),
+                                    account_data.get('TOKEN', ''),
+                                ))
                     
                     # 在更新数据后自动调整列宽
                     self.adjust_column_widths()
-                    
+                            
                     logger.info("账号列表已刷新")
                 
                 # 在主线程中执行UI更新
@@ -533,8 +546,10 @@ class ManageTab(ttk.Frame):
         
         # 启动线程
         threading.Thread(target=load_accounts, daemon=True).start()
-    #获取选中的账号
+
+    #通过treeview获取选中的账号
     def get_selected_account(self) -> Tuple[str, Dict[str, str]]:
+        # 获取选中的账号
         if not self.selected_item:
             raise ValueError("请先选择要操作的账号")
 
@@ -806,7 +821,10 @@ class ManageTab(ttk.Frame):
             cookie_str = account_data.get('COOKIES_STR', '')
             if not cookie_str:
                 email=account_data.get('EMAIL','未知邮箱')
+                password=account_data.get('PASSWORD','未知密码')
                 raise ValueError(f"未找到账号 {email} 的Cookie信息")
+                #重新登录
+                sign
             #获取账号信息
             def fetch_and_display_info():
                 try:
@@ -844,8 +862,9 @@ class ManageTab(ttk.Frame):
                         logger.info(f"成功获取账号信息: 用户ID={user_id}, 邮箱={email}, 使用量={quota}, 剩余天数={days}")
                         
                         # 尝试获取令牌
-                        long_token = account_data.get('TOKEN', '')
-                        if not long_token:
+                        access_token = account_data.get('TOKEN', '')
+                        refresh_token = account_data.get('REFRESH_TOKEN', '')
+                        if not access_token or not refresh_token:
                             logger.info("【令牌获取】尝试获取长期令牌...")
                             try:
                                 session_token = None
@@ -873,9 +892,9 @@ class ManageTab(ttk.Frame):
                                 logger.debug("【令牌获取】Cookie设置成功")
                                 # 获取令牌
                                 logger.info("【令牌获取】开始使用PKCE方法获取长期令牌...")
-                                long_token = cursor_reg.get_cursor_long_token()
-                                if long_token:
-                                    logger.info(f"【令牌获取】成功获取令牌: {long_token[:15]}...")
+                                access_token, refresh_token = cursor_reg.get_cursor_access_token_and_refresh_token()
+                                if access_token and refresh_token:
+                                    logger.info(f"【令牌获取】成功获取令牌: {access_token[:15]}...{refresh_token[:15]}...")
                                 else:
                                     logger.warning("【令牌获取】无法获取令牌")
                             except Exception as token_error:
@@ -891,7 +910,7 @@ class ManageTab(ttk.Frame):
                                 except Exception as e:
                                     logger.error(f"【令牌获取】关闭浏览器实例失败: {str(e)}")
                                 
-                                if long_token:
+                                if access_token and refresh_token:
                                     logger.info("【令牌获取】成功获取到长期令牌")
                                 else:
                                     logger.warning("【令牌获取】未能获取到长期令牌")
@@ -902,7 +921,8 @@ class ManageTab(ttk.Frame):
                         email = account_data.get('EMAIL', '未知')
                         quota = account_data.get('QUOTA', '未知')
                         days = account_data.get('DAYS', '未知')
-                        long_token = account_data.get('TOKEN', '')
+                        access_token = account_data.get('TOKEN', '')
+                        refresh_token = account_data.get('REFRESH_TOKEN', '')
                         # 更新状态为非正常
                         if account_status == "正常":
                             account_status = "异常"
@@ -913,7 +933,8 @@ class ManageTab(ttk.Frame):
                     self.account_tree.set(self.selected_item, '使用量', quota)
                     self.account_tree.set(self.selected_item, '剩余天数', days)
                     self.account_tree.set(self.selected_item, '账户状态', account_status)
-                    self.account_tree.set(self.selected_item, '令牌', long_token)
+                    self.account_tree.set(self.selected_item, 'Cookie', reconstructed_cookie)
+                    self.account_tree.set(self.selected_item, '令牌', access_token)
                     
                     # 更新CSV文件
                     try:
@@ -926,8 +947,9 @@ class ManageTab(ttk.Frame):
                             'COOKIES_STR': reconstructed_cookie
                         }
                         # 只有当令牌不为空时才更新TOKEN字段
-                        if long_token:
-                            update_dict['TOKEN'] = long_token
+                        if access_token and refresh_token:
+                            update_dict['TOKEN'] = access_token
+                            update_dict['REFRESH_TOKEN'] = refresh_token
                             
                         self.update_csv_file(csv_file_path, **update_dict)
                     except Exception as e:
@@ -945,7 +967,7 @@ class ManageTab(ttk.Frame):
                         f"剩余天数: {days}\n"
                     )
                     # 显示令牌状态
-                    if long_token:
+                    if access_token and refresh_token:
                         success_message += f"令牌: 已更新"
                     else:
                         success_message += f"令牌: 未获取"
@@ -971,16 +993,17 @@ class ManageTab(ttk.Frame):
         self.handle_account_action("获取账号信息", get_trial_info)
     
     #切换账号
-    def update_auth(self) -> None:
+    def switch_account(self) -> None:
         #切换账号
         def update_account_auth(csv_file_path: str, account_data: Dict[str, str]) -> None:
             cookie_str = account_data.get('COOKIES_STR', '')
             email = account_data.get('EMAIL', '')
             # 获取长期令牌
-            long_token = account_data.get('TOKEN', '')
+            access_token = account_data.get('TOKEN', '')
+            refresh_token = account_data.get('REFRESH_TOKEN', '')
             
             # 必须有长期令牌
-            if not long_token:
+            if not access_token or not refresh_token:
                 raise ValueError(f"账号 {email} 没有长期令牌，无法切换账号。请先更新账号信息获取长期令牌。")
             
             if not email:
@@ -1014,7 +1037,7 @@ class ManageTab(ttk.Frame):
 
                     # 使用长期令牌更新认证信息
                     logger.info(f"使用长期令牌更新账号 {email}")
-                    result = CursorManager().process_long_token(long_token, email)
+                    result = CursorManager().process_access_token_and_refresh_token(access_token, refresh_token, email)
                     
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     
@@ -1145,20 +1168,20 @@ class ManageTab(ttk.Frame):
         #启动线程
         threading.Thread(target=reset_thread, daemon=True).start()
 
-    #删除账号   
+    #删除账号方法   
     def delete_account(self):
-        #删除账号
+        #从csv文件中删除账号
         def delete_account_file(csv_file_path: str, account_data: Dict[str, str]) -> None:
             confirm_message = (
                 f"确定要删除以下账号吗？\n\n"
                 f"用户ID：{account_data['USERID']}\n"
                 f"邮箱：{account_data['EMAIL']}\n"
                 f"密码：{account_data['PASSWORD']}\n"
+                f"Cookie：{account_data['COOKIES_STR']}\n"
                 f"状态：{account_data['STATUS']}\n"
                 f"剩余天数：{account_data['DAYS']}\n"
                 f"使用量：{account_data['QUOTA']}\n"
-                f"Cookie：{account_data['COOKIES_STR']}\n"
-                f"令牌：{account_data['TOKEN']}\n"
+                f"令牌：{account_data['TOKEN'] or account_data['ACCESS_TOKEN'] or account_data['REFRESH_TOKEN']}\n"
             )
 
             if not messagebox.askyesno("确认删除", confirm_message, icon='warning'):            
@@ -1205,8 +1228,16 @@ class ManageTab(ttk.Frame):
             # 创建详情对话框
             details_dialog = tk.Toplevel(self)
             details_dialog.title("账号详细信息")
-            details_dialog.geometry("600x400")
+            details_dialog.geometry("768x480")
+            # 设置对话框居中
             details_dialog.transient(self.winfo_toplevel())
+            # 设置对话框大小
+            details_dialog.resizable(False, False)
+            # 设置对话框位置
+            details_dialog.geometry("+%d+%d" % (
+                self.winfo_toplevel().winfo_x() + 50,
+                self.winfo_toplevel().winfo_y() + 50
+            ))
             details_dialog.grab_set()
             
             # 主框架
@@ -1245,8 +1276,9 @@ class ManageTab(ttk.Frame):
     def on_double_click(self, event):
         """双击条目时打开详情对话框"""
         if self.account_tree.identify_region(event.x, event.y) == "cell":
+            # 双击时打开详情对话框
             self.view_account_details()
-
+    # 点击列标题时进行排序
     def on_column_click(self, column_idx):
         """点击列标题时进行排序"""
         column_name = self.account_tree['columns'][column_idx]
@@ -1287,7 +1319,7 @@ class ManageTab(ttk.Frame):
         #     # 类似实现剩余天数排序
         #     pass
 
-    #添加账号
+    #添加账号方法
     def add_account(self):
         """手动添加账号"""
         # 创建添加账号对话框
@@ -1307,25 +1339,31 @@ class ManageTab(ttk.Frame):
         
         # 创建输入字段
         fields = [
-            ('用户ID', '可选，自动从Cookie提取'),
+            ('用户ID', '必填，从Cookie提取'),
             ('邮箱', '必填，Cursor账号邮箱'),
             ('密码', '必填，Cursor账号密码'),
             ('Cookie', '必填，格式: WorkosCursorSessionToken=xxx'),
-            ('令牌', '可选，自动从Cookie获取'),
-            ('账户状态', '可选，自动从Cookie提取'),
-            ('剩余天数', '可选，默认14'),
-            ('使用量', '可选，格式: 已用/总量')
+            ('账户状态', '必填，从Cookie提取'),
+            ('剩余天数', '必填，默认14'),
+            ('使用量', '必填，格式: 已用/总量'),
+            ('令牌', '可选，通过Cookie获取'),
+            ('访问令牌', '可选，通过Cookie获取'),
+            ('刷新令牌', '可选，通过Cookie获取'),
         ]
-        
+        # 输入框
         entries = {}
+        # 遍历fields
         for i, (label, placeholder) in enumerate(fields):
             frame = ttk.Frame(form_frame)
             frame.pack(fill=tk.X, pady=5)
-            
+            # 标签
             ttk.Label(frame, text=f"{label}:", width=8).pack(side=tk.LEFT, padx=5)
+            # 输入框
             entry = ttk.Entry(frame, width=50)
             entry.pack(side=tk.LEFT, padx=5, fill=tk.X, expand=True)
+            # 占位文字
             entry.insert(0, placeholder)
+            # 占位文字颜色
             entry.config(foreground='gray')
             
             # 设置焦点事件，清除占位文字
@@ -1333,21 +1371,21 @@ class ManageTab(ttk.Frame):
                 if entry.get() == placeholder:
                     entry.delete(0, tk.END)
                     entry.config(foreground='black')
-            
+            # 失去焦点事件
             def on_focus_out(event, entry=entry, placeholder=placeholder):
                 if not entry.get():
                     entry.insert(0, placeholder)
                     entry.config(foreground='gray')
-            
+            # 绑定焦点事件
             entry.bind('<FocusIn>', on_focus_in)
             entry.bind('<FocusOut>', on_focus_out)
-            
+            # 添加到entries
             entries[label] = entry
         
         # 提示框
         tip_frame = ttk.Frame(main_frame)
         tip_frame.pack(fill=tk.X, pady=10)
-        
+        # 提示文本
         tip_text = ("提示:\n"
                    "• 必须填写邮箱、密码和Cookie\n"
                    "• 其他字段可以留空，系统会自动提取或设置默认值\n"
@@ -1359,14 +1397,15 @@ class ManageTab(ttk.Frame):
         # 按钮框架
         button_frame = ttk.Frame(main_frame)
         button_frame.pack(pady=10)
-        
+        # 验证并保存
         def validate_and_save():
             try:
                 # 获取所有输入
                 account_data = {}
                 for label, entry in entries.items():
+                    # 获取输入值
                     value = entry.get()
-                    # 跳过占位符文本
+                    # 如果输入值不为空，则添加到account_data
                     if value and value != fields[list(label for label, _ in fields).index(label)][1]:
                         account_data[label] = value
                 
@@ -1374,12 +1413,15 @@ class ManageTab(ttk.Frame):
                 if 'Cookie' not in account_data or not account_data['Cookie']:
                     raise ValueError("Cookie不能为空")
                 
+                # 如果Cookie不以WorkosCursorSessionToken=开头，则添加
                 if 'Cookie' in account_data and not account_data['Cookie'].startswith("WorkosCursorSessionToken="):
                     account_data['Cookie'] = f"WorkosCursorSessionToken={account_data['Cookie']}"
                 
+                # 验证邮箱不能为空
                 if '邮箱' not in account_data or not account_data['邮箱']:
                     raise ValueError("邮箱不能为空")
                 
+                # 验证密码不能为空
                 if '密码' not in account_data or not account_data['密码']:
                     raise ValueError("密码不能为空")
                 
@@ -1409,7 +1451,7 @@ class ManageTab(ttk.Frame):
                 
                 # 确保目录存在
                 os.makedirs('env_backups', exist_ok=True)
-                
+                # 写入CSV文件
                 with open(csv_file, 'w', encoding='utf-8-sig', newline='') as f:
                     csv_writer = csv.writer(f)
                     csv_writer.writerow(['variable', 'value'])  # 写入标题行
@@ -1419,13 +1461,13 @@ class ManageTab(ttk.Frame):
                         '用户ID': 'USERID',
                         '邮箱': 'EMAIL',
                         '密码': 'PASSWORD',
-                        '账户状态': 'STATUS',
-                        '剩余天数': 'DAYS',
-                        '使用量': 'QUOTA',
                         'Cookie': 'COOKIES_STR',
-                        '令牌': 'TOKEN'
+                        '账户状态': 'STATUS',
+                        '使用量': 'QUOTA',
+                        '剩余天数': 'DAYS',
+                        '令牌': 'TOKEN' or 'ACCESS_TOKEN' or 'REFRESH_TOKEN',
                     }
-                    
+                    # 根据映射字段名称写入CSV文件
                     for ui_field, csv_field in field_map.items():
                         value = account_data.get(ui_field, '')
                         csv_writer.writerow([csv_field, value])
@@ -1448,7 +1490,7 @@ class ManageTab(ttk.Frame):
         ttk.Button(button_frame, text="取消", command=add_dialog.destroy, 
                   style='Custom.TButton', width=10).pack(side=tk.LEFT, padx=5)
     
-    #导入账号
+    #导入账号方法
     def import_account(self):
         logger.info("导入账号")
         file_types = [
@@ -1542,44 +1584,74 @@ class ManageTab(ttk.Frame):
             logger.error(f"导入账号失败: {str(e)}")
             UI.show_error(self.winfo_toplevel(), "导入失败", str(e))
     
-    #导出账号
+    #导出账号方法
     def export_account(self):
-        """导出当前选中的账号"""
+        logger.info("导出账号")
+        # 检查是否有选中的账号
         if not self.selected_item:
-            UI.show_warning(self.winfo_toplevel(), "请先选择一个账号")            
+            UI.show_error(self.winfo_toplevel(), "导出失败", "请先选择一个账号")
             return
+            
+        # 获取选中账号的数据
+        item_values = self.account_tree.item(self.selected_item)['values']
         
+        # 检查是否成功获取数据
+        if not item_values or len(item_values) < 3:
+            UI.show_error(self.winfo_toplevel(), "导出失败", "无法获取账号数据")
+            return
+            
+        # 账号ID通常是第一列
+        account_id = item_values[0]
+        email = item_values[1] if len(item_values) > 1 else "未知"
+        
+        # 查找对应的CSV文件
+        csv_files = self.get_csv_files()
+        found_file = None
+        account_data = {}
+        
+        for csv_file in csv_files:
+            data = self.parse_csv_file(csv_file)
+            if data.get('EMAIL') == email or data.get('USER_ID') == account_id:
+                found_file = csv_file
+                account_data = data
+                break
+                
+        if not found_file or not account_data:
+            UI.show_error(self.winfo_toplevel(), "导出失败", f"找不到账号 {email} 的数据文件")
+            return
+            
+        # 选择保存路径
+        file_types = [('CSV文件', '*.csv'), ('所有文件', '*.*')]
+        default_name = f"cursor_account_{email.split('@')[0]}_{datetime.now().strftime('%Y%m%d')}.csv"
+        
+        file_path = filedialog.asksaveasfilename(
+            title="导出账号数据",
+            filetypes=file_types,
+            defaultextension=".csv",
+            initialfile=default_name
+        )
+        
+        if not file_path:
+            logger.info("用户取消导出账号")
+            return
+            
         try:
-            csv_file_path, account_data = self.get_selected_account()
-            
-            # 创建保存文件对话框
-            file_types = [('CSV文件', '*.csv'), ('所有文件', '*.*')]
-            email = account_data.get('EMAIL', 'account')
-            default_filename = f"cursor_account_{email.split('@')[0]}_{datetime.now().strftime('%Y%m%d')}.csv"
-            
-            save_path = filedialog.asksaveasfilename(
-                title="导出账号",
-                defaultextension=".csv",
-                filetypes=file_types,
-                initialfile=default_filename
-            )
-            
-            if not save_path:            return
-            
-            try:
-                os.makedirs(os.path.dirname(save_path), exist_ok=True)
-                # 复制文件内容
-                with open(csv_file_path, 'r', encoding='utf-8-sig') as src, open(save_path, 'w', encoding='utf-8-sig', newline='') as dst:
-                    shutil.copyfileobj(src, dst)
-            
-            except Exception as e:
-                UI.show_error(self.winfo_toplevel(), "导出账号失败", str(e))
-            
-            UI.show_success(self.winfo_toplevel(), f"已成功导出账号: {account_data.get('EMAIL')}")
-            logger.info(f"已导出账号到: {save_path}")
+            # 导出数据到选择的文件
+            with open(file_path, 'w', encoding='utf-8-sig', newline='') as f:
+                csv_writer = csv.writer(f)
+                csv_writer.writerow(['variable', 'value'])  # 写入标题行
+                
+                for key, value in account_data.items():
+                    csv_writer.writerow([key, value])
+                    
+            logger.info(f"已导出账号: {email}")
+            UI.show_success(self.winfo_toplevel(), "导出成功", f"已成功导出账号: {email}")
             
         except Exception as e:
-            UI.show_error(self.winfo_toplevel(), "导出账号失败", str(e))
+            logger.error(f"导出账号失败: {str(e)}")
+            UI.show_error(self.winfo_toplevel(), "导出失败", f"导出账号时发生错误: {str(e)}")
+
+    
 
 
 

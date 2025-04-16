@@ -71,9 +71,9 @@ class GithubActionRegistration(CursorRegistration):
             self._safe_action(self.input_email_verification, verify_code)
 
             # 获取短期和长期令牌
-            return self._safe_action(self.get_cursor_token_and_cookie)
+            return self._safe_action(self.get_cursor_access_token_and_refresh_token)
         except Exception as e:
-            logger.error(f"注册过程发生错误: {str(e)}")
+            logger.error(f"【github action】注册过程发生错误: {str(e)}")
             raise
         finally:
             if self.browser:
@@ -83,7 +83,7 @@ class GithubActionRegistration(CursorRegistration):
 if __name__ == "__main__":
     load_dotenv()
     registration = GithubActionRegistration()
-    cookie_token, long_token = registration.admin_auto_register()
+    cookie_token, access_token, refresh_token = registration.admin_auto_register()
     
     # 准备环境变量
     env_updates = {
@@ -94,8 +94,10 @@ if __name__ == "__main__":
     # 添加短期和长期令牌
     if cookie_token:
         env_updates["COOKIES_STR"] = f"WorkosCursorSessionToken={cookie_token}"
-    if long_token:
-        env_updates["TOKEN"] = long_token
+    if access_token:
+        env_updates["TOKEN"] = access_token
+    if refresh_token:
+        env_updates["REFRESH_TOKEN"] = refresh_token
         
     # 更新环境变量
     if env_updates:

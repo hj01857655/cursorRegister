@@ -141,7 +141,7 @@ class EnvManager:
             return Result.ok()
         except Exception as e:
             return Result.fail(f"更新环境变量失败: {e}")
-
+    #获取环境变量
     @staticmethod
     def get(key: str, raise_error: bool = True) -> str:
         if value := os.getenv(key):
@@ -155,17 +155,27 @@ class Utils:
     #获取路径
     @staticmethod
     def get_path(path_type: str) -> Path:
+        # 获取资源路径的基础目录
+        # 对于PyInstaller打包的应用，使用sys._MEIPASS作为基础路径
+        base_path = Path(sys._MEIPASS) if getattr(sys, '_MEIPASS', False) else (
+            Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).parent
+        )
+        
         paths = {
-            #获取当前执行文件路径
-            'base': Path(sys.executable).parent if getattr(sys, 'frozen', False) else Path(__file__).parent,
-            #获取.env文件路径
+            # 获取当前执行文件路径
+            'base': base_path,
+            # 获取.env文件路径
             'env': lambda: Utils.get_path('base') / '.env',
-            #获取appdata路径
+            # 获取appdata路径
             'appdata': lambda: Path(os.getenv("APPDATA") or ''),
-            #获取cursor路径
-            'cursor': lambda: Utils.get_path('appdata') / 'Cursor/User/globalStorage'
+            # 获取cursor路径
+            'cursor': lambda: Utils.get_path('appdata') / 'Cursor/User/globalStorage',
+            # 获取turnstilePatch路径
+            'turnstilePatch': lambda: Utils.get_path('base') / 'turnstilePatch',
+            # 获取assets路径
+            'assets': lambda: Utils.get_path('base') / 'assets',
         }
-        #获取路径函数
+        # 获取路径函数
         path_func = paths.get(path_type)
         if callable(path_func):
             return path_func()
@@ -563,7 +573,7 @@ class CursorManager:
 
     # 获取令牌
     @error_handler
-    def get_long_token(self, session_token: str) -> Result[str]:
+    def get_access_token_and_refresh_token(self, session_token: str) -> Result[str]:
         cursor_reg = None
         try:
             logger.info("【令牌获取-CM】开始使用CursorManager尝试获取长期令牌...")
@@ -595,21 +605,21 @@ class CursorManager:
                 logger.debug("【令牌获取-CM】Cookie设置成功")
                 
                 # 获取令牌
-                logger.info("【令牌获取-CM】开始调用get_cursor_long_token方法...")
-                long_token = cursor_reg.get_cursor_long_token()
-                if not long_token:
-                    logger.error("【令牌获取-CM】get_cursor_long_token方法返回空值，获取令牌失败")
+                logger.info("【令牌获取-CM】开始调用get_cursor_access_token_and_refresh_token方法...")
+                access_token, refresh_token = cursor_reg.get_cursor_access_token_and_refresh_token()
+                if not access_token or not refresh_token:
+                    logger.error("【令牌获取-CM】get_cursor_access_token_and_refresh_token方法返回空值，获取令牌失败")
                     return Result.fail("获取令牌失败")
-                    
-                logger.info(f"【令牌获取-CM】成功获取长期令牌: {long_token[:15]}...")
-                return Result.ok(long_token, "成功获取令牌")
+                #返回令牌的前
+                logger.info(f"【令牌获取-CM】成功获取长期令牌: {access_token[:15]}...")
+                return Result.ok(access_token, "成功获取令牌")
                 
             except Exception as e:
                 logger.error(f"【令牌获取-CM】获取令牌过程中发生异常: {str(e)}")
                 return Result.fail(f"获取令牌失败: {str(e)}")
             
         except Exception as e:
-            logger.error(f"【令牌获取-CM】get_long_token方法执行失败: {e}")
+            logger.error(f"【令牌获取-CM】get_access_token_and_refresh_token方法执行失败: {e}")
             return Result.fail(str(e))
         finally:
             # 确保浏览器实例被关闭
@@ -662,6 +672,7 @@ class CursorManager:
     @error_handler
     def generate_cursor_account() -> Tuple[str, str]:
         try:
+            #生成随机长度
             random_length = random.randint(5, 20)
             
             # 首先尝试从ConfigManager获取域名配置
@@ -744,19 +755,20 @@ class CursorManager:
             return Result.fail(str(e))
 
     @error_handler
-    def process_long_token(self, long_token: str, email: str) -> Result:
+    def process_access_token_and_refresh_token(self, access_token: str, refresh_token: str, email: str) -> Result:
         """
         使用长期令牌更新Cursor认证信息
         
         Args:
-            long_token: 长期令牌
+            access_token: 访问令牌
+            refresh_token: 刷新令牌
             email: 账号邮箱
             
         Returns:
             Result: 处理结果
         """
         try:
-            if not long_token:
+            if not access_token or not refresh_token:
                 return Result.fail("长期令牌不能为空")
                 
             if not email:
@@ -797,18 +809,19 @@ class CursorManager:
                 logger.info("未检测到 Cursor 进程运行，将直接更新认证信息")
                 
             # 日志记录长期令牌信息
-            logger.debug(f"使用长期令牌: {long_token[:15]}... 更新认证信息")
+            logger.debug(f"使用长期令牌: {access_token[:15]}... 更新认证信息")
             
             # 准备要更新的数据
             updates = {
                 self.AUTH_KEYS["sign_up"]: "Auth_0",
                 self.AUTH_KEYS["email"]: email,
-                self.AUTH_KEYS["access"]: long_token,
-                self.AUTH_KEYS["refresh"]: long_token,
+                self.AUTH_KEYS["access"]: access_token,
+                self.AUTH_KEYS["refresh"]: refresh_token,
                 self.AUTH_KEYS["stripe"]: "free_trial"  # 设置为免费试用类型
             }
+            #打印更新数据
+            logger.debug(f"更新数据: {updates}")
 
-            logger.debug("正在使用长期令牌更新认证信息...")
             if not (result := self.db_manager.update(updates)):
                 return result
                 
@@ -828,7 +841,7 @@ class CursorManager:
                     return Result.ok(message="使用长期令牌更新认证信息成功，但启动应用失败")
                 return Result.ok(message="使用长期令牌更新认证信息成功，已启动应用")
         except Exception as e:
-            logger.error(f"process_long_token 执行失败: {e}")
+            logger.error(f"process_access_token_and_refresh_token 执行失败: {e}")
             return Result.fail(str(e))
 
     @error_handler
@@ -904,6 +917,9 @@ class MoemailManager:
             "sec-fetch-site": "none",
             "sec-fetch-user": "?1",
             "upgrade-insecure-requests": "1",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0",
+            "Referer": "https://www.google.com/",
+            "Connection": "keep-alive",
             # 保留API密钥
             'X-API-Key': self.api_key
         }
@@ -925,61 +941,107 @@ class MoemailManager:
         return self.headers
 
     def _make_request(self, method: str, endpoint: str, **kwargs) -> Result[dict]:
-        try:
-            # 准备请求参数
-            url = f"{self.base_url}{endpoint}"
-            headers = self.get_headers()
-            
-            # 设置正确的请求参数
-            request_kwargs = {
-                'method': method,
-                'url': url,
-                'headers': headers,
-                'timeout': 30
-            }
-            
-            # 根据提供的fetch，我们需要设置credentials参数
-            # 在requests中，这对应于cookies和auth参数
-            request_kwargs['allow_redirects'] = True
-            
-            # 添加其他参数
-            for key, value in kwargs.items():
-                if key in ['json', 'data', 'params']:
-                    request_kwargs[key] = value
-            
-            logger.debug(f"发送请求: {method} {url}")
-            logger.debug(f"请求头: {headers}")
-            
-            # 发送请求
-            response = requests.request(**request_kwargs)
-            
-            # 记录响应信息
-            logger.debug(f"响应状态码: {response.status_code}")
-            logger.debug(f"响应头: {response.headers}")
-            
-            # 处理响应
-            if response.status_code in [200, 201, 204]:
-                try:
-                    data = response.json()
-                    return Result.ok(data)
-                except:
-                    return Result.ok(response.text)
-            else:
-                logger.error(f"API请求失败: {response.status_code}")
-                logger.error(f"响应内容: {response.text[:200]}")
-                try:
-                    error_data = response.json()
-                    error_message = error_data.get('message', f"请求失败: {response.status_code}")
-                    return Result.fail(f"{error_message} - {error_data}")
-                except:
-                    return Result.fail(f"请求失败: {response.status_code} - {response.text}")
+        max_retries = 3  # 最大重试次数
+        retry_delay = 2  # 重试间隔（秒）
+        
+        for retry in range(max_retries):
+            try:
+                # 准备请求参数
+                url = f"{self.base_url}{endpoint}"
+                headers = self.get_headers()
                 
-        except Exception as e:
-            logger.error(f"请求出错 {method} {endpoint}: {str(e)}")
-            return Result.fail(str(e))
-
+                # 添加一些随机性到请求头，避免被识别为机器人
+                headers["User-Agent"] = f"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/{random.randint(90, 110)}.0.{random.randint(4000, 5000)}.{random.randint(100, 200)} Safari/537.36"
+                
+                # 设置正确的请求参数
+                request_kwargs = {
+                    'method': method,
+                    'url': url,
+                    'headers': headers,
+                    'timeout': 30
+                }
+                
+                # 根据提供的fetch，我们需要设置credentials参数
+                # 在requests中，这对应于cookies和auth参数
+                request_kwargs['allow_redirects'] = True
+                
+                # 检查是否设置了代理环境变量
+                http_proxy = os.getenv('HTTP_PROXY')
+                https_proxy = os.getenv('HTTPS_PROXY')
+                
+                if http_proxy or https_proxy:
+                    proxies = {}
+                    if http_proxy:
+                        proxies['http'] = http_proxy
+                    if https_proxy:
+                        proxies['https'] = https_proxy
+                    logger.debug(f"邮件API使用代理: {proxies}")
+                    request_kwargs['proxies'] = proxies
+                
+                # 添加其他参数
+                for key, value in kwargs.items():
+                    if key in ['json', 'data', 'params']:
+                        request_kwargs[key] = value
+                
+                logger.debug(f"发送请求: {method} {url}")
+                logger.debug(f"请求头: {headers}")
+                
+                # 发送请求
+                response = requests.request(**request_kwargs)
+                
+                # 记录响应信息
+                logger.debug(f"响应状态码: {response.status_code}")
+                logger.debug(f"响应头: {response.headers}")
+                
+                # 检查是否遇到Cloudflare保护
+                if response.status_code == 403 and ('cloudflare' in response.text.lower() or '<!DOCTYPE html>' in response.text):
+                    logger.warning(f"检测到Cloudflare保护（第 {retry+1} 次尝试）")
+                    if retry < max_retries - 1:
+                        wait_time = retry_delay * (retry + 1)  # 指数退避
+                        logger.info(f"等待 {wait_time} 秒后重试...")
+                        time.sleep(wait_time)
+                        continue
+                    else:
+                        return Result.fail("API访问被Cloudflare拦截，请检查代理设置或稍后再试")
+                
+                # 处理响应
+                if response.status_code in [200, 201, 204]:
+                    try:
+                        data = response.json()
+                        return Result.ok(data)
+                    except:
+                        return Result.ok(response.text)
+                else:
+                    logger.error(f"API请求失败: {response.status_code}")
+                    logger.error(f"响应内容: {response.text[:200]}")
+                    try:
+                        error_data = response.json()
+                        error_message = error_data.get('message', f"请求失败: {response.status_code}")
+                        return Result.fail(f"{error_message} - {error_data}")
+                    except:
+                        return Result.fail(f"请求失败: {response.status_code} - {response.text}")
+                    
+            except requests.exceptions.Timeout:
+                logger.warning(f"请求超时 (第 {retry+1} 次尝试)")
+                if retry < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                return Result.fail("请求超时，请检查网络连接或使用代理")
+                
+            except requests.exceptions.ConnectionError:
+                logger.warning(f"连接错误 (第 {retry+1} 次尝试)")
+                if retry < max_retries - 1:
+                    time.sleep(retry_delay)
+                    continue
+                return Result.fail("连接错误，请检查网络连接或使用代理")
+                
+            except Exception as e:
+                logger.error(f"请求出错 {method} {endpoint}: {str(e)}")
+                return Result.fail(str(e))
+    #创建邮箱
     def create_email(self, email: str, expiry_time: int = 3600000) -> Result[dict]:
         try:
+            #获取邮箱名称和域名
             name, domain = email.split('@')
             
             # 先检查邮箱是否已存在
@@ -988,30 +1050,34 @@ class MoemailManager:
             
             # 检查是否成功获取邮箱列表
             if email_list_result.success:
+                #获取邮箱列表
                 emails = email_list_result.data.get('emails', [])
                 
                 # 检查邮箱是否已存在
                 for existing_email in emails:
                     if existing_email.get('address') == email:
                         logger.info(f"邮箱 {email} 已存在，直接使用现有邮箱")
+                        #返回邮箱信息
                         return Result.ok({
-                            "email": email,
                             "id": existing_email.get('id'),
+                            "email": email,
                             "expiresAt": existing_email.get('expiresAt')
                         })
             else:
-                logger.warning(f"获取邮箱列表失败: {email_list_result.message}，将尝试直接创建邮箱")
+                #打印邮箱未找到
+                logger.warning(f"邮箱未找到: {email_list_result.message}，将尝试直接创建邮箱")
             
             # 邮箱不存在，创建新邮箱
             data = {
+                "domain": domain,
                 "name": name,
                 "expiryTime": expiry_time,
-                "domain": domain
             }
 
             logger.debug(f"创建新邮箱: {email}")
+            #发送请求:创建邮箱
             result = self._make_request("POST", "/emails/generate", json=data)
-            
+            #如果请求失败
             if not result.success:
                 # 如果创建失败，但错误是因为邮箱已存在
                 if hasattr(result, 'data') and isinstance(result.data, dict):
@@ -1037,18 +1103,20 @@ class MoemailManager:
         except Exception as e:
             logger.error(f"创建邮箱时出错: {str(e)}")
             return Result.fail(str(e))
-
+    #获取邮箱列表
     def get_email_list(self, cursor: Optional[str] = None) -> Result[dict]:
+        #请求参数
         params = {"cursor": cursor} if cursor else {}
+        #发送请求
         return self._make_request("GET", "/emails", params=params)
-
+    #获取邮件列表
     def get_email_messages(self, email_id: str, cursor: Optional[str] = None) -> Result[dict]:
         params = {"cursor": cursor} if cursor else {}
         return self._make_request("GET", f"/emails/{email_id}", params=params)
-
+    #获取邮件详情
     def get_message_detail(self, email_id: str, message_id: str) -> Result[dict]:
         return self._make_request("GET", f"/emails/{email_id}/{message_id}")
-
+    #获取最新邮件
     def get_latest_email_messages(self, target_email: str, timeout: int = 60) -> Result[dict]:
         logger.debug(f"开始获取邮箱 {target_email} 的最新邮件")
 
@@ -1120,19 +1188,20 @@ class ConfigManager:
     """
     # 核心配置项列表 - 更新为.env文件中所有必要的配置项
     _CORE_CONFIG_KEYS = [
-        'EMAIL', 
-        'PASSWORD', 
-        'COOKIES_STR', 
         'DOMAIN', 
         'API_KEY', 
-        'MOE_MAIL_URL'
+        'MOE_MAIL_URL',
+        'EMAIL', 
+        'PASSWORD', 
+        'COOKIES_STR'
     ]
-    
+    #获取所有核心配置项的键名
     @staticmethod
     def get_config_keys() -> list[str]:
         """获取所有核心配置项的键名"""
         return ConfigManager._CORE_CONFIG_KEYS
     
+    #获取单个配置项的值
     @staticmethod
     @error_handler
     def get_config(key: str) -> Result[str]:

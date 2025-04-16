@@ -234,7 +234,7 @@ class RegisterTab(ttk.Frame):
             dialog.wait_window()
             if not result['continue']:
                 raise Exception("用户终止了注册流程")
-
+        #注册线程
         def register_thread():
             try:
                 self.winfo_toplevel().after(0, lambda: UI.show_loading(
@@ -254,12 +254,12 @@ class RegisterTab(ttk.Frame):
                     raise ValueError(f"未知的注册模式: {mode}")
 
                 # 获取短期和长期令牌
-                cookie_token, long_token = register_method(create_dialog)
+                cookie_token, access_token, refresh_token = register_method(create_dialog)
                 
-                if cookie_token or long_token:
+                if cookie_token or access_token or refresh_token:
                     # 准备保存的值
                     cookies_value = f"WorkosCursorSessionToken={cookie_token}" if cookie_token else ""
-                    token_value = long_token or ""
+                    token_value = access_token or ""
                     
                     # 更新输入框
                     self.winfo_toplevel().after(0, lambda: [
@@ -315,7 +315,7 @@ class RegisterTab(ttk.Frame):
                         "注册流程已被终止"
                     ))
                 else:
-                    logger.error(f"注册过程发生错误: {error_msg}")
+                    logger.error(f"【自动注册】注册过程发生错误: {error_msg}")
                     self.winfo_toplevel().after(0, lambda: UI.close_loading(self.winfo_toplevel()))
                     self.winfo_toplevel().after(0, lambda: UI.show_error(
                         self.winfo_toplevel(),
@@ -359,7 +359,7 @@ class RegisterTab(ttk.Frame):
                         raise RuntimeError("更新COOKIES_STR环境变量失败")
                     load_dotenv(override=True)
                 
-                # 使用传入的TOKEN参数，不从环境变量获取
+                # 使用传入的TOKEN参数
                 token_value = token if token is not None else ""
                 if token_value:
                     logger.debug(f"使用直接传入的TOKEN: {token_value[:15]}...")
@@ -420,6 +420,7 @@ class RegisterTab(ttk.Frame):
                 )
                 logger.info(log_message)
                 logger.info(f"账号信息已备份到: {backup_path}")
+                # 更新账号信息
                 self.winfo_toplevel().after(0, lambda: UI.show_success(
                     self.winfo_toplevel(),
                     f"账号备份成功\n保存位置: {backup_path}"
